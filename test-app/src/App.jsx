@@ -3,6 +3,7 @@ import "leaflet/dist/leaflet.css"
 import L from 'leaflet'
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import useGeolocation from './hooks/useGeoLocation'
+import DangerZones from './component/DangerZone'
 
 const defaultCoords = [33.525835, -5.109813];
 
@@ -27,9 +28,19 @@ const markers = [
     popup: "Barrage Ben Smim",
     icon: "/water-icon.png"
   },
-
-
 ];
+
+const dangerZones = [
+  {
+    center: [33.54536, -5.10800],
+    radius: 300, // in meters
+  },
+  {
+    center: [33.51626, -5.10452],
+    radius: 900,
+  },
+];
+
 
 // test for the custom icons
 // const customIcons = new L.Icon({
@@ -93,6 +104,10 @@ const App = () => {
             <Popup>You are here</Popup>
           </Marker>
         )}
+
+    <DangerZones zones={dangerZones} />
+
+
       </MapContainer>
     </div>
   );
