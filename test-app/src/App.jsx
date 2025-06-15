@@ -4,6 +4,7 @@ import L from 'leaflet'
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import useGeolocation from './hooks/useGeoLocation'
 import DangerZones from './component/DangerZone'
+import InteractiveDangerZones from './component/InteractiveDangerZones'
 
 const defaultCoords = [33.525835, -5.109813];
 
@@ -106,7 +107,7 @@ const App = () => {
         )}
 
     <DangerZones zones={dangerZones} />
-
+    <InteractiveDangerZones />    
 
       </MapContainer>
     </div>
