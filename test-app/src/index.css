@@ -21,8 +21,9 @@ body{
 /* sizing of the map container*/
 
 .leaflet-container{
- height: 90vh; 
+ height: 75vh; 
  width: 90vw;
+ place-content: center;
 }
 
 h1{

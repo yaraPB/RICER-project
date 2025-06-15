@@ -9,22 +9,33 @@ const defaultCoords = [33.525835, -5.109813];
 const markers = [
   {
     geocode: [33.548221, -5.112304],
-    popup: "Water Source - Ain Vitel"
+    popup: "Water Source - Ain Vitel",
+    icon: "/water-icon.png"
   },
   {
     geocode: [33.51432877479629, -5.134799896014312],
-    popup: "Camping Farah"
+    popup: "Camping Farah",
+    icon: "/camping-area-icon.png"
   },
   {
     geocode: [33.525856, -5.117086],
-    popup: "Caserne de pompier"
+    popup: "Caserne de pompier",
+    icon: "/fire-station-icon.png"
   },
+  {
+    geocode: [33.49291, -5.178666],
+    popup: "Barrage Ben Smim",
+    icon: "/water-icon.png"
+  },
+
+
 ];
 
-const customIcons = new L.Icon({
-  iconUrl: "/forest-icon.png",
-  iconSize: [38, 38],
-});
+// test for the custom icons
+// const customIcons = new L.Icon({
+//   iconUrl: "/forest-icon.png",
+//   iconSize: [38, 38],
+// });
 
 // ✅ Component that moves the map when the user's position changes
 const FlyToUserLocation = ({ position }) => {
@@ -53,7 +64,7 @@ const App = () => {
 
       <MapContainer
         center={defaultCoords}
-        zoom={15}>
+        zoom={12}>
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -61,11 +72,20 @@ const App = () => {
 
         <FlyToUserLocation position={position} />
 
-        {markers.map((marker, i) => (
-          <Marker key={i} position={marker.geocode} icon={customIcons}>
+        {markers.map((marker, i) => {
+        const customIcon = new L.Icon({
+          iconUrl: marker.icon,
+          iconSize: [38, 38],
+          iconAnchor: [19, 38],
+          popupAnchor: [0, -38],
+        });
+
+        return (
+          <Marker key={i} position={marker.geocode} icon={customIcon}>
             <Popup>{marker.popup}</Popup>
           </Marker>
-        ))}
+        );
+      })}
 
         {/* Optional: marker for user's location */}
         {!permissionDenied && (

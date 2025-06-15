@@ -18,7 +18,11 @@ const useGeolocation = (defaultCoords) => {
       (err) => {
         console.warn("Geolocation error:", err.message);
         setPermissionDenied(true);
-      }
+      },
+    {
+    enableHighAccuracy: true,  
+    maximumAge: 0  
+  }
     );
   }, []);
 
