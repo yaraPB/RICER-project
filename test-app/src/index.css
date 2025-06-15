@@ -1,0 +1,31 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap');
+
+*, *::before, *::after{
+  margin: 0px;
+  padding: 0px;
+  box-sizing: border-box;
+}
+
+#root{
+  height: 100vh;
+}
+
+body{
+  background-color: #333;
+  color: aliceblue;
+  font-family: "Montserrat", sans-serif;
+  margin: 1rem;
+  padding: 1rem;
+}
+
+/* sizing of the map container*/
+
+.leaflet-container{
+ height: 90vh; 
+ width: 90vw;
+}
+
+h1{
+  padding: .5rem;
+  text-align: center  ;
+}
