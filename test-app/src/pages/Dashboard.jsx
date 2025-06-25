@@ -13,6 +13,7 @@ import {
 } from "recharts";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
+import { useNavigate } from "react-router";
 
 const incidentsData = [
   { id: 1, location: "Camping Farah", cause: "Man-made", description: "Fire near camp area", coords: [33.51432877479629, -5.134799896014312] },
@@ -39,21 +40,27 @@ const resourceUsageData = [
 const COLORS = ["#00C49F", "#FF8042", "#FFBB28"];
 
 export default function Dashboard() {
+
+  const navigate = useNavigate()
+
   return (
     <div className="min-h-screen  p-6 font-sans">
       <h1 className="text-4xl font-bold mb-6 text-red-700">Firefighter Emergency Dashboard</h1>
 
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white rounded-lg shadow-lg p-6 text-center">
-          <h2 className="text-2xl font-semibold mb-2 text-red-600">Active Incidents</h2>
+        <div className="bg-white rounded-lg shadow-lg p-6 text-center hover:scale-105 hover:cursor-pointer active:scale-100"
+              onClick={() => navigate('/')}>
+          <h2 className="text-2xl font-semibold mb-2 text-red-600" >Active Incidents</h2>
           <p className="text-5xl font-bold text-red-800">{incidentsData.length}</p>
         </div>
-        <div className="bg-white rounded-lg shadow-lg p-6 text-center">
+        <div className="bg-white rounded-lg shadow-lg p-6 text-center hover:scale-105 hover:cursor-pointer active:scale-100"
+              onClick={() => navigate('resources')}>
           <h2 className="text-2xl font-semibold mb-2 text-yellow-600">Response Teams</h2>
           <p className="text-5xl font-bold text-yellow-800">12</p>
         </div>
-        <div className="bg-white rounded-lg shadow-lg p-6 text-center">
+        <div className="bg-white rounded-lg shadow-lg p-6 text-center hover:scale-105 hover:cursor-pointer active:scale-100"
+          onClick={() => navigate('response-teams')}>
           <h2 className="text-2xl font-semibold mb-2 text-green-600">Resources Available</h2>
           <p className="text-5xl font-bold text-green-800">45</p>
         </div>
@@ -68,10 +75,12 @@ export default function Dashboard() {
             scrollWheelZoom={false}
             className="h-full w-full"
           >
-            <TileLayer
-              attribution='&copy; <a href="https://osm.org/copyright">OpenStreetMap</a>'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
+           <TileLayer
+            url="https://tiles.stadiamaps.com/tiles/alidade_satellite/{z}/{x}/{y}{r}.jpg"
+            attribution='&copy; CNES, Distribution Airbus DS, © Airbus DS, © PlanetObserver (Contains Copernicus Data) | &copy; <a href="https://www.stadiamaps.com/" target="_blank">Stadia Maps</a> &copy; <a href="https://openmaptiles.org/" target="_blank">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            minZoom={0}
+            maxZoom={20}
+          />
             {incidentsData.map((inc) => (
               <Marker key={inc.id} position={inc.coords}>
                 <Popup>

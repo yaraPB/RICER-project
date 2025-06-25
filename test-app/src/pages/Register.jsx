@@ -1,12 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const Register = () => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     address: '',
-    phone: '', // corrected from phoneNumber to phone for input name match
+    phone: '',
   });
+
+  const [product, setProduct] = useState(null); // State to store product data
+
+  useEffect(() => {
+    fetch('https://fakestoreapi.com/products/1')
+      .then(response => response.json())
+      .then(data => setProduct(data))
+      .catch(error => console.error('Error fetching product:', error));
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -15,12 +24,23 @@ const Register = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    alert("Form submitted successfully!", formData);
-    // Add actual submit logic here
+    alert("Form submitted successfully!");
+    console.log(formData);
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-[ur(`./assets/logo.png`)] p-4">
+    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-100">
+      {/* Product Display */}
+      {product && (
+        <div className="bg-red-300 shadow-md rounded-lg p-4 mb-6 w-full max-w-md">
+          <h2 className="text-2xl font-semibold mb-2">{product.title}</h2>
+          <img src={product.image} alt={product.title} className="w-32 h-32 object-contain mx-auto mb-2" />
+          <p className="text-gray-700 mb-1">{product.description}</p>
+          <p className="text-green-600 font-bold text-lg">${product.price}</p>
+        </div>
+      )}
+
+      {/* Form */}
       <form
         onSubmit={handleSubmit}
         className="bg-white rounded-lg shadow-lg p-8 w-full max-w-lg"
