@@ -1,7 +1,8 @@
 import React from 'react';
 import "leaflet/dist/leaflet.css";
-import { MapContainer, TileLayer } from 'react-leaflet';
+import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet';
 import FireMarker from '../components/FireMarker';
+import MapLayers from './MapLayers';
 
 const Map = () => {
 
@@ -12,6 +13,11 @@ const defaultCoords = [33.537600, -5.106647];
           <MapContainer
             center={defaultCoords}
             zoom={18}
+            dragging={true}
+            doubleClickZoom={true}
+            scrollWheelZoom={true}
+            attributionControl={true}
+            zoomControl={true}
             
            className=" rounded-xl shadow-lg"  
             >
@@ -22,7 +28,7 @@ const defaultCoords = [33.537600, -5.106647];
       maxZoom={20}
     />
 
-    <FireMarker position={[33.534229, -5.108965]} />
+      <MapLayers/>
 
     </MapContainer>
     </div>
