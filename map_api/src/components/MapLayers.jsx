@@ -1,15 +1,10 @@
 import React from 'react'
-import { LayersControl,  Rectangle, FeatureGroup, Circle, LayerGroup} from 'react-leaflet'
+import { LayersControl, LayerGroup} from 'react-leaflet'
 import FireMarker from './FireMarker'
 import Polygons from './Polygons'
 import dataFile from '../assets/data-minimal.json'
 
 const Layers = () => {
-
-    const rectangle = [
-  [51.49, -0.08],
-  [51.5, -0.06],
-]
 
   return (
     <div>
