@@ -1,0 +1,10 @@
+@import "tailwindcss";
+
+body{
+    padding: 0px;
+    margin: 0px;
+}
+
+.leaflet-container{
+    @apply h-[90vh] w-[90vw]
+}
