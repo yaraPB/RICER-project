@@ -34,13 +34,13 @@ const NavBar = () => {
   const settings = [
     { label: 'Profile', path: 'profile' },
     { label: 'Notifications', path: 'notifications' },
-    { label: 'Logout', path: 'logout' } // You can customize this
+    { label: 'Logout', path: 'logout' } 
   ]
 
   return (
     <AppBar position="static" sx={{bgcolor: "#96D4AF"}}>
       <Toolbar sx={{ display: 'flex', justifyContent: 'space-between' }}>
-        {/* Logo */}
+        
         <img
           src={logo}
           alt="the logo showing 2 firefighters responding to an emergency"
@@ -48,7 +48,7 @@ const NavBar = () => {
           onClick={() => navigate('/')}
         />
 
-        {/* Navigation Links */}
+
         <Box sx={{ display: 'flex', gap: 2 }}>
           <Typography variant="h6" onClick={() => navigate('incidents')} sx={{ cursor: 'pointer' }}>
             Incidents
@@ -61,8 +61,7 @@ const NavBar = () => {
           </Typography>
         </Box>
 
-        {/* Register Button */}
-        <Button variant="contained" onClick={() => navigate('register')}>
+        <Button variant="contained" onClick={() => navigate('register/civilian-registration')}>
           Register now
         </Button>
 

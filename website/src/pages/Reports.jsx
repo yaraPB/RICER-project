@@ -6,7 +6,8 @@ import {
   InputLabel,
   Typography,
   Box,
-  Stack
+  Stack,
+  Container
 } from '@mui/material';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -56,7 +57,7 @@ const Reports = () => {
   };
 
   return (
-    <Box className='m-6 text-2xl`'>
+    <Container className='m-6 text-2xl' maxWidth="lg">
       <Typography variant="h4" align="center" fontWeight="bold" gutterBottom>
         Report An Incident
       </Typography>
@@ -64,7 +65,7 @@ const Reports = () => {
       <Box
         component="form"
         onSubmit={handleSubmit}
-        sx={{mx: 'auto', display: 'flex', flexDirection: 'column', gap: 2, mx: "2.5rem"}}
+        sx={{ display: 'flex', flexDirection: 'column', gap: 2, mx: "2.5rem"}}
       >
         <TextField
           label="Enter Location (optional)"
@@ -102,12 +103,13 @@ const Reports = () => {
             label="Date and Time of Incident"
             value={datetime}
             onChange={setDatetime}
-            sx={{ mt: 2 }}
+            sx={{ mt: 2, width: 300 }}
+            
           />
         </LocalizationProvider>
 
         {/* File Upload */}
-        <Button variant="outlined" component="label">
+        <Button variant="contained" component="label" color='secondary' size='large' sx={{mx: "2rem", my: 2}}>
           Upload Photos or Files
           <input hidden multiple type="file" onChange={handleFileChange} />
         </Button>
@@ -128,11 +130,11 @@ const Reports = () => {
         />
 
         {/* Submit */}
-        <Button type="submit" variant="contained" size="large" sx={{ my: 2 }}>
+        <Button type="submit" variant="contained" size="large" sx={{ my: 2, mx: "2rem" }}>
           Submit Report
         </Button>
       </Box>
-    </Box>
+    </Container>
   );
 };
 

@@ -1,0 +1,102 @@
+{
+  "equipmentData": [
+    {
+      "category": "Material Roulant VPI et Camions",
+      "items": [
+        { "id": 1, "name": "VPI Camion 1" },
+        { "id": 2, "name": "Camion 2" }
+      ]
+    },
+    {
+      "category": "Petit materiel de lutte",
+      "items": [
+        { "id": 3, "name": "Debroussailleuse" },
+        { "id": 4, "name": "Tronconneuse" },
+        { "id": 5, "name": "Batte à feu" },
+        { "id": 6, "name": "Pelle" },
+        { "id": 7, "name": "Pioche" },
+        { "id": 8, "name": "Pompe dorsale" },
+        { "id": 9, "name": "Hache" },
+        { "id": 10, "name": "Scie" }
+      ]
+    },
+    {
+      "category": "Habillement du personnel de lutte",
+      "items": [
+        { "id": 11, "name": "Chemises" },
+        { "id": 12, "name": "Gants" },
+        { "id": 13, "name": "Pantalons" },
+        { "id": 14, "name": "Chaussures" },
+        { "id": 15, "name": "Lunettes de protection" },
+        { "id": 16, "name": "Casques" },
+        { "id": 17, "name": "Sac à dos" },
+        { "id": 18, "name": "Protecteurs à oreilles" },
+        { "id": 19, "name": "Masque à gaz" }
+      ]
+    },
+    {
+      "category": "Moyen de communication et de positionnement",
+      "items": [
+        { "id": 20, "name": "Cartes d'infrastructure DFCI" },
+        { "id": 21, "name": "GSM" },
+        { "id": 22, "name": "Jumelles" },
+        { "id": 23, "name": "GPS" },
+        { "id": 24, "name": "Cartes du risque statique" }
+      ]
+    },
+    {
+      "category": "Materiel de campement",
+      "items": [
+        { "id": 25, "name": "Tentes" },
+        { "id": 26, "name": "Lits" },
+        { "id": 27, "name": "Tables" },
+        { "id": 28, "name": "Chaises" },
+        { "id": 29, "name": "Groupes électrogènes" },
+        { "id": 30, "name": "Sac de couchage" },
+        { "id": 31, "name": "Mini-frigos" },
+        { "id": 32, "name": "Elements d'hygiène" },
+        { "id": 33, "name": "Matelas" },
+        { "id": 34, "name": "Citerne d'eau" }
+      ]
+    },
+    {
+      "category": "Produit retarda",
+      "items": [
+        { "id": 35, "name": "Produit retardant A" },
+        { "id": 36, "name": "Produit retardant B" }
+      ]
+    }
+  ],
+  "infrastructureData": [
+    {
+      "type": "Point d'eau",
+      "points": [
+        { "id": 1, "name": "Point d'eau 1", "condition": "Good" },
+        { "id": 2, "name": "Point d'eau 2", "condition": "Mild" },
+        { "id": 3, "name": "Point d'eau 3", "condition": "Bad" }
+      ]
+    },
+    {
+      "type": "Tranche pare-feu",
+      "points": [
+        { "id": 4, "name": "Tranche pare-feu 1", "condition": "Good" },
+        { "id": 5, "name": "Tranche pare-feu 2", "condition": "Mild" }
+      ]
+    },
+    {
+      "type": "Postes Vigies",
+      "points": [
+        { "id": 6, "name": "Poste Vigie 1", "condition": "Bad" },
+        { "id": 7, "name": "Poste Vigie 2", "condition": "Good" }
+      ]
+    },
+    {
+      "type": "Pistes Forestieres",
+      "points": [
+        { "id": 8, "name": "Piste Forestiere 1", "condition": "Mild" },
+        { "id": 9, "name": "Piste Forestiere 2", "condition": "Good" }
+      ]
+    }
+  ],
+  "conditionOptions": ["Good", "Mild", "Bad"]
+}
