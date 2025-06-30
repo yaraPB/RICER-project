@@ -38,7 +38,7 @@ const NavBar = () => {
   ]
 
   return (
-    <AppBar position="static" sx={{bgcolor: "#96D4AF"}}>
+    <AppBar position="sticky" sx={{ padding: ".75rem"}}  size="large">
       <Toolbar sx={{ display: 'flex', justifyContent: 'space-between' }}>
         
         <img
@@ -49,27 +49,28 @@ const NavBar = () => {
         />
 
 
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <Typography variant="h6" onClick={() => navigate('incidents')} sx={{ cursor: 'pointer' }}>
+        <Box sx={{ display: 'flex', gap: 12}}>
+          <Typography variant="h5" fontWeight={700} onClick={() => navigate('incidents')} sx={{ cursor: 'pointer' }}>
             Incidents
           </Typography>
-          <Typography variant="h6" onClick={() => navigate('dashboard')} sx={{ cursor: 'pointer' }}>
+          <Typography variant="h5" fontWeight={700} onClick={() => navigate('dashboard')} sx={{ cursor: 'pointer' }}>
             Dashboard
           </Typography>
-          <Typography variant="h6" onClick={() => navigate('reports')} sx={{ cursor: 'pointer' }}>
+          <Typography variant="h5"  fontWeight={700} onClick={() => navigate('reports')} sx={{ cursor: 'pointer' }}>
             Reports
           </Typography>
         </Box>
 
-        <Button variant="contained" onClick={() => navigate('register/civilian-registration')}>
+        <Button variant="contained" sx={{bgcolor: "orange"}} onClick={() => navigate('register/civilian-registration')}>
           Register now
         </Button>
 
         {/* Avatar Menu */}
         <Box sx={{ flexGrow: 0 }}>
           <Tooltip title="Open settings">
-            <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
-              <Avatar alt="User Avatar" src={placeHolderImage} />
+            <IconButton onClick={handleOpenUserMenu} sx={{ p: 0}}>
+              <Avatar alt="User Avatar" src={placeHolderImage}
+               sx={{ width: 56, height: 56 }} />
             </IconButton>
           </Tooltip>
           <Menu

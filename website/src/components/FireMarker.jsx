@@ -1,20 +1,22 @@
-import React from 'react'
-import fireIcon from '../assets/fireIcon.png'
-import L from 'leaflet'
 import { Marker, Popup } from 'react-leaflet'
+import L from 'leaflet'
+import fireIcon from '../assets/fireIcon.png'
 
-const FireMarker = ({ position }) => {
+const customIcon = new L.Icon({
+  iconUrl: fireIcon,
+  iconSize: [32, 32],
+  iconAnchor: [16, 32]
+})
 
-    const customIcon = new L.Icon({
-    iconUrl: fireIcon, 
-    iconSize: [48, 48], 
-    iconAnchor: [16, 32],
-    popupAnchor: [0, -32],
-    });
-
+const FireMarker = ({ position, data }) => {
   return (
     <Marker position={position} icon={customIcon}>
-        <Popup>There's a fire here</Popup>
+      <Popup>
+        <strong>Fire Incident</strong><br />
+        <strong>Cause:</strong> {data.cause}<br />
+        <strong>Date:</strong> {data.date}<br />
+        <strong>Severity:</strong> {data.severity}
+      </Popup>
     </Marker>
   )
 }

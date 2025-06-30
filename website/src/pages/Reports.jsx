@@ -109,12 +109,12 @@ const Reports = () => {
         </LocalizationProvider>
 
         {/* File Upload */}
-        <Button variant="contained" component="label" color='secondary' size='large' sx={{mx: "2rem", my: 2}}>
+        <Button variant="contained" component="label" size='large' sx={{mx: "2rem", my: 2, bgcolor: "orange"}}>
           Upload Photos or Files
           <input hidden multiple type="file" onChange={handleFileChange} />
         </Button>
         {files.length > 0 && (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2">
             {files.length} file(s) selected
           </Typography>
         )}
