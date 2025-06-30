@@ -11,14 +11,14 @@ const Register = () => {
         <h1 className='text-3xl m-1'>Register</h1>
         <Button variant="contained" color="secondary"
         sx={{margin: "4px"}}
-        onClick={() => navigate('civilian-registration')}
+        onClick={() => navigate('officials-registration')}
         >
           I am a firefighter
         </Button>
         <Button variant="contained" color="secondary"
-        onClick={() => navigate('officials-registration')}
+        onClick={() => navigate('civilian-registration')}
         >
-          I am a civiian 
+          I am a civilian 
         </Button>
     </div>
   )

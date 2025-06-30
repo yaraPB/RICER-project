@@ -10,6 +10,7 @@ import Profile from './pages/Profile'
 import RegisterLayout from './Layouts/RegisterLayout'
 import CivilianRegistration from './components/CivilianRegistration'
 import GovRegistration from './components/GovRegistration'
+import Notifications from './pages/Notifications'
 
 const App = () => {
 
@@ -20,6 +21,7 @@ const App = () => {
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="incidents" element={<Incidents />} />
           <Route path="reports" element={<Reports />} />
+          <Route path="notifications" element={<Notifications />} />
           <Route path="profile" element={<Profile />} />
           <Route path="register" element={<RegisterLayout />} >
               <Route path='civilian-registration' element={<CivilianRegistration/>}/>

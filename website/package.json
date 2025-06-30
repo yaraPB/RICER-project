@@ -14,12 +14,18 @@
     "@emotion/styled": "^11.14.1",
     "@mui/icons-material": "^7.2.0",
     "@mui/material": "^7.2.0",
+    "@mui/x-date-pickers": "^8.6.0",
     "@tailwindcss/vite": "^4.1.11",
+    "date-fns": "^4.1.0",
     "leaflet": "^1.9.4",
+    "mui-tel-input": "^9.0.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "react-hook-form": "^7.59.0",
+    "react-leaflet": "^5.0.0",
     "react-router-dom": "^7.6.3",
-    "tailwindcss": "^4.1.11"
+    "tailwindcss": "^4.1.11",
+    "zod": "^3.25.67"
   },
   "devDependencies": {
     "@eslint/js": "^9.29.0",
