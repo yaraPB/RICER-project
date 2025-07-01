@@ -2,11 +2,8 @@ import React, { useState } from 'react';
 import {
   TextField,
   Button,
-  FormControl,
-  InputLabel,
   Typography,
   Box,
-  Stack,
   Container
 } from '@mui/material';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
@@ -27,7 +24,7 @@ const LocationSelector = ({ position, setPosition }) => {
   useMapEvents({
     click(e) {
       setPosition([e.latlng.lat, e.latlng.lng]);
-      console.log("Position selected", position)
+      console.log(position)
     }
   });
 
@@ -53,33 +50,92 @@ const Reports = () => {
       files,
       comment
     });
-    // Submit logic here
   };
 
   return (
-    <Container className='m-6 text-2xl' maxWidth="lg">
+    <Container maxWidth="xl" sx={{ bgcolor: "aliceblue" }}>
       <Typography variant="h4" align="center" fontWeight="bold" gutterBottom>
         Report An Incident
       </Typography>
 
       <Box
-        component="form"
-        onSubmit={handleSubmit}
-        sx={{ display: 'flex', flexDirection: 'column', gap: 2, mx: "2.5rem"}}
+        sx={{
+          display: 'flex',
+          flexDirection: { xs: 'column', md: 'row' },
+          gap: 4,
+          mt: 4
+        }}
       >
-        <TextField
-          label="Enter Location (optional)"
-          placeholder="City, district, etc."
-          value={manualLocation}
-          onChange={(e) => setManualLocation(e.target.value)}
-          variant="filled"
-        />
+        {/* LEFT SIDE: FORM */}
+        <Box
+          component="form"
+          onSubmit={handleSubmit}
+          sx={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            placeContent: "center",
+            gap: 2
+          }}
+        >
+          <TextField
+            label="Enter Location (optional)"
+            placeholder="City, district, etc."
+            value={manualLocation}
+            onChange={(e) => setManualLocation(e.target.value)}
+            variant="filled"
+          />
 
-        <Typography variant="subtitle1" gutterBottom>
-          Or select your location on the map:
-        </Typography>
+          <Typography variant="subtitle1">
+            Or select your location on the map:
+          </Typography>
 
-        <Box sx={{ height: 800, borderRadius: 2, overflow: 'hidden' }}>
+          <LocalizationProvider dateAdapter={AdapterDateFns}>
+            <DateTimePicker
+              label="Date and Time of Incident"
+              value={datetime}
+              onChange={setDatetime}
+              sx={{ mt: 1, width: 'fit-content' }}
+            />
+          </LocalizationProvider>
+
+          <Button
+            variant="contained"
+            component="label"
+            size="large"
+            sx={{ my: 1, bgcolor: '#108b8b', width: 'fit-content' }}
+          >
+            Upload Photos or Files
+            <input hidden multiple type="file" onChange={handleFileChange} />
+          </Button>
+
+          {files.length > 0 && (
+            <Typography variant="body2">
+              {files.length} file(s) selected
+            </Typography>
+          )}
+
+          <TextField
+            label="Additional Comments"
+            multiline
+            rows={4}
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            variant="filled"
+          />
+
+          <Button
+            type="submit"
+            variant="contained"
+            size="large"
+            sx={{ my: 2, bgcolor: '#108b8b', width: 'fit-content' }}
+          >
+            Submit Report
+          </Button>
+        </Box>
+
+        {/* RIGHT SIDE: WIDER MAP */}
+        <Box sx={{ flex: 1.3, height: 800, borderRadius: 2, overflow: 'hidden' }}>
           <MapContainer
             center={[33.537600, -5.106647]} // Casablanca default
             zoom={17}
@@ -88,51 +144,14 @@ const Reports = () => {
             scrollWheelZoom={true}
             attributionControl={true}
             zoomControl={true}
-            style={{ height: '100%', width: '100%' }}
           >
             <TileLayer
               url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-              attribution='&copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+              attribution='&copy; Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
             />
             <LocationSelector position={position} setPosition={setPosition} />
           </MapContainer>
         </Box>
-
-        <LocalizationProvider dateAdapter={AdapterDateFns}>
-          <DateTimePicker
-            label="Date and Time of Incident"
-            value={datetime}
-            onChange={setDatetime}
-            sx={{ mt: 2, width: 300 }}
-            
-          />
-        </LocalizationProvider>
-
-        {/* File Upload */}
-        <Button variant="contained" component="label" size='large' sx={{mx: "2rem", my: 2, bgcolor: "orange"}}>
-          Upload Photos or Files
-          <input hidden multiple type="file" onChange={handleFileChange} />
-        </Button>
-        {files.length > 0 && (
-          <Typography variant="body2">
-            {files.length} file(s) selected
-          </Typography>
-        )}
-
-        {/* Comment */}
-        <TextField
-          label="Additional Comments"
-          multiline
-          rows={4}
-          value={comment}
-          onChange={(e) => setComment(e.target.value)}
-          variant="filled"
-        />
-
-        {/* Submit */}
-        <Button type="submit" variant="contained" size="large" sx={{ my: 2, mx: "2rem" }}>
-          Submit Report
-        </Button>
       </Box>
     </Container>
   );

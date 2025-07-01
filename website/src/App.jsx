@@ -33,8 +33,8 @@ const App = () => {
     )
   )
 
-return (
-  <div className='bg-white'>
+return (  
+  <div className='bg-[aliceblue] h-[100%]'>
       <RouterProvider router={router}/>
     </div>
   )

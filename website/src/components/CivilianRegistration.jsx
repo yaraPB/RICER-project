@@ -71,7 +71,7 @@ const CivilianRegistration = () => {
                 />
 
                 <div className='flex place-content-center w-[90vw]'>
-                    <Button type="submit" variant="contained" color="primary" sx={{width: "400px", padding: ".75rem", fontSize: "1rem", fontWeight: "700"}}>
+                    <Button type="submit" variant="contained" sx={{width: "400px", padding: ".75rem", fontSize: "1rem", fontWeight: "700", bgcolor: "#108b8b"}}>
                     Submit
                     </Button>
                 </div>

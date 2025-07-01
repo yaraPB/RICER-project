@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import data from '../assets/data.json';
 import {
-  Container,
+  Box,
   Typography,
   Table,
   TableBody,
@@ -13,12 +13,9 @@ import {
   IconButton,
   TextField,
   Stack,
-  Box,
   Checkbox,
-  useTheme,
   Select,
   MenuItem,
-  Button
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
@@ -26,10 +23,6 @@ import RemoveIcon from '@mui/icons-material/Remove';
 const { equipmentData, infrastructureData, conditionOptions } = data;
 
 const Dashboard = () => {
-  const theme = useTheme();
-  const equipRef = useRef(null);
-  const infraRef = useRef(null);
-
   const [quantities, setQuantities] = useState(() => {
     const init = {};
     equipmentData.forEach(cat => cat.items.forEach(item => (init[item.id] = 0)));
@@ -78,145 +71,151 @@ const Dashboard = () => {
     );
   };
 
+  // Refs for scrolling to sections
+  const categoryRefs = useRef({});
+  const typeRefs = useRef({});
+
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 8 }}>
-      <Typography variant="h2" align="center" fontWeight="bold" gutterBottom>
-        Dashboard
-      </Typography>
+    <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: 'aliceblue', position: "sticky" }}>
+      {/* Manual Sidebar */}
+      <Box 
+       sx={{
+    width: 220,
+    py: "80px",
+    px: "12px",
+    position: 'sticky',
+    top: 0,
+    alignSelf: 'flex-start', 
+    height: '100vh', 
+    overflowY: 'auto',
+    bgcolor: 'aliceblue', 
+  }}>
 
-      {/* Scroll Buttons */}
-      <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', mb: 4 }}>
-        <Button variant="contained" onClick={() => equipRef.current?.scrollIntoView({ behavior: 'smooth' })}>
-          Go to Equipements
-        </Button>
-        <Button variant="contained" onClick={() => infraRef.current?.scrollIntoView({ behavior: 'smooth' })}>
-          Go to Infrastructures
-        </Button>
-      </Box>
-
-      <Typography ref={equipRef} variant="h4" color="primary" fontWeight="bold" gutterBottom>
-        Equipements
-      </Typography>
-
-      {/* Equipment Tables */}
-      {equipmentData.map(({ category, items }) => (
-        <Box
-          key={category}
-          sx={{
-            backgroundColor: theme.palette.background.paper,
-            p: 3,
-            mb: 6,
-            borderRadius: 2,
-            border: '2px solid primary',
-            bgcolor: '#b9d6fa'
-          }}
-        >
-          <Typography variant="h6" gutterBottom>
+        <Typography variant="body2" fontWeight={600}  mb={1}>
+          Equipments
+        </Typography>
+        {equipmentData.map(({ category }) => (
+          <Typography
+            key={category}
+            variant="body2"
+            sx={{ pl: 1, py: "4px", mb: 0.5, cursor: 'pointer', '&:hover': { transform: "scale(1.1)" } }}
+            onClick={() => categoryRefs.current[category]?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+          >
             {category}
           </Typography>
+        ))}
 
-          <TableContainer component={Paper} elevation={0}>
-            <Table>
-              <TableHead>
-                <TableRow bgcolor="orange">
-                  <TableCell>Item</TableCell>
-                  <TableCell align="center" width={180}>
-                    Quantity
-                  </TableCell>
-                  <TableCell align="center" width={180}>
-                    Inspected
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {items.map(({ id, name }) => (
-                  <TableRow key={id}>
-                    <TableCell>{name}</TableCell>
-                    <TableCell align="center">
-                      <Stack direction="row" spacing={1} justifyContent="center" alignItems="center">
-                        <IconButton size="small" onClick={() => handleDecrement(id)} disabled={quantities[id] === 0}>
-                          <RemoveIcon />
-                        </IconButton>
-                        <TextField
-                          type="number"
-                          inputProps={{ min: 0, style: { textAlign: 'center', width: 60 } }}
-                          value={quantities[id]}
-                          onChange={e => handleQuantityChange(id, e.target.value)}
-                          size="small"
-                          variant="standard"
-                        />
-                        <IconButton size="small" onClick={() => handleIncrement(id)}>
-                          <AddIcon />
-                        </IconButton>
-                      </Stack>
-                    </TableCell>
-                    <TableCell align="center">
-                      <Checkbox checked={inspected[id]} onChange={() => handleInspectToggle(id)} color="primary" />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Box>
-      ))}
-
-      <Typography ref={infraRef} variant="h4" color="primary" fontWeight="bold" gutterBottom>
-        Infrastructures
-      </Typography>
-
-      {infrastructure.map(({ type, points }) => (
-        <Box
-          key={type}
-          sx={{
-            backgroundColor: theme.palette.background.paper,
-            p: 3,
-            mb: 6,
-            borderRadius: 2,
-            border: '2px solid primary',
-            bgcolor: '#b9d6fa'
-          }}
-        >
-          <Typography variant="h6" gutterBottom>
+        <Typography variant="body2" fontWeight={600}  mt={2} mb={1}>
+          Infrastructures
+        </Typography>
+        {infrastructure.map(({ type }) => (
+          <Typography
+            key={type}
+            variant="body2"
+            sx={{ pl: 1, mb: 0.5, cursor: 'pointer', '&:hover': { transform: "scale(1.1)" } }}
+            onClick={() => typeRefs.current[type]?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+          >
             {type}
           </Typography>
+        ))}
+      </Box>
 
-          <TableContainer component={Paper} elevation={0}>
-            <Table>
-              <TableHead>
-                <TableRow bgcolor="orange">
-                  <TableCell>Region Name</TableCell>
-                  <TableCell align="center" width={180}>
-                    Condition
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {points.map(({ id, name, condition }) => (
-                  <TableRow key={id}>
-                    <TableCell>{name}</TableCell>
-                    <TableCell align="center">
-                      <Select
-                        value={condition}
-                        onChange={e => handleConditionChange(type, id, e.target.value)}
-                        size="small"
-                        sx={{ minWidth: 120 }}
-                      >
-                        {conditionOptions.map(cond => (
-                          <MenuItem key={cond} value={cond}>
-                            {cond}
-                          </MenuItem>
-                        ))}
-                      </Select>
+      {/* Main Table */}
+      <Box sx={{ flex: 1, p: 3 }}>
+        <Typography variant="h5" fontWeight={600} mb={3}>
+          Equipment & Infrastructure Overview
+        </Typography>
+
+        <TableContainer component={Paper} elevation={0}>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 600 }}>Name</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Type</TableCell>
+                <TableCell sx={{ fontWeight: 600 }} align="center">Quantity / Condition</TableCell>
+                <TableCell sx={{ fontWeight: 600 }} align="center">Inspected</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {/* Equipment Rows */}
+              {equipmentData.map(({ category, items }) => (
+                <React.Fragment key={category}>
+                  <TableRow ref={el => (categoryRefs.current[category] = el)} sx={{ backgroundColor: '#303030'}}>
+                    <TableCell colSpan={4} sx={{ fontWeight: 600, color: "white" }}>
+                      {category}
                     </TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Box>
-      ))}
-    </Container>
+                  {items.map(({ id, name }) => (
+                    <TableRow key={id} hover>
+                      <TableCell>{name}</TableCell>
+                      <TableCell>{category}</TableCell>
+                      <TableCell align="center">
+                        <Stack direction="row" spacing={1} justifyContent="center" alignItems="center">
+                          <IconButton size="small" onClick={() => handleDecrement(id)} disabled={quantities[id] === 0}>
+                            <RemoveIcon fontSize="small" />
+                          </IconButton>
+                          <TextField
+                            type="number"
+                            inputProps={{ min: 0, style: { textAlign: 'center', width: 50 } }}
+                            value={quantities[id]}
+                            onChange={e => handleQuantityChange(id, e.target.value)}
+                            size="small"
+                            variant="standard"
+                          />
+                          <IconButton size="small" onClick={() => handleIncrement(id)}>
+                            <AddIcon fontSize="small" />
+                          </IconButton>
+                        </Stack>
+                      </TableCell>
+                      <TableCell align="center">
+                        <Checkbox
+                          checked={inspected[id]}
+                          onChange={() => handleInspectToggle(id)}
+                          color="default"
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </React.Fragment>
+              ))}
+
+              {/* Infrastructure Rows */}
+              {infrastructure.map(({ type, points }) => (
+                <React.Fragment key={type}>
+                  <TableRow ref={el => (typeRefs.current[type] = el)} sx={{ backgroundColor: '#303030'}}>
+                    <TableCell colSpan={4} sx={{ fontWeight: 600, color: "white" }}>
+                      {type}
+                    </TableCell>
+                  </TableRow>
+                  {points.map(({ id, name, condition }) => (
+                    <TableRow key={id} hover>
+                      <TableCell>{name}</TableCell>
+                      <TableCell>{type}</TableCell>
+                      <TableCell align="center">
+                        <Select
+                          value={condition}
+                          onChange={e => handleConditionChange(type, id, e.target.value)}
+                          size="small"
+                          variant="standard"
+                          sx={{ minWidth: 120 }}
+                        >
+                          {conditionOptions.map(opt => (
+                            <MenuItem key={opt} value={opt}>
+                              {opt}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </TableCell>
+                      <TableCell align="center">—</TableCell>
+                    </TableRow>
+                  ))}
+                </React.Fragment>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Box>
+    </Box>
   );
 };
 
