@@ -11,7 +11,7 @@ import MenuItem from '@mui/material/MenuItem'
 import Button from '@mui/material/Button'
 import { useNavigate } from 'react-router'
 
-import logo from '../assets/logo-1.png'
+import logo from '../assets/logo-2.png'
 import logoAUI from '../assets/aui-logo.png'
 import placeHolderImage from '../assets/pfp-placeholder.jpg'
 
@@ -80,7 +80,7 @@ const NavBar = () => {
             alt="logo"
             onClick={() => navigate('/')}
             style={{
-              width: scaleValue(48, 32),
+              width: scaleValue(48, 48),
               height: scaleValue(48, 32),
               cursor: 'pointer',
               transition: 'width 0.3s ease, height 0.3s ease'
