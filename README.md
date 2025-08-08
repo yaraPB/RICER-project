@@ -12,8 +12,8 @@ This project is focused on reducing the impact of forest fires on critical infra
 
 ### General To-do
 
-- [] Sign-in and sign-up for normal civilians (ask CIN number and phone number and also MOSIP integration)
-- [] Sign-in and sign-up for government officials (ask CIN number and department and Role)
+- Sign-in and sign-up for normal civilians (ask CIN number and phone number and also MOSIP integration)
+- Sign-in and sign-up for government officials (ask CIN number and department and Role)
 - Implement all of the Departments
 
 ### 1.1 Phase de preparation
