@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { TextField, Button, Select, MenuItem } from '@mui/material';
 import { MuiTelInput } from 'mui-tel-input'
-import { FormControl, InputLabel } from '@mui/material';
 
 const CivilianRegistration = () => {
     const [formData, setFormData] = useState({
@@ -67,7 +66,6 @@ const CivilianRegistration = () => {
                     value={formData.phone}
                     onChange={handlePhoneChange}
                     defaultCountry="MA"
-                    required
                 />
 
                 <div className='flex place-content-center w-[90vw]'>

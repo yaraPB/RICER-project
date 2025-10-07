@@ -93,3 +93,10 @@ Deuxieme message: importance de l'incendie:
 4. Conditions meteorologiques Vent (violent ou non, rafales, direction...) et Temperature (elevee, moderee ou faible).
 
 **DPEFLCD et le principale canal de transmission des messages.**
+
+#### Things TODO
+
+1. Implement the Whatsapp API.
+2. Integrate between the frontend and the backend.
+3. Testing the application.
+4. Hosting.
