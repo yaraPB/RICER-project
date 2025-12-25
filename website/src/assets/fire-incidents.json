@@ -1,0 +1,72 @@
+[
+  {
+    "id": 1,
+    "position": [33.534229, -5.108965],
+    "cause": "Campfire left unattended",
+    "date": "2025-06-30",
+    "severity": "High"
+  },
+  {
+    "id": 2,
+    "position": [33.51996, -5.11819],
+    "cause": "Lightning strike",
+    "date": "2025-06-29",
+    "severity": "Moderate"
+  },
+  {
+    "id": 3,
+    "position": [33.532035, -5.116341],
+    "cause": "Illegal waste burning",
+    "date": "2025-06-26",
+    "severity": "Low"
+  },
+  {
+    "id": 4,
+    "position": [33.528500, -5.110000],
+    "cause": "Campfire left unattended",
+    "date": "2025-06-25",
+    "severity": "Moderate"
+  },
+  {
+    "id": 5,
+    "position": [33.540000, -5.115000],
+    "cause": "Lightning strike",
+    "date": "2025-06-26",
+    "severity": "High"
+  },
+  {
+    "id": 6,
+    "position": [33.535000, -5.120000],
+    "cause": "Illegal waste burning",
+    "date": "2025-06-27",
+    "severity": "Moderate"
+  },
+  {
+    "id": 7,
+    "position": [33.530000, -5.112000],
+    "cause": "Campfire left unattended",
+    "date": "2025-06-24",
+    "severity": "Low"
+  },
+  {
+    "id": 8,
+    "position": [33.525000, -5.117000],
+    "cause": "Lightning strike",
+    "date": "2025-06-24",
+    "severity": "High"
+  },
+  {
+    "id": 9,
+    "position": [33.538000, -5.113000],
+    "cause": "Illegal waste burning",
+    "date": "2025-06-22",
+    "severity": "Low"
+  },
+  {
+    "id": 10,
+    "position": [33.536000, -5.109000],
+    "cause": "Campfire left unattended",
+    "date": "2025-06-22",
+    "severity": "Moderate"
+  }
+]

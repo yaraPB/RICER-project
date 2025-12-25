@@ -1,0 +1,25 @@
+"use strict";
+/*
+ * ATTENTION: An "eval-source-map" devtool has been used.
+ * This devtool is neither made for production nor for readable output files.
+ * It uses "eval()" calls to create a separate source file with attached SourceMaps in the browser devtools.
+ * If you are trying to read the output file, select a different devtool (https://webpack.js.org/configuration/devtool/)
+ * or disable the default devtool with "devtool: false".
+ * If you are looking for production-ready output files, see mode: "production" (https://webpack.js.org/configuration/mode/).
+ */
+exports.id = "_rsc_messages_fr_json";
+exports.ids = ["_rsc_messages_fr_json"];
+exports.modules = {
+
+/***/ "(rsc)/./messages/fr.json":
+/*!**************************!*\
+  !*** ./messages/fr.json ***!
+  \**************************/
+/***/ ((module) => {
+
+module.exports = /*#__PURE__*/JSON.parse('{"nav":{"home":"Accueil","dashboard":"Tableau de bord","incidents":"Incidents","reports":"Signaler un incendie","notifications":"Notifications","profile":"Profil","logout":"Se déconnecter","login":"Connexion","register":"S\'inscrire"},"home":{"title":"Système de Gestion des Incidents d\'Incendie","subtitle":"Signaler, surveiller et gérer les incendies au Maroc","reportFire":"Signaler un incendie","viewDashboard":"Voir le tableau de bord","heroTitle":"Protégeons nos forêts ensemble","heroDescription":"Un système complet pour signaler, surveiller et gérer les incendies de forêt"},"auth":{"loginTitle":"Connexion","registerTitle":"Créer un compte","fullName":"Nom complet","cin":"Numéro CIN","phone":"Téléphone","password":"Mot de passe","department":"Département","title":"Titre","civilian":"Citoyen","firefighter":"Pompier","chooseRole":"Choisir le type de compte","civilianRegistration":"Inscription Citoyen","firefighterRegistration":"Inscription Pompier","submit":"Soumettre","alreadyHaveAccount":"Vous avez déjà un compte?","dontHaveAccount":"Vous n\'avez pas de compte?","registerHere":"Inscrivez-vous ici","selectDepartment":"Sélectionner le département"},"reports":{"title":"Signaler un incendie","location":"Emplacement","enterLocation":"Entrer l\'emplacement (facultatif)","selectOnMap":"Ou sélectionnez votre emplacement sur la carte:","datetime":"Date et heure de l\'incident","uploadFiles":"Télécharger des photos ou fichiers","comments":"Commentaires supplémentaires","submit":"Soumettre le rapport","filesSelected":"fichier(s) sélectionné(s)","reportSubmitted":"Rapport soumis avec succès","reportSubmittedDesc":"Votre rapport sera examiné par les autorités compétentes","whatsappSent":"Notification WhatsApp envoyée aux responsables"},"dashboard":{"title":"Vue d\'ensemble Équipement & Infrastructure","equipment":"Équipement","infrastructure":"Infrastructure","name":"Nom","type":"Type","quantity":"Quantité","condition":"État","inspected":"Inspecté","good":"Bon","mild":"Moyen","bad":"Mauvais","lastUpdated":"Dernière mise à jour","equipments":"Équipements","infrastructures":"Infrastructures"},"incidents":{"title":"Détails des incidents","weather":"Informations météo","last14Days":"Incidents des 14 derniers jours","causeDistribution":"Distribution des causes","id":"ID","latitude":"Latitude","longitude":"Longitude","cause":"Cause","date":"Date","severity":"Gravité","low":"Faible","medium":"Moyen","high":"Élevé","critical":"Critique","unknown":"Inconnu","temperature":"Température","wind":"Vent","direction":"Direction","incidentsInLastWeeks":"Incidents dans les 2 dernières semaines","fireIncidentDetails":"Détails des incidents d\'incendie","weatherInfo":"Informations météo"},"notifications":{"title":"Notifications","markAsRead":"Marquer comme lu","noNotifications":"Aucune nouvelle notification","newReport":"Nouveau rapport d\'incendie","reportVerified":"Rapport vérifié","incidentAlert":"Alerte incident"},"profile":{"title":"Profil","personalInfo":"Informations personnelles","changePassword":"Changer le mot de passe","notificationPreferences":"Préférences de notification","whatsappNotifications":"Notifications WhatsApp","save":"Enregistrer les modifications"},"common":{"loading":"Chargement...","error":"Erreur","success":"Succès","cancel":"Annuler","confirm":"Confirmer","save":"Enregistrer","delete":"Supprimer","edit":"Modifier","search":"Rechercher","filter":"Filtrer","export":"Exporter","import":"Importer"}}');
+
+/***/ })
+
+};
+;
