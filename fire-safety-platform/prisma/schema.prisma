@@ -1,0 +1,121 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CIVILIAN
+  OFFICIAL
+}
+
+enum ReportStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum FireCause {
+  CAMPFIRE_UNATTENDED
+  CIGARETTE
+  AGRICULTURAL_BURNING
+  ELECTRICAL
+  LIGHTNING
+  ARSON
+  EQUIPMENT_MALFUNCTION
+  OTHER
+  UNKNOWN
+}
+
+model User {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  cin         String   @unique
+  phone       String
+  password    String
+  role        UserRole @default(CIVILIAN)
+  department  String?
+  position    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  reports     Report[]
+}
+
+model Incident {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  latitude    Float
+  longitude   Float
+  cause       FireCause
+  severity    Int       // 1-5 scale
+  status      ReportStatus @default(PENDING)
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Report {
+  id          String       @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String       @db.ObjectId
+  latitude    Float
+  longitude   Float
+  description String
+  images      String[]     // URLs to images (for future use)
+  status      ReportStatus @default(PENDING)
+  cause       FireCause?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  
+  user        User         @relation(fields: [userId], references: [id])
+}
+
+model Equipment {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  category        String   // VPI, Camions, Petit materiel, etc.
+  name            String
+  quantity        Int
+  condition       String   // Bon, Moyen, Mauvais
+  lastMaintenance DateTime?
+  location        String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model RetardantProduct {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  productName     String
+  acquisitionDate DateTime
+  storageLocation String   // Magasin or Aeroport
+  quantity        Int      // in liters
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Infrastructure {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  type        String   // Point d'eau, TPF, Poste Vigie, Piste Forestiere
+  name        String
+  latitude    Float?
+  longitude   Float?
+  status      String   // Operational, Maintenance, etc.
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model TruckDeployment {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  truckId     String
+  truckName   String
+  latitude    Float
+  longitude   Float
+  status      String   // En route, Sur place, Disponible
+  assignedTo  String?  // Incident ID or location
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
