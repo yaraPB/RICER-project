@@ -77,9 +77,11 @@ export default function ReportsListPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
           قائمة التقارير
+          <span className="text-lg font-normal text-gray-600 mr-2">Liste des Rapports</span>
         </h1>
         <p className="text-gray-600">
           جميع تقارير الحرائق المقدمة من المواطنين
+          <span className="text-sm text-gray-500 mr-2">Tous les rapports d'incendie soumis par les citoyens</span>
         </p>
       </div>
 

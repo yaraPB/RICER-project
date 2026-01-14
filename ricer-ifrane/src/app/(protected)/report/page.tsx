@@ -97,9 +97,11 @@ export default function ReportPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
           الإبلاغ عن حريق
+          <span className="text-lg font-normal text-gray-600 mr-2">Signaler un Incendie</span>
         </h1>
         <p className="text-gray-600">
           حدد موقع الحريق على الخريطة وأضف التفاصيل
+          <span className="text-sm text-gray-500 mr-2">Localisez l'incendie sur la carte et ajoutez les détails</span>
         </p>
       </div>
 

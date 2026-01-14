@@ -89,8 +89,12 @@ export default function AnalyticsPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
           الإحصائيات والتحليلات
+          <span className="text-lg font-normal text-gray-600 mr-2">Statistiques et Analyses</span>
         </h1>
-        <p className="text-gray-600">تحليل حوادث الحرائق خلال آخر 14 يوم</p>
+        <p className="text-gray-600">
+          تحليل حوادث الحرائق خلال آخر 14 يوم
+          <span className="text-sm text-gray-500 mr-2">Analyse des incidents sur les 14 derniers jours</span>
+        </p>
       </div>
 
       {/* Stats Cards */}

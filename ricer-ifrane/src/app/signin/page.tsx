@@ -35,7 +35,7 @@ export default function SignInPage() {
       }
 
       setUser(data.user);
-      router.push('/weather');
+      router.push('/map');
     } catch (err) {
       setError('حدث خطأ في الاتصال');
     } finally {
@@ -52,7 +52,12 @@ export default function SignInPage() {
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
               RICER Ifrane
             </h1>
-            <p className="text-gray-600">نظام الإبلاغ عن الحرائق في إفران</p>
+            <p className="text-gray-600">
+              نظام الإبلاغ عن الحرائق في إفران
+            </p>
+            <p className="text-sm text-gray-500">
+              Système de signalement des incendies à Ifrane
+            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -65,6 +70,7 @@ export default function SignInPage() {
             <div>
               <label className="block text-right text-sm font-medium text-gray-700 mb-2">
                 رقم البطاقة الوطنية
+                <span className="text-xs text-gray-500 mr-2">• CIN</span>
               </label>
               <input
                 type="text"
@@ -82,6 +88,7 @@ export default function SignInPage() {
             <div>
               <label className="block text-right text-sm font-medium text-gray-700 mb-2">
                 كلمة المرور
+                <span className="text-xs text-gray-500 mr-2">• Mot de passe</span>
               </label>
               <input
                 type="password"
@@ -100,7 +107,7 @@ export default function SignInPage() {
               disabled={loading}
               className="w-full bg-red-600 hover:bg-red-700 disabled:bg-red-300 text-white font-medium py-3 rounded-lg transition-colors"
             >
-              {loading ? 'جاري تسجيل الدخول...' : 'تسجيل الدخول'}
+              {loading ? 'جاري تسجيل الدخول...' : 'تسجيل الدخول • Connexion'}
             </button>
           </form>
 
@@ -112,6 +119,15 @@ export default function SignInPage() {
                 className="text-red-600 hover:text-red-700 font-medium"
               >
                 إنشاء حساب جديد
+              </Link>
+            </p>
+            <p className="text-sm text-gray-500 mt-1">
+              Pas de compte ?{' '}
+              <Link
+                href="/signup"
+                className="text-red-600 hover:text-red-700 font-medium"
+              >
+                Créer un compte
               </Link>
             </p>
           </div>

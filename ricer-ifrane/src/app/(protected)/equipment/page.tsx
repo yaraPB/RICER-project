@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
+import { useTranslation } from '@/hooks/useTranslation';
 import dynamic from 'next/dynamic';
 import type {
   Equipment,
@@ -33,12 +34,16 @@ interface EquipmentData {
 export default function EquipmentPage() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
+  const { t } = useTranslation();
   const [data, setData] = useState<EquipmentData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValues, setEditValues] = useState<{ quantity: number; condition: string }>({ quantity: 0, condition: '' });
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (user?.role !== 'OFFICIAL') {
-      router.push('/weather');
+      router.push('/map');
       return;
     }
     fetchEquipment();
@@ -51,7 +56,7 @@ export default function EquipmentPage() {
         const result = await response.json();
         setData(result);
       } else if (response.status === 403) {
-        router.push('/weather');
+        router.push('/map');
       }
     } catch (error) {
       console.error('Failed to fetch equipment:', error);
@@ -60,10 +65,47 @@ export default function EquipmentPage() {
     }
   };
 
+  const startEdit = (item: Equipment) => {
+    setEditingId(item.id);
+    setEditValues({ quantity: item.quantity, condition: item.condition });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditValues({ quantity: 0, condition: '' });
+  };
+
+  const saveEdit = async (id: string) => {
+    setSaving(true);
+    try {
+      const response = await fetch(`/api/equipment/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editValues),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        // Update local state
+        setData(prev => prev ? {
+          ...prev,
+          equipment: prev.equipment.map(item => 
+            item.id === id ? result.equipment : item
+          )
+        } : null);
+        setEditingId(null);
+      }
+    } catch (error) {
+      console.error('Failed to update equipment:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto p-6">
-        <div className="text-center py-12">جاري تحميل بيانات المعدات...</div>
+        <div className="text-center py-12">{t('loadingEquipment')}</div>
       </div>
     );
   }
@@ -78,34 +120,47 @@ export default function EquipmentPage() {
     );
   }
 
+  const getConditionColor = (condition: string) => {
+    if (condition === 'Bon') return 'bg-green-100 text-green-800';
+    if (condition === 'Moyen') return 'bg-yellow-100 text-yellow-800';
+    return 'bg-red-100 text-red-800';
+  };
+
+  const getConditionLabel = (condition: string) => {
+    if (condition === 'Bon') return t('good');
+    if (condition === 'Moyen') return t('average');
+    return t('poor');
+  };
+
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          إدارة المعدات والموارد
+          {t('equipmentTitle')}
         </h1>
-        <p className="text-gray-600">لوحة تحكم المسؤولين - متاح للمسؤولين فقط</p>
+        <p className="text-gray-600">{t('equipmentDesc')}</p>
       </div>
 
       {/* Truck Deployment Map */}
       <div className="bg-white rounded-xl shadow-lg p-6">
-        <h2 className="text-2xl font-bold mb-4 text-right">خريطة نشر الشاحنات</h2>
+        <h2 className="text-2xl font-bold mb-4 text-right">{t('truckDeploymentMap')}</h2>
         <TruckMap trucks={data.truckDeployments} />
       </div>
 
       {/* Equipment Table */}
       <div className="bg-white rounded-xl shadow-lg p-6">
-        <h2 className="text-2xl font-bold mb-4 text-right">جرد المعدات</h2>
+        <h2 className="text-2xl font-bold mb-4 text-right">{t('equipmentInventory')}</h2>
         <div className="overflow-x-auto">
           <table className="w-full text-right">
             <thead>
               <tr className="border-b-2 border-gray-200">
-                <th className="py-3 px-4 text-right font-bold">الفئة</th>
-                <th className="py-3 px-4 text-right font-bold">الاسم</th>
-                <th className="py-3 px-4 text-right font-bold">الكمية</th>
-                <th className="py-3 px-4 text-right font-bold">الحالة</th>
-                <th className="py-3 px-4 text-right font-bold">الموقع</th>
-                <th className="py-3 px-4 text-right font-bold">آخر صيانة</th>
+                <th className="py-3 px-4 text-right font-bold">{t('category')}</th>
+                <th className="py-3 px-4 text-right font-bold">{t('name')}</th>
+                <th className="py-3 px-4 text-right font-bold">{t('quantity')}</th>
+                <th className="py-3 px-4 text-right font-bold">{t('condition')}</th>
+                <th className="py-3 px-4 text-right font-bold">{t('locationLabel')}</th>
+                <th className="py-3 px-4 text-right font-bold">{t('lastMaintenance')}</th>
+                <th className="py-3 px-4 text-right font-bold"></th>
               </tr>
             </thead>
             <tbody>
@@ -113,27 +168,68 @@ export default function EquipmentPage() {
                 <tr key={item.id} className="border-b border-gray-100">
                   <td className="py-3 px-4">{item.category}</td>
                   <td className="py-3 px-4">{item.name}</td>
-                  <td className="py-3 px-4">{item.quantity}</td>
                   <td className="py-3 px-4">
-                    <span
-                      className={`px-2 py-1 rounded text-sm ${
-                        item.condition === 'Bon'
-                          ? 'bg-green-100 text-green-800'
-                          : item.condition === 'Moyen'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}
-                    >
-                      {item.condition}
-                    </span>
+                    {editingId === item.id ? (
+                      <input
+                        type="number"
+                        min="0"
+                        value={editValues.quantity}
+                        onChange={(e) => setEditValues({ ...editValues, quantity: parseInt(e.target.value) || 0 })}
+                        className="w-20 px-2 py-1 border border-gray-300 rounded text-right"
+                      />
+                    ) : (
+                      item.quantity
+                    )}
+                  </td>
+                  <td className="py-3 px-4">
+                    {editingId === item.id ? (
+                      <select
+                        value={editValues.condition}
+                        onChange={(e) => setEditValues({ ...editValues, condition: e.target.value })}
+                        className="px-2 py-1 border border-gray-300 rounded text-right"
+                      >
+                        <option value="Bon">{t('good')}</option>
+                        <option value="Moyen">{t('average')}</option>
+                        <option value="Mauvais">{t('poor')}</option>
+                      </select>
+                    ) : (
+                      <span className={`px-2 py-1 rounded text-sm ${getConditionColor(item.condition)}`}>
+                        {getConditionLabel(item.condition)}
+                      </span>
+                    )}
                   </td>
                   <td className="py-3 px-4">{item.location}</td>
                   <td className="py-3 px-4 text-sm text-gray-500">
                     {item.lastMaintenance
-                      ? new Date(item.lastMaintenance).toLocaleDateString(
-                          'ar-MA'
-                        )
+                      ? new Date(item.lastMaintenance).toLocaleDateString('ar-MA')
                       : '-'}
+                  </td>
+                  <td className="py-3 px-4">
+                    {editingId === item.id ? (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => saveEdit(item.id)}
+                          disabled={saving}
+                          className="px-3 py-1 bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white text-sm rounded transition-colors"
+                        >
+                          {saving ? t('saving') : t('save')}
+                        </button>
+                        <button
+                          onClick={cancelEdit}
+                          disabled={saving}
+                          className="px-3 py-1 bg-gray-300 hover:bg-gray-400 text-gray-700 text-sm rounded transition-colors"
+                        >
+                          {t('cancel')}
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => startEdit(item)}
+                        className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors"
+                      >
+                        {t('edit')}
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -144,17 +240,15 @@ export default function EquipmentPage() {
 
       {/* Retardant Products */}
       <div className="bg-white rounded-xl shadow-lg p-6">
-        <h2 className="text-2xl font-bold mb-4 text-right">
-          منتجات مثبطات الحريق
-        </h2>
+        <h2 className="text-2xl font-bold mb-4 text-right">{t('retardantProducts')}</h2>
         <div className="overflow-x-auto">
           <table className="w-full text-right">
             <thead>
               <tr className="border-b-2 border-gray-200">
-                <th className="py-3 px-4 text-right font-bold">اسم المنتج</th>
-                <th className="py-3 px-4 text-right font-bold">الكمية (لتر)</th>
-                <th className="py-3 px-4 text-right font-bold">الموقع</th>
-                <th className="py-3 px-4 text-right font-bold">تاريخ الشراء</th>
+                <th className="py-3 px-4 text-right font-bold">{t('productName')}</th>
+                <th className="py-3 px-4 text-right font-bold">{t('quantityLiters')}</th>
+                <th className="py-3 px-4 text-right font-bold">{t('locationLabel')}</th>
+                <th className="py-3 px-4 text-right font-bold">{t('acquisitionDate')}</th>
               </tr>
             </thead>
             <tbody>
@@ -166,9 +260,7 @@ export default function EquipmentPage() {
                   </td>
                   <td className="py-3 px-4">{product.storageLocation}</td>
                   <td className="py-3 px-4 text-sm text-gray-500">
-                    {new Date(product.acquisitionDate).toLocaleDateString(
-                      'ar-MA'
-                    )}
+                    {new Date(product.acquisitionDate).toLocaleDateString('ar-MA')}
                   </td>
                 </tr>
               ))}
@@ -177,29 +269,27 @@ export default function EquipmentPage() {
         </div>
         <div className="mt-4 p-4 bg-blue-50 rounded-lg">
           <div className="text-right font-bold text-blue-800">
-            المجموع الكلي:{' '}
+            {t('totalAmount')}:{' '}
             {data.retardantProducts
               .reduce((sum, p) => sum + p.quantity, 0)
               .toLocaleString()}{' '}
-            لتر
+            {t('liters')}
           </div>
         </div>
       </div>
 
       {/* Infrastructure */}
       <div className="bg-white rounded-xl shadow-lg p-6">
-        <h2 className="text-2xl font-bold mb-4 text-right">
-          البنية التحتية
-        </h2>
+        <h2 className="text-2xl font-bold mb-4 text-right">{t('infrastructure')}</h2>
         <div className="overflow-x-auto">
           <table className="w-full text-right">
             <thead>
               <tr className="border-b-2 border-gray-200">
-                <th className="py-3 px-4 text-right font-bold">النوع</th>
-                <th className="py-3 px-4 text-right font-bold">الاسم</th>
-                <th className="py-3 px-4 text-right font-bold">الحالة</th>
-                <th className="py-3 px-4 text-right font-bold">الوصف</th>
-                <th className="py-3 px-4 text-right font-bold">الموقع</th>
+                <th className="py-3 px-4 text-right font-bold">{t('type')}</th>
+                <th className="py-3 px-4 text-right font-bold">{t('name')}</th>
+                <th className="py-3 px-4 text-right font-bold">{t('status')}</th>
+                <th className="py-3 px-4 text-right font-bold">{t('description')}</th>
+                <th className="py-3 px-4 text-right font-bold">{t('locationLabel')}</th>
               </tr>
             </thead>
             <tbody>
@@ -224,9 +314,7 @@ export default function EquipmentPage() {
                   <td className="py-3 px-4 text-sm">{item.description}</td>
                   <td className="py-3 px-4 text-sm text-gray-500">
                     {item.latitude && item.longitude
-                      ? `${item.latitude.toFixed(4)}, ${item.longitude.toFixed(
-                          4
-                        )}`
+                      ? `${item.latitude.toFixed(4)}, ${item.longitude.toFixed(4)}`
                       : '-'}
                   </td>
                 </tr>

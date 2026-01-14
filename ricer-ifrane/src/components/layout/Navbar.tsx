@@ -3,11 +3,14 @@
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/store/authStore';
+import { useTranslation } from '@/hooks/useTranslation';
+import LanguageSwitcher from './LanguageSwitcher';
 
 export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
   const { user, logout } = useAuthStore();
+  const { t } = useTranslation();
 
   const handleLogout = async () => {
     try {
@@ -20,15 +23,14 @@ export default function Navbar() {
   };
 
   const navItems = [
-    { href: '/weather', label: 'الطقس', icon: '🌤️' },
-    { href: '/map', label: 'خريطة الحرائق', icon: '🗺️' },
-    { href: '/analytics', label: 'الإحصائيات', icon: '📊' },
-    { href: '/report', label: 'إبلاغ عن حريق', icon: '🚨' },
-    { href: '/reports-list', label: 'التقارير', icon: '📋' },
+    { href: '/map', label: t('fireMap'), icon: '🗺️' },
+    { href: '/analytics', label: t('analytics'), icon: '📊' },
+    { href: '/report', label: t('reportFire'), icon: '🚨' },
+    { href: '/reports-list', label: t('reports'), icon: '📋' },
   ];
 
   if (user?.role === 'OFFICIAL') {
-    navItems.push({ href: '/equipment', label: 'المعدات', icon: '🚒' });
+    navItems.push({ href: '/equipment', label: t('equipment'), icon: '🚒' });
   }
 
   return (
@@ -36,7 +38,7 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link href="/weather" className="flex items-center gap-2">
+          <Link href="/map" className="flex items-center gap-2">
             <span className="text-2xl">🔥</span>
             <span className="font-bold text-xl text-red-600">
               RICER Ifrane
@@ -63,12 +65,13 @@ export default function Navbar() {
 
           {/* User Menu */}
           <div className="flex items-center gap-4">
+            <LanguageSwitcher />
             <div className="text-right hidden sm:block">
               <div className="text-sm font-medium text-gray-900">
                 {user?.cin}
               </div>
               <div className="text-xs text-gray-500">
-                {user?.role === 'OFFICIAL' ? 'مسؤول' : 'مواطن'}
+                {user?.role === 'OFFICIAL' ? t('official') : t('civilian')}
                 {user?.department && ` - ${user.department}`}
               </div>
             </div>
@@ -76,7 +79,7 @@ export default function Navbar() {
               onClick={handleLogout}
               className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors text-sm font-medium"
             >
-              تسجيل الخروج
+              {t('logout')}
             </button>
           </div>
         </div>

@@ -59,7 +59,7 @@ export default function SignUpPage() {
       }
 
       setUser(data.user);
-      router.push('/weather');
+      router.push('/map');
     } catch (err) {
       setError('حدث خطأ في الاتصال');
     } finally {
@@ -76,7 +76,12 @@ export default function SignUpPage() {
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
               إنشاء حساب جديد
             </h1>
-            <p className="text-gray-600">انضم إلى نظام RICER Ifrane</p>
+            <p className="text-gray-600">
+              انضم إلى نظام RICER Ifrane
+            </p>
+            <p className="text-sm text-gray-500">
+              Rejoignez le système RICER Ifrane
+            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
