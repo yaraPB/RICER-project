@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/store/authStore';
+import { useTranslation } from '@/hooks/useTranslation';
 import { STATUS_LABELS, FIRE_CAUSES, formatDate } from '@/utils/constants';
 import type { Report } from '@/types';
 
 export default function ReportsListPage() {
   const user = useAuthStore((state) => state.user);
+  const { t, language } = useTranslation();
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
@@ -64,10 +66,34 @@ export default function ReportsListPage() {
     }
   };
 
+  const getStatusLabel = (status: string) => {
+    if (status === 'PENDING') return t('pending');
+    if (status === 'IN_PROGRESS') return t('inProgress');
+    if (status === 'COMPLETED') return t('completed');
+    return status;
+  };
+
+  const getCauseLabel = (causeKey: string | undefined) => {
+    if (!causeKey) return t('unknown');
+    
+    const causeMap: Record<string, keyof typeof t> = {
+      'CAMPFIRE_UNATTENDED': 'campfireUnattended',
+      'CIGARETTE': 'cigarette',
+      'AGRICULTURAL_BURNING': 'agriculturalBurning',
+      'ELECTRICAL': 'electrical',
+      'LIGHTNING': 'lightning',
+      'ARSON': 'arson',
+      'EQUIPMENT_MALFUNCTION': 'equipmentMalfunction',
+      'OTHER': 'other',
+      'UNKNOWN': 'unknown',
+    };
+    return t(causeMap[causeKey] || 'unknown');
+  };
+
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto p-6">
-        <div className="text-center py-12">جاري تحميل التقارير...</div>
+        <div className="text-center py-12">{t('loadingReports')}</div>
       </div>
     );
   }
@@ -76,12 +102,10 @@ export default function ReportsListPage() {
     <div className="max-w-7xl mx-auto p-6">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          قائمة التقارير
-          <span className="text-lg font-normal text-gray-600 mr-2">Liste des Rapports</span>
+          {t('reportsListTitle')}
         </h1>
         <p className="text-gray-600">
-          جميع تقارير الحرائق المقدمة من المواطنين
-          <span className="text-sm text-gray-500 mr-2">Tous les rapports d'incendie soumis par les citoyens</span>
+          {t('reportsListDesc')}
         </p>
       </div>
 
@@ -89,9 +113,9 @@ export default function ReportsListPage() {
         <div className="bg-gray-50 rounded-lg p-12 text-center">
           <div className="text-6xl mb-4">📋</div>
           <h3 className="text-xl font-bold text-gray-700 mb-2">
-            لا توجد تقارير
+            {t('noReports')}
           </h3>
-          <p className="text-gray-500">لم يتم تقديم أي تقارير بعد</p>
+          <p className="text-gray-500">{t('noReportsDesc')}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6">
@@ -108,7 +132,7 @@ export default function ReportsListPage() {
                         report.status
                       )}`}
                     >
-                      {STATUS_LABELS[report.status]}
+                      {getStatusLabel(report.status)}
                     </span>
                     <div className="text-sm text-gray-500">
                       {formatDate(report.createdAt)}
@@ -116,19 +140,18 @@ export default function ReportsListPage() {
                   </div>
 
                   <div className="text-sm text-gray-600 mb-1">
-                    <span className="font-medium">المبلّغ:</span> {report.user?.cin}
+                    <span className="font-medium">{t('reporter')}:</span> {report.user?.cin}
                   </div>
 
                   {report.cause && (
                     <div className="text-sm text-gray-600 mb-1">
-                      <span className="font-medium">السبب:</span>{' '}
-                      {FIRE_CAUSES[report.cause as keyof typeof FIRE_CAUSES] ||
-                        report.cause}
+                      <span className="font-medium">{t('cause')}:</span>{' '}
+                      {getCauseLabel(report.cause)}
                     </div>
                   )}
 
                   <div className="text-sm text-gray-600">
-                    <span className="font-medium">الموقع:</span>{' '}
+                    <span className="font-medium">{t('location')}:</span>{' '}
                     {report.latitude.toFixed(6)}, {report.longitude.toFixed(6)}
                   </div>
                 </div>
@@ -138,7 +161,7 @@ export default function ReportsListPage() {
 
               <div className="bg-gray-50 rounded-lg p-4 mb-4">
                 <div className="text-sm font-medium text-gray-700 mb-2 text-right">
-                  الوصف:
+                  {t('description')}:
                 </div>
                 <p className="text-gray-800 text-right">{report.description}</p>
               </div>
@@ -152,7 +175,7 @@ export default function ReportsListPage() {
                     }
                     className="flex-1 px-4 py-2 bg-red-100 hover:bg-red-200 disabled:bg-gray-100 disabled:text-gray-400 text-red-700 rounded-lg text-sm font-medium transition-colors"
                   >
-                    قيد الانتظار
+                    {t('pending')}
                   </button>
                   <button
                     onClick={() =>
@@ -164,7 +187,7 @@ export default function ReportsListPage() {
                     }
                     className="flex-1 px-4 py-2 bg-orange-100 hover:bg-orange-200 disabled:bg-gray-100 disabled:text-gray-400 text-orange-700 rounded-lg text-sm font-medium transition-colors"
                   >
-                    قيد المعالجة
+                    {t('inProgress')}
                   </button>
                   <button
                     onClick={() => handleStatusUpdate(report.id, 'COMPLETED')}
@@ -173,7 +196,7 @@ export default function ReportsListPage() {
                     }
                     className="flex-1 px-4 py-2 bg-green-100 hover:bg-green-200 disabled:bg-gray-100 disabled:text-gray-400 text-green-700 rounded-lg text-sm font-medium transition-colors"
                   >
-                    مكتمل
+                    {t('completed')}
                   </button>
                 </div>
               )}

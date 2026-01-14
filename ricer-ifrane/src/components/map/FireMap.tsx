@@ -111,7 +111,8 @@ export default function FireMap() {
 
       {/* Legend */}
       <div className="absolute bottom-6 left-6 bg-white rounded-lg shadow-lg p-4 z-[1000]">
-        <div className="text-sm font-bold mb-3 text-right">دليل الألوان</div>
+        <div className="text-sm font-bold mb-3 text-right"> 
+Guide des couleurs - دليل الألوان</div>
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <div

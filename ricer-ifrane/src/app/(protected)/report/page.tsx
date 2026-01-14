@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslation } from '@/hooks/useTranslation';
 import dynamic from 'next/dynamic';
 import { FIRE_CAUSES } from '@/utils/constants';
 
@@ -19,6 +20,7 @@ const LocationPicker = dynamic(
 
 export default function ReportPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     location: null as { lat: number; lng: number } | null,
     description: '',
@@ -78,15 +80,30 @@ export default function ReportPage() {
     }
   };
 
+  const getCauseLabel = (causeKey: string) => {
+    const causeMap: Record<string, keyof typeof t> = {
+      'CAMPFIRE_UNATTENDED': 'campfireUnattended',
+      'CIGARETTE': 'cigarette',
+      'AGRICULTURAL_BURNING': 'agriculturalBurning',
+      'ELECTRICAL': 'electrical',
+      'LIGHTNING': 'lightning',
+      'ARSON': 'arson',
+      'EQUIPMENT_MALFUNCTION': 'equipmentMalfunction',
+      'OTHER': 'other',
+      'UNKNOWN': 'unknown',
+    };
+    return t(causeMap[causeKey] || 'unknown');
+  };
+
   if (success) {
     return (
       <div className="max-w-4xl mx-auto p-6">
         <div className="bg-green-50 border border-green-200 rounded-lg p-8 text-center">
           <div className="text-6xl mb-4">✅</div>
           <h2 className="text-2xl font-bold text-green-800 mb-2">
-            تم إرسال التقرير بنجاح
+            {t('reportSuccess')}
           </h2>
-          <p className="text-green-700">جاري التوجيه إلى قائمة التقارير...</p>
+          <p className="text-green-700">{t('redirecting')}</p>
         </div>
       </div>
     );
@@ -96,12 +113,10 @@ export default function ReportPage() {
     <div className="max-w-4xl mx-auto p-6">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          الإبلاغ عن حريق
-          <span className="text-lg font-normal text-gray-600 mr-2">Signaler un Incendie</span>
+          {t('reportFireTitle')}
         </h1>
         <p className="text-gray-600">
-          حدد موقع الحريق على الخريطة وأضف التفاصيل
-          <span className="text-sm text-gray-500 mr-2">Localisez l'incendie sur la carte et ajoutez les détails</span>
+          {t('reportFireDesc')}
         </p>
       </div>
 
@@ -115,7 +130,7 @@ export default function ReportPage() {
         {/* Location Picker */}
         <div>
           <label className="block text-right text-lg font-medium text-gray-700 mb-3">
-            موقع الحريق
+            {t('fireLocation')}
           </label>
           <LocationPicker
             onLocationSelect={handleLocationSelect}
@@ -123,7 +138,7 @@ export default function ReportPage() {
           />
           {formData.location && (
             <div className="mt-2 text-sm text-gray-600 text-right">
-              الموقع المحدد: {formData.location.lat.toFixed(6)},{' '}
+              {t('selectedLocation')}: {formData.location.lat.toFixed(6)},{' '}
               {formData.location.lng.toFixed(6)}
             </div>
           )}
@@ -132,7 +147,7 @@ export default function ReportPage() {
         {/* Description */}
         <div>
           <label className="block text-right text-lg font-medium text-gray-700 mb-3">
-            وصف الحريق
+            {t('fireDescription')}
           </label>
           <textarea
             value={formData.description}
@@ -141,7 +156,7 @@ export default function ReportPage() {
             }
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-right"
             rows={5}
-            placeholder="اكتب وصفاً تفصيلياً للحريق (الحجم، الدخان، الخطورة...)"
+            placeholder={t('descriptionPlaceholder')}
             required
           />
         </div>
@@ -149,7 +164,7 @@ export default function ReportPage() {
         {/* Cause */}
         <div>
           <label className="block text-right text-lg font-medium text-gray-700 mb-3">
-            السبب المحتمل (اختياري)
+            {t('probableCause')}
           </label>
           <select
             value={formData.cause}
@@ -158,10 +173,10 @@ export default function ReportPage() {
             }
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-right"
           >
-            <option value="">اختر السبب إذا كنت تعرفه</option>
-            {Object.entries(FIRE_CAUSES).map(([key, label]) => (
+            <option value="">{t('selectCause')}</option>
+            {Object.keys(FIRE_CAUSES).map((key) => (
               <option key={key} value={key}>
-                {label}
+                {getCauseLabel(key)}
               </option>
             ))}
           </select>
@@ -174,14 +189,14 @@ export default function ReportPage() {
             onClick={() => router.back()}
             className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-3 rounded-lg transition-colors"
           >
-            إلغاء
+            {t('cancel')}
           </button>
           <button
             type="submit"
             disabled={loading}
             className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-red-300 text-white font-medium py-3 rounded-lg transition-colors"
           >
-            {loading ? 'جاري الإرسال...' : 'إرسال التقرير 🚨'}
+            {loading ? t('submitting') : `${t('submitReport')} 🚨`}
           </button>
         </div>
       </form>
