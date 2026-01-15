@@ -72,6 +72,15 @@ export async function POST(request: Request) {
       },
     });
 
+    console.log('🔥 Report created:', report.id);
+
+    // Try to send WhatsApp - won't crash if it fails
+    try {
+      await sendWhatsAppNotifications(report);
+    } catch (error) {
+      console.error('WhatsApp error (non-blocking):', error);
+    }
+
     return NextResponse.json({
       report,
       message: 'تم إرسال التقرير بنجاح',
@@ -82,5 +91,82 @@ export async function POST(request: Request) {
       { error: 'حدث خطأ أثناء إنشاء التقرير' },
       { status: 500 }
     );
+  }
+}
+
+async function sendWhatsAppNotifications(report: any) {
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  const whatsappFrom = process.env.TWILIO_WHATSAPP_NUMBER;
+  const testPhone = process.env.TEST_PHONE_NUMBER;
+
+  if (!accountSid || !authToken || !whatsappFrom) {
+    console.log('⚠️  Twilio not configured');
+    return;
+  }
+
+  console.log('📱 Twilio configured, attempting to send...');
+
+  const twilio = require('twilio');
+  const client = twilio(accountSid, authToken);
+
+  // Get officials
+  const officials = await prisma.user.findMany({
+    where: { role: 'OFFICIAL' },
+    select: { phone: true },
+  });
+
+  let recipients = officials
+    .map((o) => `whatsapp:${o.phone}`)
+    .filter((p) => p.includes('+'));
+
+  // If no officials, use test phone
+  if (recipients.length === 0 && testPhone && testPhone !== '+212XXXXXXXXX') {
+    recipients = [`whatsapp:${testPhone}`];
+    console.log('📞 No officials, using test number:', testPhone);
+  }
+
+  if (recipients.length === 0) {
+    console.log('⚠️  No recipients to send to');
+    return;
+  }
+
+  const googleMapsLink = `https://www.google.com/maps?q=${report.latitude},${report.longitude}`;
+  
+  const message = `🔥 *ALERTE INCENDIE - RICER Ifrane*
+
+📍 *Localisation:*
+${report.latitude.toFixed(6)}, ${report.longitude.toFixed(6)}
+Voir sur Google Maps: ${googleMapsLink}
+
+📝 *Description:*
+${report.description}
+
+👤 *Signalé par:* ${report.user.cin}
+🕐 *Date:* ${new Date(report.createdAt).toLocaleString('fr-FR')}
+
+🆔 ID: ${report.id}
+
+⚠️ *Action requise immédiatement*`;
+
+  console.log(`📨 Sending to ${recipients.length} recipient(s)`);
+
+  for (const recipient of recipients) {
+    try {
+      console.log(`📤 Sending to: ${recipient}`);
+      
+      const result = await client.messages.create({
+        from: whatsappFrom,
+        to: recipient,
+        body: message,
+      });
+
+      console.log(`✅ Sent! SID: ${result.sid}`);
+    } catch (error: any) {
+      console.error(`❌ Failed to ${recipient}:`, error.message);
+      if (error.code) console.error('Error code:', error.code);
+    }
+    
+    await new Promise((r) => setTimeout(r, 1000));
   }
 }
