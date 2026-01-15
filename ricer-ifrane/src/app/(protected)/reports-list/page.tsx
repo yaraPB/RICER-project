@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { useTranslation } from '@/hooks/useTranslation';
-import { STATUS_LABELS, FIRE_CAUSES, formatDate } from '@/utils/constants';
 import type { Report } from '@/types';
 
 export default function ReportsListPage() {
@@ -90,6 +89,24 @@ export default function ReportsListPage() {
     return t(causeMap[causeKey] || 'unknown');
   };
 
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleString(
+      language === 'ar' ? 'ar-MA' : 'fr-FR',
+      {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      }
+    );
+  };
+
+  const isRTL = language === 'ar';
+  const textAlign = isRTL ? 'text-right' : 'text-left';
+  const flexAlign = isRTL ? 'justify-end' : 'justify-start';
+
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto p-6">
@@ -101,10 +118,10 @@ export default function ReportsListPage() {
   return (
     <div className="max-w-7xl mx-auto p-6">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+        <h1 className={`text-3xl font-bold text-gray-900 mb-2 ${textAlign}`}>
           {t('reportsListTitle')}
         </h1>
-        <p className="text-gray-600">
+        <p className={`text-gray-600 ${textAlign}`}>
           {t('reportsListDesc')}
         </p>
       </div>
@@ -123,10 +140,11 @@ export default function ReportsListPage() {
             <div
               key={report.id}
               className="bg-white rounded-lg shadow-lg p-6 border border-gray-200"
+              dir={isRTL ? 'rtl' : 'ltr'}
             >
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1 text-right">
-                  <div className="flex items-center gap-3 justify-end mb-2">
+              <div className={`flex items-start ${isRTL ? 'flex-row-reverse' : 'flex-row'} justify-between mb-4`}>
+                <div className={`flex-1 ${textAlign}`}>
+                  <div className={`flex items-center gap-3 ${flexAlign} mb-2`}>
                     <span
                       className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(
                         report.status
@@ -139,31 +157,31 @@ export default function ReportsListPage() {
                     </div>
                   </div>
 
-                  <div className="text-sm text-gray-600 mb-1">
+                  <div className={`text-sm text-gray-600 mb-1 ${textAlign}`}>
                     <span className="font-medium">{t('reporter')}:</span> {report.user?.cin}
                   </div>
 
                   {report.cause && (
-                    <div className="text-sm text-gray-600 mb-1">
+                    <div className={`text-sm text-gray-600 mb-1 ${textAlign}`}>
                       <span className="font-medium">{t('cause')}:</span>{' '}
                       {getCauseLabel(report.cause)}
                     </div>
                   )}
 
-                  <div className="text-sm text-gray-600">
+                  <div className={`text-sm text-gray-600 ${textAlign}`}>
                     <span className="font-medium">{t('location')}:</span>{' '}
                     {report.latitude.toFixed(6)}, {report.longitude.toFixed(6)}
                   </div>
                 </div>
 
-                <div className="text-4xl mr-4">🔥</div>
+                <div className={`text-4xl ${isRTL ? 'mr-4' : 'ml-4'}`}>🔥</div>
               </div>
 
               <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                <div className="text-sm font-medium text-gray-700 mb-2 text-right">
+                <div className={`text-sm font-medium text-gray-700 mb-2 ${textAlign}`}>
                   {t('description')}:
                 </div>
-                <p className="text-gray-800 text-right">{report.description}</p>
+                <p className={`text-gray-800 ${textAlign}`}>{report.description}</p>
               </div>
 
               {user?.role === 'OFFICIAL' && (

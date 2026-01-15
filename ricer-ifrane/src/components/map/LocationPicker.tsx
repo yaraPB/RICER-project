@@ -56,8 +56,9 @@ export default function LocationPicker({
         />
       </MapContainer>
       <div className="absolute top-4 right-4 bg-white rounded-lg shadow-lg p-3 z-[1000] text-sm">
-        <div className="font-bold mb-1 text-right">📍 اضغط على الخريطة</div>
-        <div className="text-gray-600 text-right">لتحديد موقع الحريق</div>
+        <div className="font-bold mb-1 text-right"> Appuyer sur la carte 📍 اضغط على الخريطة</div>
+        <div className="text-gray-600 text-right">Pour déterminer l'emplacement de l'incendie - لتحديد موقع الحريق
+</div>
       </div>
     </div>
   );

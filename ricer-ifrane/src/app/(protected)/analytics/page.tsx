@@ -14,7 +14,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
-import { FIRE_CAUSES } from '@/utils/constants';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface AnalyticsData {
   timeline: { date: string; count: number }[];
@@ -39,6 +39,7 @@ const COLORS = [
 ];
 
 export default function AnalyticsPage() {
+  const { t, language } = useTranslation();
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -60,10 +61,25 @@ export default function AnalyticsPage() {
     }
   };
 
+  const getCauseLabel = (causeKey: string) => {
+    const causeMap: Record<string, keyof typeof t> = {
+      'CAMPFIRE_UNATTENDED': 'campfireUnattended',
+      'CIGARETTE': 'cigarette',
+      'AGRICULTURAL_BURNING': 'agriculturalBurning',
+      'ELECTRICAL': 'electrical',
+      'LIGHTNING': 'lightning',
+      'ARSON': 'arson',
+      'EQUIPMENT_MALFUNCTION': 'equipmentMalfunction',
+      'OTHER': 'other',
+      'UNKNOWN': 'unknown',
+    };
+    return t(causeMap[causeKey] || 'unknown');
+  };
+
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto p-6">
-        <div className="text-center py-12">جاري تحميل الإحصائيات...</div>
+        <div className="text-center py-12">{t('loadingStats')}</div>
       </div>
     );
   }
@@ -72,7 +88,7 @@ export default function AnalyticsPage() {
     return (
       <div className="max-w-7xl mx-auto p-6">
         <div className="bg-red-50 text-red-600 p-4 rounded-lg text-center">
-          فشل في جلب الإحصائيات
+          {language === 'ar' ? 'فشل في جلب الإحصائيات' : 'Échec du chargement des statistiques'}
         </div>
       </div>
     );
@@ -81,20 +97,19 @@ export default function AnalyticsPage() {
   // Format causes for display
   const causesData = data.causes.map((item) => ({
     ...item,
-    name: FIRE_CAUSES[item.cause as keyof typeof FIRE_CAUSES] || item.cause,
+    name: getCauseLabel(item.cause),
   }));
+
+  const countLabel = language === 'ar' ? 'العدد' : 'Nombre';
+  const fireLabel = language === 'ar' ? 'حريق' : 'incendie(s)';
 
   return (
     <div className="max-w-7xl mx-auto p-6">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          الإحصائيات والتحليلات
-          <span className="text-lg font-normal text-gray-600 mr-2">Statistiques et Analyses</span>
+          {t('analyticsTitle')}
         </h1>
-        <p className="text-gray-600">
-          تحليل حوادث الحرائق خلال آخر 14 يوم
-          <span className="text-sm text-gray-500 mr-2">Analyse des incidents sur les 14 derniers jours</span>
-        </p>
+        <p className="text-gray-600">{t('analyticsDesc')}</p>
       </div>
 
       {/* Stats Cards */}
@@ -105,7 +120,7 @@ export default function AnalyticsPage() {
             <div className="text-3xl font-bold text-red-600">
               {data.stats.totalIncidents}
             </div>
-            <div className="text-sm text-gray-600 mt-1">إجمالي الحرائق</div>
+            <div className="text-sm text-gray-600 mt-1">{t('totalFires')}</div>
           </div>
         </div>
 
@@ -115,7 +130,7 @@ export default function AnalyticsPage() {
             <div className="text-3xl font-bold text-orange-600">
               {data.stats.daysWithFires}
             </div>
-            <div className="text-sm text-gray-600 mt-1">أيام بها حرائق</div>
+            <div className="text-sm text-gray-600 mt-1">{t('daysWithFires')}</div>
           </div>
         </div>
 
@@ -125,7 +140,7 @@ export default function AnalyticsPage() {
             <div className="text-3xl font-bold text-blue-600">
               {data.stats.dailyAverage}
             </div>
-            <div className="text-sm text-gray-600 mt-1">متوسط يومي</div>
+            <div className="text-sm text-gray-600 mt-1">{t('dailyAverage')}</div>
           </div>
         </div>
       </div>
@@ -133,7 +148,7 @@ export default function AnalyticsPage() {
       {/* Timeline Chart */}
       <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
         <h2 className="text-xl font-bold mb-4 text-right">
-          تطور الحرائق خلال آخر 14 يوم
+          {t('fireEvolution')}
         </h2>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={data.timeline}>
@@ -149,9 +164,11 @@ export default function AnalyticsPage() {
             <Tooltip
               labelFormatter={(value) => {
                 const date = new Date(value);
-                return date.toLocaleDateString('ar-MA');
+                return date.toLocaleDateString(
+                  language === 'ar' ? 'ar-MA' : 'fr-FR'
+                );
               }}
-              formatter={(value) => [`${value} حريق`, 'العدد']}
+              formatter={(value) => [`${value} ${fireLabel}`, countLabel]}
             />
             <Line
               type="monotone"
@@ -167,20 +184,18 @@ export default function AnalyticsPage() {
       {/* Causes Pie Chart */}
       <div className="bg-white rounded-xl shadow-lg p-6">
         <h2 className="text-xl font-bold mb-4 text-right">
-          توزيع الحرائق حسب السبب
+          {t('distributionByCause')}
         </h2>
         <div className="flex flex-col md:flex-row items-center gap-8">
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={350}>
             <PieChart>
               <Pie
                 data={causesData}
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={({ name, percent }) =>
-                  `${name} (${(percent * 100).toFixed(0)}%)`
-                }
-                outerRadius={100}
+                label={false}
+                outerRadius={120}
                 fill="#8884d8"
                 dataKey="count"
               >
@@ -191,16 +206,30 @@ export default function AnalyticsPage() {
                   />
                 ))}
               </Pie>
-              <Tooltip formatter={(value) => [`${value} حريق`, 'العدد']} />
+              <Tooltip
+                formatter={(value, name, props) => [
+                  `${value} ${fireLabel}`,
+                  props.payload.name
+                ]}
+                contentStyle={{
+                  backgroundColor: 'white',
+                  border: '1px solid #ccc',
+                  borderRadius: '8px',
+                  padding: '10px',
+                  color: '#000',
+                }}
+                labelStyle={{ color: '#000', fontWeight: 'bold' }}
+                itemStyle={{ color: '#000' }}
+              />
             </PieChart>
           </ResponsiveContainer>
 
-          {/* Legend */}
-          <div className="space-y-2">
+          {/* Legend on the side */}
+          <div className="space-y-2 min-w-[250px]">
             {causesData.map((entry, index) => (
               <div key={entry.cause} className="flex items-center gap-3">
                 <div
-                  className="w-4 h-4 rounded"
+                  className="w-4 h-4 rounded flex-shrink-0"
                   style={{ backgroundColor: COLORS[index % COLORS.length] }}
                 ></div>
                 <span className="text-sm">
