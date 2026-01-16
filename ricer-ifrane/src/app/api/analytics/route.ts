@@ -10,11 +10,11 @@ export async function GET() {
       return NextResponse.json({ error: 'غير مصرح' }, { status: 401 });
     }
 
-    // Get incidents from last 14 days
+    // Get reports from last 14 days
     const fourteenDaysAgo = new Date();
     fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
 
-    const incidents = await prisma.incident.findMany({
+    const reports = await prisma.report.findMany({
       where: {
         createdAt: {
           gte: fourteenDaysAgo,
@@ -24,15 +24,15 @@ export async function GET() {
     });
 
     // Group by date
-    const incidentsByDate: Record<string, number> = {};
-    const incidentsByCause: Record<string, number> = {};
+    const reportsByDate: Record<string, number> = {};
+    const reportsByCause: Record<string, number> = {};
 
-    incidents.forEach((incident) => {
-      const date = incident.createdAt.toISOString().split('T')[0];
-      incidentsByDate[date] = (incidentsByDate[date] || 0) + 1;
+    reports.forEach((report) => {
+      const date = report.createdAt.toISOString().split('T')[0];
+      reportsByDate[date] = (reportsByDate[date] || 0) + 1;
 
-      incidentsByCause[incident.cause] =
-        (incidentsByCause[incident.cause] || 0) + 1;
+      const cause = report.cause || 'UNKNOWN';
+      reportsByCause[cause] = (reportsByCause[cause] || 0) + 1;
     });
 
     // Fill in missing dates with 0
@@ -43,12 +43,12 @@ export async function GET() {
       const dateStr = date.toISOString().split('T')[0];
       dateArray.push({
         date: dateStr,
-        count: incidentsByDate[dateStr] || 0,
+        count: reportsByDate[dateStr] || 0,
       });
     }
 
     // Format causes for pie chart
-    const causesArray = Object.entries(incidentsByCause).map(
+    const causesArray = Object.entries(reportsByCause).map(
       ([cause, count]) => ({
         cause,
         count,
@@ -56,16 +56,16 @@ export async function GET() {
     );
 
     // Calculate stats
-    const totalIncidents = incidents.length;
-    const daysWithFires = Object.keys(incidentsByDate).length;
+    const totalReports = reports.length;
+    const daysWithFires = Object.keys(reportsByDate).length;
     const dailyAverage =
-      daysWithFires > 0 ? (totalIncidents / daysWithFires).toFixed(1) : '0';
+      daysWithFires > 0 ? (totalReports / daysWithFires).toFixed(1) : '0';
 
     return NextResponse.json({
       timeline: dateArray,
       causes: causesArray,
       stats: {
-        totalIncidents,
+        totalIncidents: totalReports,
         daysWithFires,
         dailyAverage,
       },
