@@ -62,7 +62,7 @@ export default function AnalyticsPage() {
   };
 
   const getCauseLabel = (causeKey: string) => {
-    const causeMap: Record<string, keyof typeof t> = {
+    const causeMap: Record<string, string> = {
       'CAMPFIRE_UNATTENDED': 'campfireUnattended',
       'CIGARETTE': 'cigarette',
       'AGRICULTURAL_BURNING': 'agriculturalBurning',
@@ -73,7 +73,7 @@ export default function AnalyticsPage() {
       'OTHER': 'other',
       'UNKNOWN': 'unknown',
     };
-    return t(causeMap[causeKey] || 'unknown');
+    return t(causeMap[causeKey] as any || 'unknown');
   };
 
   if (loading) {
