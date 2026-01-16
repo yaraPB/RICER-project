@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "preinstall": "npm install --legacy-peer-deps",
     "start": "next start",
     "lint": "next lint",
     "prisma:generate": "prisma generate",
