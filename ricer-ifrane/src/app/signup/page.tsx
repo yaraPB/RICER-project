@@ -4,11 +4,14 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/store/authStore';
-import { DEPARTMENTS } from '@/utils/constants';
+import { useTranslation } from '@/hooks/useTranslation';
+import { DEPARTMENTS, getDepartmentName } from '@/utils/constants';
+import LanguageSwitcher from '@/components/layout/LanguageSwitcher';
 
 export default function SignUpPage() {
   const router = useRouter();
   const setUser = useAuthStore((state) => state.setUser);
+  const { t, language } = useTranslation();
   const [formData, setFormData] = useState({
     cin: '',
     phone: '',
@@ -26,12 +29,12 @@ export default function SignUpPage() {
     setError('');
 
     if (formData.password !== formData.confirmPassword) {
-      setError('كلمات المرور غير متطابقة');
+      setError(t('passwordsDontMatch'));
       return;
     }
 
     if (formData.role === 'OFFICIAL' && !formData.department) {
-      setError('يرجى اختيار القسم');
+      setError(t('selectDepartmentError'));
       return;
     }
 
@@ -54,46 +57,50 @@ export default function SignUpPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || 'حدث خطأ أثناء إنشاء الحساب');
+        setError(data.error || t('signupError'));
         return;
       }
 
       setUser(data.user);
       router.push('/map');
     } catch (err) {
-      setError('حدث خطأ في الاتصال');
+      setError(t('connectionError'));
     } finally {
       setLoading(false);
     }
   };
 
+  const isRTL = language === 'ar';
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50 flex items-center justify-center p-4">
+      {/* Language Switcher */}
+      <div className="absolute top-4 right-4">
+        <LanguageSwitcher />
+      </div>
+
       <div className="w-full max-w-md">
         <div className="bg-white rounded-lg shadow-xl p-8">
           <div className="text-center mb-8">
             <div className="text-5xl mb-4">🔥</div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              إنشاء حساب جديد
+              {t('createNewAccount')}
             </h1>
             <p className="text-gray-600">
-              انضم إلى نظام RICER Ifrane
-            </p>
-            <p className="text-sm text-gray-500">
-              Rejoignez le système RICER Ifrane
+              {t('joinSystem')}
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4" dir={isRTL ? 'rtl' : 'ltr'}>
             {error && (
-              <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm text-right">
+              <div className={`bg-red-50 text-red-600 p-3 rounded-lg text-sm ${isRTL ? 'text-right' : 'text-left'}`}>
                 {error}
               </div>
             )}
 
             <div>
-              <label className="block text-right text-sm font-medium text-gray-700 mb-2">
-                رقم البطاقة الوطنية
+              <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                {t('cin')}
               </label>
               <input
                 type="text"
@@ -101,7 +108,7 @@ export default function SignUpPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, cin: e.target.value })
                 }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-right"
+                className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent ${isRTL ? 'text-right' : 'text-left'}`}
                 placeholder="AB123456"
                 required
                 dir="ltr"
@@ -109,8 +116,8 @@ export default function SignUpPage() {
             </div>
 
             <div>
-              <label className="block text-right text-sm font-medium text-gray-700 mb-2">
-                رقم الهاتف
+              <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                {t('phone')}
               </label>
               <input
                 type="tel"
@@ -118,7 +125,7 @@ export default function SignUpPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, phone: e.target.value })
                 }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-right"
+                className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent ${isRTL ? 'text-right' : 'text-left'}`}
                 placeholder="+212612345678"
                 required
                 dir="ltr"
@@ -126,8 +133,8 @@ export default function SignUpPage() {
             </div>
 
             <div>
-              <label className="block text-right text-sm font-medium text-gray-700 mb-2">
-                كلمة المرور
+              <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                {t('password')}
               </label>
               <input
                 type="password"
@@ -135,15 +142,15 @@ export default function SignUpPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, password: e.target.value })
                 }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-right"
+                className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent ${isRTL ? 'text-right' : 'text-left'}`}
                 placeholder="••••••••"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-right text-sm font-medium text-gray-700 mb-2">
-                تأكيد كلمة المرور
+              <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                {t('confirmPassword')}
               </label>
               <input
                 type="password"
@@ -151,15 +158,15 @@ export default function SignUpPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, confirmPassword: e.target.value })
                 }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-right"
+                className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent ${isRTL ? 'text-right' : 'text-left'}`}
                 placeholder="••••••••"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-right text-sm font-medium text-gray-700 mb-2">
-                نوع الحساب
+              <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                {t('accountType')}
               </label>
               <select
                 value={formData.role}
@@ -169,39 +176,39 @@ export default function SignUpPage() {
                     role: e.target.value as 'CIVILIAN' | 'OFFICIAL',
                   })
                 }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-right"
+                className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent ${isRTL ? 'text-right' : 'text-left'}`}
               >
-                <option value="CIVILIAN">مواطن</option>
-                <option value="OFFICIAL">مسؤول حكومي</option>
+                <option value="CIVILIAN">{t('civilian')}</option>
+                <option value="OFFICIAL">{t('official')}</option>
               </select>
             </div>
 
             {formData.role === 'OFFICIAL' && (
               <>
                 <div>
-                  <label className="block text-right text-sm font-medium text-gray-700 mb-2">
-                    القسم
+                  <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t('department')}
                   </label>
                   <select
                     value={formData.department}
                     onChange={(e) =>
                       setFormData({ ...formData, department: e.target.value })
                     }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-right"
+                    className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent ${isRTL ? 'text-right' : 'text-left'}`}
                     required
                   >
-                    <option value="">اختر القسم</option>
-                    {Object.entries(DEPARTMENTS).map(([code, name]) => (
+                    <option value="">{t('selectDepartment')}</option>
+                    {Object.keys(DEPARTMENTS).map((code) => (
                       <option key={code} value={code}>
-                        {name} ({code})
+                        {getDepartmentName(code as keyof typeof DEPARTMENTS, language)} ({code})
                       </option>
                     ))}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-right text-sm font-medium text-gray-700 mb-2">
-                    المنصب (اختياري)
+                  <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t('positionOptional')}
                   </label>
                   <input
                     type="text"
@@ -209,8 +216,8 @@ export default function SignUpPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, position: e.target.value })
                     }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-right"
-                    placeholder="مثال: مدير العمليات"
+                    className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent ${isRTL ? 'text-right' : 'text-left'}`}
+                    placeholder={language === 'ar' ? 'مثال: مدير العمليات' : 'Ex: Directeur des opérations'}
                   />
                 </div>
               </>
@@ -221,18 +228,18 @@ export default function SignUpPage() {
               disabled={loading}
               className="w-full bg-red-600 hover:bg-red-700 disabled:bg-red-300 text-white font-medium py-3 rounded-lg transition-colors"
             >
-              {loading ? 'جاري إنشاء الحساب...' : 'إنشاء حساب'}
+              {loading ? t('creatingAccount') : t('createAccount')}
             </button>
           </form>
 
-          <div className="mt-6 text-center">
+          <div className={`mt-6 text-center ${isRTL ? 'text-right' : 'text-left'}`}>
             <p className="text-gray-600">
-              لديك حساب بالفعل؟{' '}
+              {t('haveAccount')}{' '}
               <Link
                 href="/signin"
                 className="text-red-600 hover:text-red-700 font-medium"
               >
-                تسجيل الدخول
+                {t('signIn')}
               </Link>
             </p>
           </div>

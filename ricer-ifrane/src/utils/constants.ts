@@ -30,6 +30,34 @@ export const DEPARTMENTS = {
   PN: 'الإنعاش الوطني',
 } as const;
 
+// NEW: Bilingual department names
+export const DEPARTMENTS_FR = {
+  ADM: 'Autoroutes du Maroc',
+  CCDRF: 'Centre Conservation des Ressources Forestières',
+  CEDEFO: 'Centre de Défense Forestière',
+  DFCI: 'Défense des Forêts Contre les Incendies',
+  DPEFLCD: 'Direction Provinciale des Eaux et Forêts',
+  DREFLCD: 'Direction Régionale des Eaux et Forêts',
+  FA: 'Forces Auxiliaires',
+  FAR: 'Forces Armées Royales',
+  GR: 'Gendarmerie Royale',
+  HCEFLCD: 'Haut-Commissariat aux Eaux et Forêts',
+  MET: 'Ministère de l\'Équipement et du Transport',
+  MI: 'Ministère de l\'Intérieur',
+  MJS: 'Ministère de la Jeunesse et des Sports',
+  ONCE: 'Office National des Chemins de Fer',
+  ONDA: 'Office National des Aéroports',
+  ONEEP: 'Office National de l\'Électricité et de l\'Eau Potable',
+  PN: 'Promotion Nationale',
+} as const;
+
+export function getDepartmentName(code: keyof typeof DEPARTMENTS, language: 'ar' | 'fr'): string {
+  if (language === 'fr') {
+    return DEPARTMENTS_FR[code];
+  }
+  return DEPARTMENTS[code];
+}
+
 export const STATUS_LABELS = {
   PENDING: 'قيد الانتظار',
   IN_PROGRESS: 'قيد المعالجة',
