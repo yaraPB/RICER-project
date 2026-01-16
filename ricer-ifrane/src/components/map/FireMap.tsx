@@ -6,7 +6,6 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useTranslation } from '@/hooks/useTranslation';
 import { IFRANE_COORDINATES, STATUS_COLORS } from '@/utils/constants';
-import type { Incident } from '@/types';
 
 // Fix for default marker icons in Leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -36,22 +35,25 @@ const createColoredIcon = (color: string) => {
 
 export default function FireMap() {
   const { t, language } = useTranslation();
-  const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [reports, setReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchIncidents();
+    fetchReports();
+    // Refresh every 30 seconds to show new reports
+    const interval = setInterval(fetchReports, 30000);
+    return () => clearInterval(interval);
   }, []);
 
-  const fetchIncidents = async () => {
+  const fetchReports = async () => {
     try {
-      const response = await fetch('/api/incidents');
+      const response = await fetch('/api/reports');
       if (response.ok) {
         const data = await response.json();
-        setIncidents(data.incidents);
+        setReports(data.reports);
       }
     } catch (error) {
-      console.error('Failed to fetch incidents:', error);
+      console.error('Failed to fetch reports:', error);
     } finally {
       setLoading(false);
     }
@@ -62,6 +64,23 @@ export default function FireMap() {
     if (status === 'IN_PROGRESS') return t('inProgress');
     if (status === 'COMPLETED') return t('completed');
     return status;
+  };
+
+  const getCauseLabel = (causeKey: string | undefined) => {
+    if (!causeKey) return t('unknown');
+    
+    const causeMap: Record<string, keyof typeof t> = {
+      'CAMPFIRE_UNATTENDED': 'campfireUnattended',
+      'CIGARETTE': 'cigarette',
+      'AGRICULTURAL_BURNING': 'agriculturalBurning',
+      'ELECTRICAL': 'electrical',
+      'LIGHTNING': 'lightning',
+      'ARSON': 'arson',
+      'EQUIPMENT_MALFUNCTION': 'equipmentMalfunction',
+      'OTHER': 'other',
+      'UNKNOWN': 'unknown',
+    };
+    return t(causeMap[causeKey] || 'unknown');
   };
 
   if (loading) {
@@ -81,8 +100,8 @@ export default function FireMap() {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        {incidents.map((incident) => {
-          const formattedDate = new Date(incident.createdAt).toLocaleString(
+        {reports.map((report) => {
+          const formattedDate = new Date(report.createdAt).toLocaleString(
             language === 'ar' ? 'ar-MA' : 'fr-FR',
             {
               year: 'numeric',
@@ -95,9 +114,9 @@ export default function FireMap() {
 
           return (
             <Marker
-              key={`${incident.id}-${language}`}
-              position={[incident.latitude, incident.longitude]}
-              icon={createColoredIcon(STATUS_COLORS[incident.status])}
+              key={`${report.id}-${language}`}
+              position={[report.latitude, report.longitude]}
+              icon={createColoredIcon(STATUS_COLORS[report.status])}
             >
               <Popup>
                 <div className="text-right" dir="rtl">
@@ -110,26 +129,34 @@ export default function FireMap() {
                         {language === 'ar' ? 'الحالة:' : 'Statut:'}
                       </span>{' '}
                       <span
-                        style={{ color: STATUS_COLORS[incident.status] }}
+                        style={{ color: STATUS_COLORS[report.status] }}
                         className="font-bold"
                       >
-                        {getStatusLabel(incident.status)}
+                        {getStatusLabel(report.status)}
                       </span>
                     </div>
-                    <div>
-                      <span className="font-medium">
-                        {language === 'ar' ? 'الخطورة:' : 'Gravité:'}
-                      </span>{' '}
-                      {incident.severity}/5
-                    </div>
-                    {incident.description && (
+                    {report.cause && (
+                      <div>
+                        <span className="font-medium">
+                          {language === 'ar' ? 'السبب:' : 'Cause:'}
+                        </span>{' '}
+                        {getCauseLabel(report.cause)}
+                      </div>
+                    )}
+                    {report.description && (
                       <div>
                         <span className="font-medium">
                           {t('description')}:
                         </span>{' '}
-                        {incident.description}
+                        {report.description}
                       </div>
                     )}
+                    <div>
+                      <span className="font-medium">
+                        {language === 'ar' ? 'المبلّغ:' : 'Signalé par:'}
+                      </span>{' '}
+                      {report.user?.cin}
+                    </div>
                     <div className="text-xs text-gray-500 mt-2">
                       {formattedDate}
                     </div>
