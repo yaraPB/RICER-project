@@ -86,7 +86,7 @@ export default function MapPage() {
               <span className="text-3xl">🧭</span>
               <div className="text-right">
                 <div className="text-xs text-gray-600 mb-1">
-                  اتجاه الرياح • Direction
+                  اتجاه الرياح • Direction du vent
                 </div>
                 <div className="text-lg font-bold text-green-600">
                   {windDirectionText}
@@ -98,7 +98,20 @@ export default function MapPage() {
         </div>
       )}
 
+
       <FireMap />
+
+
+      <div className='text-center text-2xl mt-4'>
+        Pour plus d'information . للمزيد من المعلومات  
+      </div>
+      <div  className='text-center text-xl underline text-blue-700 hover:scale-110'>
+        <a href="http://sysfeu.com/" target="_blank">
+        sysfeu.com
+      </a>
+      </div>
+      
+
     </div>
   );
 }
