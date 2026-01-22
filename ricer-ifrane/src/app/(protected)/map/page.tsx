@@ -103,7 +103,7 @@ export default function MapPage() {
 
 
       <div className='text-center text-2xl mt-4'>
-        Pour plus d'information . للمزيد من المعلومات  
+        
       </div>
       <div  className='text-center text-xl underline text-blue-700 hover:scale-110'>
         <a href="http://sysfeu.com/" target="_blank">

@@ -416,7 +416,3 @@ fire-safety-platform/
 ├── tailwind.config.ts     # Tailwind + RTL
 └── tsconfig.json          # TypeScript config
 ```
-
-## Installation Guide
-
-Please also provide an installation guide at the end where you explain all the steps used for the creation of this project
