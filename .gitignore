@@ -7,24 +7,48 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
+# dependencies
+**/node_modules/
+/.pnp
+.pnp.js
+
+# testing
+**/coverage/
+
+# next.js
+**/.next/
+**/out/
+
+# production
+**/build/
 dist
 dist-ssr
+
+# misc
+.DS_Store
+*.pem
 *.local
+
+# typescript
+*.tsbuildinfo
+
+# prisma
+**/prisma/migrations/
+
+.env.*
+.env
+_env
+_env.*
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
 .idea
-.DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
 
-.env.*
-.env
-
-twilio1.jpeg
-twilio2.jpeg
+# vercel
+**/.vercel/

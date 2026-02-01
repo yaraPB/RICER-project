@@ -1,0 +1,96 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Import Leaflet CSS */
+@import 'leaflet/dist/leaflet.css';
+
+@layer base {
+  :root {
+    --background: 24 20% 99%;
+    --foreground: 222 47% 11%;
+    --surface: 0 0% 100%;
+    --surface-2: 220 14% 96%;
+    --muted: 220 10% 92%;
+    --muted-foreground: 220 9% 46%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 19 86% 54%;
+    --primary: 19 86% 54%;
+    --primary-foreground: 0 0% 100%;
+    --success: 142 71% 45%;
+    --warning: 38 92% 50%;
+    --danger: 0 84% 60%;
+    --radius: 12px;
+  }
+
+  .dark {
+    --background: 20 25% 8%;
+    --foreground: 210 40% 98%;
+    --surface: 20 25% 11%;
+    --surface-2: 20 25% 14%;
+    --muted: 20 22% 18%;
+    --muted-foreground: 215 20% 65%;
+    --border: 215 28% 21%;
+    --input: 215 28% 21%;
+    --ring: 19 86% 54%;
+    --primary: 19 86% 54%;
+    --primary-foreground: 0 0% 100%;
+    --success: 142 71% 45%;
+    --warning: 38 92% 50%;
+    --danger: 0 84% 60%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}
+
+/* Leaflet RTL adjustments */
+.leaflet-control-container .leaflet-top.leaflet-right {
+  right: auto;
+  left: 10px;
+}
+
+.leaflet-control-container .leaflet-top.leaflet-left {
+  left: auto;
+  right: 10px;
+}
+
+.leaflet-control-container .leaflet-bottom.leaflet-right {
+  right: auto;
+  left: 10px;
+}
+
+.leaflet-control-container .leaflet-bottom.leaflet-left {
+  left: auto;
+  right: 10px;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}

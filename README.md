@@ -2,6 +2,13 @@
 
 [Link to the website](https://ricer-project-website.vercel.app/)
 
+## Repository Structure
+
+- `apps/web` - Next.js web application
+- `docs` - Project documentation and constraints
+- `data/gis` - GIS datasets and QGIS project files
+- `scripts` - Utility scripts
+
 This project is focused on reducing the impact of forest fires on critical infrastructure, such as transportation networks and healthcare facilities, while enhancing coordination and preparation efforts of relevant stakeholders. This includes :
 
 1. Developing a Centralized GIS-Based Web Platform: Integrating with emergency services for a coordinated response, this platform will facilitate real-time data exchange among stakeholders including the Local authorities, DPEi (for transportation), healthcare facilities, provincial forest department DEFii and la Protection Civil.
