@@ -15,7 +15,7 @@ export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
         <span className="sr-only">{label}</span>
         <Icon
           name="search"
-          aria-hidden="true"
+          aria-hidden={true}
           className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
           size={20}
         />

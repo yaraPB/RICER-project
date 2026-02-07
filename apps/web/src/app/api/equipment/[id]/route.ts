@@ -4,12 +4,12 @@ import { prisma } from '@/lib/prisma';
 import { withApiHandler } from '@/lib/errors/withApiHandler';
 import { AppError } from '@/lib/errors/AppError';
 
-export const PATCH = withApiHandler(async (request: Request, { params }: { params: { id: string } }) => {
-  const currentUser = await getCurrentUser();
+export const PATCH = withApiHandler(async (request: Request, context) => {
+  const currentUser = await getCurrentUser(request);
   if (!currentUser) throw new AppError(2000);
   if (currentUser.role !== 'OFFICIAL') throw new AppError(2001);
 
-  const id = params?.id;
+  const id = context?.params?.id;
   if (!id) throw new AppError(1000);
 
   let body: { quantity?: unknown; condition?: unknown };

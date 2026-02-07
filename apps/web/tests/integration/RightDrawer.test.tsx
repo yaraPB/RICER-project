@@ -15,7 +15,8 @@ describe('RightDrawer', () => {
     );
 
     expect(screen.getByRole('dialog', { name: 'Incident Details' })).toBeInTheDocument();
-    expect(await axe(container)).toHaveNoViolations();
+    const results = await axe(container);
+    expect(results.violations.length).toBe(0);
   });
 
   it('closes when clicking the overlay', async () => {
@@ -27,7 +28,7 @@ describe('RightDrawer', () => {
       </RightDrawer>
     );
 
-    const overlay = container.querySelector('button.fixed.inset-0');
+    const overlay = container.querySelector('[data-testid="right-drawer-overlay"]');
     if (!overlay) throw new Error('Overlay not found');
     await user.click(overlay);
     expect(onOpenChange).toHaveBeenCalledWith(false);

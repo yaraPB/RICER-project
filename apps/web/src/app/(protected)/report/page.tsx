@@ -4,8 +4,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/hooks/useTranslation';
 import dynamic from 'next/dynamic';
-import { FIRE_CAUSE_KEYS } from '@/utils/constants';
-import type { TranslationKey } from '@/utils/translations';
+import { FIRE_CAUSE_KEYS } from '@/config/constants';
+import type { TranslationKey } from '@/i18n/translations';
 import { Icon } from '@/components/ui/Icon';
 import { getApiErrorUserMessage } from '@/lib/errors/sdk';
 
@@ -49,12 +49,12 @@ export default function ReportPage() {
     setError('');
 
     if (!formData.location) {
-      setError('يرجى تحديد موقع الحريق على الخريطة');
+      setError(t('locationRequired'));
       return;
     }
 
     if (!formData.description.trim()) {
-      setError('يرجى إضافة وصف للحريق');
+      setError(t('descriptionRequired'));
       return;
     }
 
@@ -210,7 +210,7 @@ export default function ReportPage() {
               t('submitting')
             ) : (
               <span className="inline-flex items-center justify-center gap-2">
-                <Icon name="siren" aria-hidden="true" size={18} />
+                <Icon name="siren" aria-hidden={true} size={18} />
                 {t('submitReport')}
               </span>
             )}

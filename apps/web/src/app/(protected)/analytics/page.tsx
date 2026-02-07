@@ -14,7 +14,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { useTranslation } from '@/hooks/useTranslation';
-import type { TranslationKey } from '@/utils/translations';
+import type { TranslationKey } from '@/i18n/translations';
 import { Icon } from '@/components/ui/Icon';
 import { getApiErrorUserMessage } from '@/lib/errors/sdk';
 
@@ -125,7 +125,7 @@ export default function AnalyticsPage() {
         <div className="bg-white rounded-xl shadow-lg p-6">
           <div className="text-center">
             <div className="mb-2 flex justify-center text-red-600">
-              <Icon name="fire" aria-hidden="true" size={28} />
+              <Icon name="fire" aria-hidden={true} size={28} />
             </div>
             <div className="text-3xl font-bold text-red-600">
               {data.stats.totalIncidents}
@@ -137,7 +137,7 @@ export default function AnalyticsPage() {
         <div className="bg-white rounded-xl shadow-lg p-6">
           <div className="text-center">
             <div className="mb-2 flex justify-center text-orange-600">
-              <Icon name="calendar" aria-hidden="true" size={28} />
+              <Icon name="calendar" aria-hidden={true} size={28} />
             </div>
             <div className="text-3xl font-bold text-orange-600">
               {data.stats.daysWithFires}
@@ -149,7 +149,7 @@ export default function AnalyticsPage() {
         <div className="bg-white rounded-xl shadow-lg p-6">
           <div className="text-center">
             <div className="mb-2 flex justify-center text-blue-600">
-              <Icon name="analytics" aria-hidden="true" size={28} />
+              <Icon name="analytics" aria-hidden={true} size={28} />
             </div>
             <div className="text-3xl font-bold text-blue-600">
               {data.stats.dailyAverage}

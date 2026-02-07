@@ -1,12 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthStore } from '@/store/useAuthStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import type { Report } from '@/types';
-import type { TranslationKey } from '@/utils/translations';
+import type { TranslationKey } from '@/i18n/translations';
 import { Icon } from '@/components/ui/Icon';
 import { getApiErrorUserMessage } from '@/lib/errors/sdk';
+import { CreateIncidentModal } from '@/components/reports/CreateIncidentModal';
 
 export default function ReportsListPage() {
   const user = useAuthStore((state) => state.user);
@@ -15,6 +16,7 @@ export default function ReportsListPage() {
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [reportToConvert, setReportToConvert] = useState<Report | null>(null);
 
   const fetchReports = useCallback(async () => {
     setError(null);
@@ -167,7 +169,7 @@ export default function ReportsListPage() {
       {reports.length === 0 ? (
         <div className="bg-gray-50 rounded-lg p-12 text-center">
           <div className="mb-4 flex justify-center text-muted-foreground">
-            <Icon name="clipboard" aria-hidden="true" size={52} />
+            <Icon name="clipboard" aria-hidden={true} size={52} />
           </div>
           <h3 className="text-xl font-bold text-gray-700 mb-2">
             {t('noReports')}
@@ -215,7 +217,7 @@ export default function ReportsListPage() {
                 </div>
 
                 <div className={isRTL ? 'mr-4 text-red-600' : 'ml-4 text-red-600'}>
-                  <Icon name="fire" aria-hidden="true" size={28} />
+                  <Icon name="fire" aria-hidden={true} size={28} />
                 </div>
               </div>
 
@@ -227,43 +229,74 @@ export default function ReportsListPage() {
               </div>
 
               {user?.role === 'OFFICIAL' && (
-                <div className="flex gap-2" aria-busy={updatingId === report.id}>
-                  <button
-                    onClick={() => handleStatusUpdate(report.id, 'PENDING')}
-                    disabled={
-                      report.status === 'PENDING' || updatingId === report.id
-                    }
-                    className="flex-1 px-4 py-2 bg-red-100 hover:bg-red-200 disabled:bg-gray-100 disabled:text-gray-400 text-red-700 rounded-lg text-sm font-medium transition-colors"
-                  >
-                    {t('pending')}
-                  </button>
-                  <button
-                    onClick={() =>
-                      handleStatusUpdate(report.id, 'IN_PROGRESS')
-                    }
-                    disabled={
-                      report.status === 'IN_PROGRESS' ||
-                      updatingId === report.id
-                    }
-                    className="flex-1 px-4 py-2 bg-orange-100 hover:bg-orange-200 disabled:bg-gray-100 disabled:text-gray-400 text-orange-700 rounded-lg text-sm font-medium transition-colors"
-                  >
-                    {t('inProgress')}
-                  </button>
-                  <button
-                    onClick={() => handleStatusUpdate(report.id, 'COMPLETED')}
-                    disabled={
-                      report.status === 'COMPLETED' || updatingId === report.id
-                    }
-                    className="flex-1 px-4 py-2 bg-green-100 hover:bg-green-200 disabled:bg-gray-100 disabled:text-gray-400 text-green-700 rounded-lg text-sm font-medium transition-colors"
-                  >
-                    {t('completed')}
-                  </button>
+                <div className="space-y-2">
+                  <div className="flex gap-2" aria-busy={updatingId === report.id}>
+                    <button
+                      onClick={() => handleStatusUpdate(report.id, 'PENDING')}
+                      disabled={
+                        report.status === 'PENDING' || updatingId === report.id
+                      }
+                      className="flex-1 px-4 py-2 bg-red-100 hover:bg-red-200 disabled:bg-gray-100 disabled:text-gray-400 text-red-700 rounded-lg text-sm font-medium transition-colors"
+                    >
+                      {t('pending')}
+                    </button>
+                    <button
+                      onClick={() =>
+                        handleStatusUpdate(report.id, 'IN_PROGRESS')
+                      }
+                      disabled={
+                        report.status === 'IN_PROGRESS' ||
+                        updatingId === report.id
+                      }
+                      className="flex-1 px-4 py-2 bg-orange-100 hover:bg-orange-200 disabled:bg-gray-100 disabled:text-gray-400 text-orange-700 rounded-lg text-sm font-medium transition-colors"
+                    >
+                      {t('inProgress')}
+                    </button>
+                    <button
+                      onClick={() => handleStatusUpdate(report.id, 'COMPLETED')}
+                      disabled={
+                        report.status === 'COMPLETED' || updatingId === report.id
+                      }
+                      className="flex-1 px-4 py-2 bg-green-100 hover:bg-green-200 disabled:bg-gray-100 disabled:text-gray-400 text-green-700 rounded-lg text-sm font-medium transition-colors"
+                    >
+                      {t('completed')}
+                    </button>
+                  </div>
+
+                  <div className="flex gap-2">
+                    {!report.incidentId && (
+                      <button
+                        onClick={() => setReportToConvert(report)}
+                        className="flex-1 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                      >
+                        <Icon name="fire" size={16} />
+                        {t('createIncident')}
+                      </button>
+                    )}
+
+                    {report.incidentId && (
+                      <div className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-green-100 px-4 py-2 text-sm font-medium text-green-800">
+                        <Icon name="check-circle" size={16} />
+                        {t('incidentCreated')}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
           ))}
         </div>
       )}
+
+      <CreateIncidentModal
+        report={reportToConvert}
+        open={!!reportToConvert}
+        onClose={() => setReportToConvert(null)}
+        onSuccess={() => {
+          setReportToConvert(null);
+          fetchReports();
+        }}
+      />
     </div>
   );
 }

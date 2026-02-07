@@ -5,8 +5,8 @@ type Bucket = {
 
 const buckets = new Map<string, Bucket>();
 
-const DEFAULT_WINDOW_MS = 30_000;
-const DEFAULT_MAX = 5;
+const DEFAULT_WINDOW_MS = 60_000; // Increased from 30s to 60s
+const DEFAULT_MAX = 15;           // Increased from 5 to 15
 const MAX_BUCKETS = 10_000;
 
 function nowMs() {
@@ -15,10 +15,9 @@ function nowMs() {
 
 function cleanupIfNeeded(current: number) {
   if (buckets.size <= MAX_BUCKETS) return;
-  for (const [key, bucket] of buckets) {
+  buckets.forEach((bucket, key) => {
     if (bucket.resetAt <= current) buckets.delete(key);
-    if (buckets.size <= MAX_BUCKETS) return;
-  }
+  });
 }
 
 export function getClientIp(request: Request): string {

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { mockAuthMe, setLanguage } from './helpers';
+import { mockAuthMe, mockGeoRoutes, setLanguage } from './helpers';
 
 test('signin validates required fields', async ({ page }) => {
   await setLanguage(page, 'en');
@@ -12,6 +12,7 @@ test('signin validates required fields', async ({ page }) => {
 test('signin succeeds and navigates to protected area', async ({ page }) => {
   await setLanguage(page, 'en');
   await mockAuthMe(page, 'CIVILIAN');
+  await mockGeoRoutes(page);
 
   await page.route('**/api/auth/signin', async (route) => {
     await route.fulfill({

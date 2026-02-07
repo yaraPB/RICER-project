@@ -36,97 +36,85 @@ async function main() {
 
   console.log('Users created');
 
-  // Create fire incidents around Ifrane
-  const incidents = await prisma.incident.createMany({
+  // Create fire incidents around Ifrane (GeoJSON location + IncidentStatus)
+  await prisma.incident.createMany({
     data: [
       {
-        latitude: 33.5275,
-        longitude: -5.1056,
+        location: { type: 'Point', coordinates: [-5.1056, 33.5275] },
         cause: 'CAMPFIRE_UNATTENDED',
         severity: 3,
-        status: 'COMPLETED',
+        status: 'ETEINT',
         description: 'حريق نار مخيم بالقرب من المركز',
       },
       {
-        latitude: 33.5312,
-        longitude: -5.1123,
+        location: { type: 'Point', coordinates: [-5.1123, 33.5312] },
         cause: 'CIGARETTE',
         severity: 2,
-        status: 'COMPLETED',
+        status: 'ETEINT',
         description: 'حريق صغير بسبب سيجارة',
       },
       {
-        latitude: 33.5198,
-        longitude: -5.0987,
+        location: { type: 'Point', coordinates: [-5.0987, 33.5198] },
         cause: 'AGRICULTURAL_BURNING',
         severity: 4,
-        status: 'IN_PROGRESS',
+        status: 'INTERVENTION',
         description: 'حريق زراعي خارج عن السيطرة',
       },
       {
-        latitude: 33.5356,
-        longitude: -5.1189,
+        location: { type: 'Point', coordinates: [-5.1189, 33.5356] },
         cause: 'LIGHTNING',
         severity: 5,
-        status: 'PENDING',
+        status: 'ALERTE',
         description: 'حريق كبير بسبب صاعقة',
       },
       {
-        latitude: 33.5243,
-        longitude: -5.1134,
+        location: { type: 'Point', coordinates: [-5.1134, 33.5243] },
         cause: 'ELECTRICAL',
         severity: 2,
-        status: 'COMPLETED',
+        status: 'ETEINT',
       },
       {
-        latitude: 33.5389,
-        longitude: -5.0923,
+        location: { type: 'Point', coordinates: [-5.0923, 33.5389] },
         cause: 'UNKNOWN',
         severity: 3,
-        status: 'IN_PROGRESS',
+        status: 'MAITRISE',
       },
       {
-        latitude: 33.5156,
-        longitude: -5.1212,
+        location: { type: 'Point', coordinates: [-5.1212, 33.5156] },
         cause: 'ARSON',
         severity: 4,
-        status: 'PENDING',
+        status: 'ALERTE',
         description: 'حريق متعمد - تحت التحقيق',
       },
       {
-        latitude: 33.5423,
-        longitude: -5.1045,
+        location: { type: 'Point', coordinates: [-5.1045, 33.5423] },
         cause: 'EQUIPMENT_MALFUNCTION',
         severity: 2,
-        status: 'COMPLETED',
+        status: 'ETEINT',
       },
       {
-        latitude: 33.5089,
-        longitude: -5.0889,
+        location: { type: 'Point', coordinates: [-5.0889, 33.5089] },
         cause: 'CAMPFIRE_UNATTENDED',
         severity: 3,
-        status: 'COMPLETED',
+        status: 'VIGILANCE',
       },
       {
-        latitude: 33.5467,
-        longitude: -5.1167,
+        location: { type: 'Point', coordinates: [-5.1167, 33.5467] },
         cause: 'OTHER',
         severity: 2,
-        status: 'PENDING',
+        status: 'VIGILANCE',
       },
       {
-        latitude: 33.5234,
-        longitude: -5.0956,
+        location: { type: 'Point', coordinates: [-5.0956, 33.5234] },
         cause: 'CIGARETTE',
         severity: 1,
-        status: 'COMPLETED',
+        status: 'ETEINT',
       },
       {
-        latitude: 33.5178,
-        longitude: -5.1089,
+        location: { type: 'Point', coordinates: [-5.1089, 33.5178] },
         cause: 'LIGHTNING',
         severity: 4,
-        status: 'IN_PROGRESS',
+        status: 'INTERVENTION',
       },
     ],
   });
@@ -336,145 +324,128 @@ async function main() {
 
   console.log('✅ Retardant products created');
 
-  // Create infrastructure
+  // Create infrastructure (GeoJSON geometry + InfrastructureType enum)
   await prisma.infrastructure.createMany({
     data: [
-      // Points d'eau
+      // Water points
       {
-        type: "Point d'eau",
+        type: 'WATER_POINT',
         name: 'بئر مياه 1',
-        latitude: 33.5289,
-        longitude: -5.1067,
+        geometry: { type: 'Point', coordinates: [-5.1067, 33.5289] },
         status: 'Opérationnel',
         description: 'بئر بسعة 50000 لتر',
       },
       {
-        type: "Point d'eau",
+        type: 'WATER_POINT',
         name: 'خزان مياه مركزي',
-        latitude: 33.5256,
-        longitude: -5.1089,
+        geometry: { type: 'Point', coordinates: [-5.1089, 33.5256] },
         status: 'Opérationnel',
         description: 'خزان بسعة 100000 لتر',
       },
       {
-        type: "Point d'eau",
+        type: 'WATER_POINT',
         name: 'نقطة مياه طبيعية',
-        latitude: 33.5334,
-        longitude: -5.1145,
+        geometry: { type: 'Point', coordinates: [-5.1145, 33.5334] },
         status: 'Opérationnel',
         description: 'نبع مياه طبيعي',
       },
       {
-        type: "Point d'eau",
+        type: 'WATER_POINT',
         name: 'بئر مياه 2',
-        latitude: 33.5198,
-        longitude: -5.0934,
+        geometry: { type: 'Point', coordinates: [-5.0934, 33.5198] },
         status: 'Opérationnel',
         description: 'بئر بسعة 30000 لتر',
       },
       {
-        type: "Point d'eau",
+        type: 'WATER_POINT',
         name: 'حوض مياه',
-        latitude: 33.5412,
-        longitude: -5.1198,
+        geometry: { type: 'Point', coordinates: [-5.1198, 33.5412] },
         status: 'Opérationnel',
         description: 'حوض مياه بسعة 75000 لتر',
       },
-      // Tranchées pare-feu
+      // Firebreaks (LineString geometry)
       {
-        type: 'Tranchée pare-feu',
+        type: 'FIREBREAK',
         name: 'خندق واقي شمالي',
-        latitude: 33.5445,
-        longitude: -5.1123,
+        geometry: { type: 'LineString', coordinates: [[-5.1100, 33.5445], [-5.1150, 33.5460]] },
         status: 'Bon état',
         description: 'خندق بطول 2 كلم',
       },
       {
-        type: 'Tranchée pare-feu',
+        type: 'FIREBREAK',
         name: 'خندق واقي جنوبي',
-        latitude: 33.5123,
-        longitude: -5.0967,
+        geometry: { type: 'LineString', coordinates: [[-5.0950, 33.5123], [-5.0980, 33.5140]] },
         status: 'Bon état',
         description: 'خندق بطول 1.5 كلم',
       },
       {
-        type: 'Tranchée pare-feu',
+        type: 'FIREBREAK',
         name: 'خندق واقي شرقي',
-        latitude: 33.5289,
-        longitude: -5.0856,
+        geometry: { type: 'LineString', coordinates: [[-5.0840, 33.5289], [-5.0870, 33.5310]] },
         status: 'Nécessite entretien',
         description: 'خندق بطول 1.8 كلم',
       },
       {
-        type: 'Tranchée pare-feu',
+        type: 'FIREBREAK',
         name: 'خندق واقي غربي',
-        latitude: 33.5267,
-        longitude: -5.1267,
+        geometry: { type: 'LineString', coordinates: [[-5.1250, 33.5267], [-5.1290, 33.5280]] },
         status: 'Bon état',
         description: 'خندق بطول 2.2 كلم',
       },
       {
-        type: 'Tranchée pare-feu',
+        type: 'FIREBREAK',
         name: 'خندق واقي المنطقة الوسطى',
-        latitude: 33.5278,
-        longitude: -5.1045,
+        geometry: { type: 'LineString', coordinates: [[-5.1020, 33.5278], [-5.1070, 33.5295]] },
         status: 'Excellent état',
         description: 'خندق بطول 3 كلم',
       },
-      // Tours de guet
+      // Watchtowers
       {
-        type: 'Tour de guet',
+        type: 'WATCHTOWER',
         name: 'برج مراقبة 1',
-        latitude: 33.5489,
-        longitude: -5.1234,
+        geometry: { type: 'Point', coordinates: [-5.1234, 33.5489] },
         status: 'Opérationnel',
         description: 'برج بارتفاع 25 متر',
       },
       {
-        type: 'Tour de guet',
+        type: 'WATCHTOWER',
         name: 'برج مراقبة 2',
-        latitude: 33.5156,
-        longitude: -5.0878,
+        geometry: { type: 'Point', coordinates: [-5.0878, 33.5156] },
         status: 'Opérationnel',
         description: 'برج بارتفاع 30 متر',
       },
       {
-        type: 'Tour de guet',
+        type: 'WATCHTOWER',
         name: 'برج مراقبة 3',
-        latitude: 33.5367,
-        longitude: -5.1345,
+        geometry: { type: 'Point', coordinates: [-5.1345, 33.5367] },
         status: 'En maintenance',
         description: 'برج بارتفاع 28 متر',
       },
       {
-        type: 'Tour de guet',
+        type: 'WATCHTOWER',
         name: 'برج مراقبة 4',
-        latitude: 33.5089,
-        longitude: -5.1123,
+        geometry: { type: 'Point', coordinates: [-5.1123, 33.5089] },
         status: 'Opérationnel',
         description: 'برج بارتفاع 27 متر',
       },
       {
-        type: 'Tour de guet',
+        type: 'WATCHTOWER',
         name: 'برج مراقبة 5',
-        latitude: 33.5423,
-        longitude: -5.0967,
+        geometry: { type: 'Point', coordinates: [-5.0967, 33.5423] },
         status: 'Opérationnel',
         description: 'برج بارتفاع 32 متر',
       },
       {
-        type: 'Tour de guet',
+        type: 'WATCHTOWER',
         name: 'برج مراقبة 6',
-        latitude: 33.5234,
-        longitude: -5.1289,
+        geometry: { type: 'Point', coordinates: [-5.1289, 33.5234] },
         status: 'Opérationnel',
         description: 'برج بارتفاع 26 متر',
       },
       {
-        type: 'Tour de guet',
+        type: 'WATCHTOWER',
         name: 'برج مراقبة 7',
-        latitude: 33.5178,
-        longitude: -5.0945,
+        geometry: { type: 'Point', coordinates: [-5.0945, 33.5178] },
         status: 'Opérationnel',
         description: 'برج بارتفاع 29 متر',
       },
@@ -482,6 +453,123 @@ async function main() {
   });
 
   console.log('✅ Infrastructure created');
+
+  // Create resources
+  await prisma.resource.createMany({
+    data: [
+      {
+        type: 'TRUCK',
+        name: 'شاحنة إطفاء 1',
+        location: { type: 'Point', coordinates: [-5.1056, 33.5275] },
+        status: 'Disponible',
+      },
+      {
+        type: 'TRUCK',
+        name: 'شاحنة إطفاء 2',
+        location: { type: 'Point', coordinates: [-5.1123, 33.5312] },
+        status: 'En route',
+        assignedTo: 'Incident en cours',
+      },
+      {
+        type: 'TRUCK',
+        name: 'شاحنة إطفاء 3',
+        location: { type: 'Point', coordinates: [-5.0987, 33.5198] },
+        status: 'Sur place',
+        assignedTo: 'Zone agricole',
+      },
+      {
+        type: 'AIRCRAFT',
+        name: 'Avion bombardier 1',
+        location: { type: 'Point', coordinates: [-5.1200, 33.5400] },
+        status: 'Disponible',
+      },
+      {
+        type: 'AIRCRAFT',
+        name: 'Hélicoptère 1',
+        location: { type: 'Point', coordinates: [-5.0900, 33.5300] },
+        status: 'En mission',
+        assignedTo: 'Zone forestière nord',
+      },
+      {
+        type: 'PERSONNEL',
+        name: 'Équipe pompiers A',
+        location: { type: 'Point', coordinates: [-5.1056, 33.5275] },
+        status: 'Disponible',
+      },
+      {
+        type: 'PERSONNEL',
+        name: 'Équipe pompiers B',
+        location: { type: 'Point', coordinates: [-5.0987, 33.5198] },
+        status: 'En intervention',
+        assignedTo: 'Incident agricole',
+      },
+      {
+        type: 'EQUIPMENT',
+        name: 'Groupe électrogène',
+        location: { type: 'Point', coordinates: [-5.1056, 33.5275] },
+        status: 'Disponible',
+      },
+    ],
+  });
+
+  console.log('✅ Resources created');
+
+  // Create risk basins (polygon geometries around Ifrane)
+  await prisma.riskBasin.createMany({
+    data: [
+      {
+        name: 'Zone forestière nord',
+        geometry: {
+          type: 'Polygon',
+          coordinates: [[
+            [-5.1300, 33.5450],
+            [-5.1100, 33.5500],
+            [-5.0900, 33.5450],
+            [-5.0900, 33.5350],
+            [-5.1100, 33.5300],
+            [-5.1300, 33.5350],
+            [-5.1300, 33.5450],
+          ]],
+        },
+        riskLevel: 4,
+        description: 'Zone boisée dense au nord de Ifrane',
+      },
+      {
+        name: 'Zone agricole sud',
+        geometry: {
+          type: 'Polygon',
+          coordinates: [[
+            [-5.1200, 33.5250],
+            [-5.1000, 33.5250],
+            [-5.0800, 33.5200],
+            [-5.0800, 33.5100],
+            [-5.1000, 33.5100],
+            [-5.1200, 33.5150],
+            [-5.1200, 33.5250],
+          ]],
+        },
+        riskLevel: 2,
+        description: 'Terrains agricoles au sud',
+      },
+      {
+        name: 'Périphérie urbaine',
+        geometry: {
+          type: 'Polygon',
+          coordinates: [[
+            [-5.1150, 33.5350],
+            [-5.0950, 33.5350],
+            [-5.0950, 33.5250],
+            [-5.1150, 33.5250],
+            [-5.1150, 33.5350],
+          ]],
+        },
+        riskLevel: 1,
+        description: 'Zone urbaine périphérique',
+      },
+    ],
+  });
+
+  console.log('✅ Risk basins created');
 
   // Create truck deployments
   await prisma.truckDeployment.createMany({

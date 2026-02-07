@@ -1,5 +1,5 @@
-import { useLanguageStore } from '@/store/languageStore';
-import { translations, TranslationKey } from '@/utils/translations';
+import { useLanguageStore } from '@/store/useLanguageStore';
+import { translations, TranslationKey } from '@/i18n/translations';
 
 export function useTranslation() {
   const language = useLanguageStore((state) => state.language);

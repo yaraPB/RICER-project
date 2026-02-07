@@ -27,7 +27,7 @@ export function AuthShell({ title, subtitle, children, footer, isRTL }: AuthShel
         <Card tone="elevated" className="p-6 sm:p-8" dir={isRTL ? 'rtl' : 'ltr'}>
           <div className="mb-6 text-center">
             <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-xl bg-primary text-primary-foreground shadow-elev-1">
-              <Icon name="fire" aria-hidden="true" size={26} />
+              <Icon name="fire" aria-hidden={true} size={26} />
             </div>
             <h1 className="text-2xl font-extrabold tracking-tight text-foreground">{title}</h1>
             {subtitle ? <p className="mt-2 text-sm text-muted-foreground">{subtitle}</p> : null}

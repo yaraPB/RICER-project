@@ -4,8 +4,8 @@ import { prisma } from '@/lib/prisma';
 import { withApiHandler } from '@/lib/errors/withApiHandler';
 import { AppError } from '@/lib/errors/AppError';
 
-export const GET = withApiHandler(async () => {
-  const currentUser = await getCurrentUser();
+export const GET = withApiHandler(async (request: Request) => {
+  const currentUser = await getCurrentUser(request);
   if (!currentUser) throw new AppError(2000);
 
   const user = await prisma.user.findUnique({

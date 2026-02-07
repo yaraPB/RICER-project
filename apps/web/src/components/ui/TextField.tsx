@@ -50,7 +50,7 @@ export function TextField({
         )}
       >
         {leadingIcon ? (
-          <Icon name={leadingIcon} aria-hidden="true" className="text-muted-foreground" size={18} />
+          <Icon name={leadingIcon} aria-hidden={true} className="text-muted-foreground" size={18} />
         ) : null}
 
         <input

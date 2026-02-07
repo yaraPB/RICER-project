@@ -51,6 +51,76 @@ export async function mockAuthMe(page: Page, role: Role = 'CIVILIAN') {
   });
 }
 
+export async function mockGeoRoutes(page: Page) {
+  const now = new Date().toISOString();
+
+  // Incidents GeoJSON
+  await page.route('**/api/geo/incidents', async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        type: 'FeatureCollection',
+        features: [
+          {
+            type: 'Feature',
+            geometry: { type: 'Point', coordinates: [-5.105, 33.531] },
+            properties: { id: 'inc-1', cause: 'CIGARETTE', severity: 3, status: 'ALERTE', description: 'Forest fire near main road', createdAt: now },
+          },
+          {
+            type: 'Feature',
+            geometry: { type: 'Point', coordinates: [-5.112, 33.528] },
+            properties: { id: 'inc-2', cause: 'LIGHTNING', severity: 2, status: 'ETEINT', description: 'Small brush fire', createdAt: now },
+          },
+        ],
+      }),
+    });
+  });
+
+  // Resources GeoJSON (empty for civilians)
+  await page.route('**/api/geo/resources', async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ type: 'FeatureCollection', features: [] }),
+    });
+  });
+
+  // Infrastructure GeoJSON
+  await page.route('**/api/geo/infrastructure', async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ type: 'FeatureCollection', features: [] }),
+    });
+  });
+
+  // Risk basins GeoJSON
+  await page.route('**/api/geo/risk-basins', async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ type: 'FeatureCollection', features: [] }),
+    });
+  });
+
+  // Block MapTiler tile requests with 1px blank PNG
+  const blankPng = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=',
+    'base64'
+  );
+  await page.route('**/tiles.maptiler.com/**', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'image/png', body: blankPng });
+  });
+  await page.route('**/tile.openstreetmap.org/**', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'image/png', body: blankPng });
+  });
+}
+
 export type MockReport = {
   id: string;
   userId: string;

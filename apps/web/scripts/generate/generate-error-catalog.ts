@@ -30,9 +30,11 @@ function toMarkdown() {
       lines.push('');
       lines.push('**Remediation hints**');
       for (const h of e.remediationHints) {
-        lines.push(`- ${h.title}`);
-        if (h.steps?.length) for (const step of h.steps) lines.push(`  - ${step}`);
-        if (h.url) lines.push(`  - ${h.url}`);
+        const hint = h as { title: string; steps?: string[]; url?: string };
+        lines.push(`- ${hint.title}`);
+        const steps = hint.steps ?? [];
+        for (const step of steps) lines.push(`  - ${step}`);
+        if (hint.url) lines.push(`  - ${hint.url}`);
       }
     }
     lines.push('');

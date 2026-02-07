@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthStore } from '@/store/useAuthStore';
 import { Icon } from '@/components/ui/Icon';
 import { useTranslation } from '@/hooks/useTranslation';
 
@@ -44,7 +44,7 @@ export default function AuthProvider({
           className="flex items-center gap-4 rounded-lg border border-border bg-surface px-5 py-4 shadow-elev-1"
         >
           <div className="grid h-10 w-10 place-items-center rounded-md bg-primary text-primary-foreground shadow-sm">
-            <Icon name="fire" aria-hidden="true" size={20} />
+            <Icon name="fire" aria-hidden={true} size={20} />
           </div>
           <div className="text-sm font-semibold text-muted-foreground">{t('loading')}</div>
         </div>

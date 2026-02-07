@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { IFRANE_COORDINATES } from '@/utils/constants';
+import { IFRANE_COORDINATES } from '@/config/constants';
 import { withApiHandler } from '@/lib/errors/withApiHandler';
 import { AppError } from '@/lib/errors/AppError';
 

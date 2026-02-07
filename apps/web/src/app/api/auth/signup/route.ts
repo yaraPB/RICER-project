@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcrypt';
 import { prisma } from '@/lib/prisma';
-import { signToken, setAuthCookie } from '@/lib/auth';
+import { deriveScopes, hashRefreshToken, setAuthCookies, signAccessToken, signRefreshToken } from '@/lib/auth';
 import { withApiHandler } from '@/lib/errors/withApiHandler';
 import { AppError } from '@/lib/errors/AppError';
 
@@ -52,14 +52,33 @@ export const POST = withApiHandler(async (request: Request) => {
     },
   });
 
-  const token = signToken({
+  const scopes = deriveScopes(user.role);
+  const accessToken = signAccessToken({
     userId: user.id,
     cin: user.cin,
     role: user.role,
     department: user.department ?? undefined,
+    scopes,
   });
 
-  await setAuthCookie(token);
+  const jti = typeof crypto !== 'undefined' ? crypto.randomUUID() : `${Date.now()}:${Math.random()}`;
+  const refreshToken = signRefreshToken({ userId: user.id, jti, scopes });
+  const refreshTokenHash = hashRefreshToken(refreshToken);
+  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+  await prisma.refreshToken.create({
+    data: {
+      userId: user.id,
+      jti,
+      tokenHash: refreshTokenHash,
+      scopes,
+      expiresAt,
+      ip: request.headers.get('x-forwarded-for') ?? undefined,
+      userAgent: request.headers.get('user-agent') ?? undefined,
+    },
+  });
+
+  await setAuthCookies(accessToken, refreshToken);
 
   const userWithoutPassword = {
     id: user.id,

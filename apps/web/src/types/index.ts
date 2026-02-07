@@ -21,22 +21,98 @@ export interface Report {
   images: string[];
   status: Status;
   cause?: string;
+  incidentId?: string | null;
+  incident?: Incident | null;
   createdAt: Date;
   updatedAt: Date;
   user?: User;
 }
 
+export type IncidentStatus = 'VIGILANCE' | 'ALERTE' | 'INTERVENTION' | 'MAITRISE' | 'ETEINT';
+
 export interface Incident {
   id: string;
+  location: { type: 'Point'; coordinates: [number, number] };
+  cause: string;
+  severity: number;
+  status: IncidentStatus;
+  description?: string;
+  reportId?: string | null;
+  report?: Report | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CreateIncidentInput {
+  reportId?: string;
   latitude: number;
   longitude: number;
   cause: string;
   severity: number;
-  status: Status;
+  status?: IncidentStatus;
   description?: string;
-  createdAt: Date;
-  updatedAt: Date;
 }
+
+export interface UpdateIncidentInput {
+  status?: IncidentStatus;
+  severity?: number;
+  description?: string;
+}
+
+export type ResourceType = 'TRUCK' | 'AIRCRAFT' | 'PERSONNEL' | 'EQUIPMENT';
+
+export type InfrastructureType = 'WATCHTOWER' | 'WATER_POINT' | 'FIREBREAK' | 'STATION';
+
+export interface GeoFeature<P> {
+  type: 'Feature';
+  geometry: { type: string; coordinates: unknown };
+  properties: P;
+}
+
+export interface GeoFeatureCollection<P> {
+  type: 'FeatureCollection';
+  features: GeoFeature<P>[];
+}
+
+export interface GeoIncidentProps {
+  id: string;
+  cause: string;
+  severity: number;
+  status: IncidentStatus;
+  description?: string;
+  createdAt: string;
+}
+
+export type GeoIncident = GeoFeature<GeoIncidentProps>;
+
+export interface GeoResourceProps {
+  id: string;
+  type: ResourceType;
+  name: string;
+  status: string;
+  assignedTo?: string;
+}
+
+export type GeoResource = GeoFeature<GeoResourceProps>;
+
+export interface GeoInfrastructureProps {
+  id: string;
+  type: InfrastructureType;
+  name: string;
+  status: string;
+  description: string;
+}
+
+export type GeoInfrastructure = GeoFeature<GeoInfrastructureProps>;
+
+export interface RiskBasinProps {
+  id: string;
+  name: string;
+  riskLevel: number;
+  description?: string;
+}
+
+export type GeoRiskBasin = GeoFeature<RiskBasinProps>;
 
 export interface Equipment {
   id: string;

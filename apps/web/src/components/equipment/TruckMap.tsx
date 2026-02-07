@@ -1,46 +1,16 @@
 'use client';
 
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-import { IFRANE_COORDINATES } from '@/utils/constants';
+import { useState } from 'react';
+import ReactMapGL, { Marker, Popup } from 'react-map-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
+import { IFRANE_COORDINATES } from '@/config/constants';
 import type { TruckDeployment } from '@/types';
 import { Icon } from '@/components/ui/Icon';
+import { getMapStyle } from '@/lib/map/styles';
+import { TRUCK_STATUS_COLORS } from '@/lib/map/colors';
 
-// Fix for default marker icons
-const iconProto = L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown };
-delete iconProto._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-});
-
-// Create custom truck icons
-const createTruckIcon = (status: string) => {
-  const color = status === 'Disponible' ? '#22c55e' : status === 'En route' ? '#f97316' : '#ef4444';
-
-  return L.divIcon({
-    className: 'custom-truck-marker',
-    html: `<div style="
-      background-color: ${color};
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border: 3px solid white;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-    "><div style="
-      width: 14px;
-      height: 14px;
-      border-radius: 9999px;
-      background: rgba(255,255,255,0.9);
-    "></div></div>`,
-    iconSize: [40, 40],
-    iconAnchor: [20, 20],
-  });
+const truckColor = (status: string) => {
+  return TRUCK_STATUS_COLORS[status] || '#ef4444';
 };
 
 interface TruckMapProps {
@@ -48,81 +18,109 @@ interface TruckMapProps {
 }
 
 export default function TruckMap({ trucks }: TruckMapProps) {
+  const [popupTruckId, setPopupTruckId] = useState<string | null>(null);
+
+  const mapStyle = getMapStyle('streets');
+
   return (
     <div className="relative">
-      <MapContainer
-        center={[IFRANE_COORDINATES.lat, IFRANE_COORDINATES.lng]}
+      <ReactMapGL
+        longitude={IFRANE_COORDINATES.lng}
+        latitude={IFRANE_COORDINATES.lat}
         zoom={13}
-        style={{ height: '500px', width: '100%' }}
-        className="rounded-lg shadow-lg z-0"
+        mapStyle={mapStyle as string}
+        style={{ width: '100%', height: '500px', borderRadius: '0.5rem', boxShadow: '0 10px 25px -5px rgb(0 0 0 / 0.1)' }}
       >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
         {trucks.map((truck) => (
           <Marker
             key={truck.id}
-            position={[truck.latitude, truck.longitude]}
-            icon={createTruckIcon(truck.status)}
+            longitude={truck.longitude}
+            latitude={truck.latitude}
+            anchor="center"
+            onClick={() => setPopupTruckId(popupTruckId === truck.id ? null : truck.id)}
           >
-            <Popup>
-              <div className="text-right" dir="rtl">
-                <div className="font-bold text-lg mb-2">{truck.truckName}</div>
-                <div className="text-sm space-y-1">
+            <div
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: '999px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '3px solid white',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                backgroundColor: truckColor(truck.status),
+                cursor: 'pointer',
+              }}
+            >
+              <div
+                style={{
+                  width: 14,
+                  height: 14,
+                  borderRadius: '999px',
+                  background: 'rgba(255,255,255,0.9)',
+                }}
+              />
+            </div>
+          </Marker>
+        ))}
+
+        {popupTruckId && (() => {
+          const truck = trucks.find((t) => t.id === popupTruckId);
+          if (!truck) return null;
+          return (
+            <Popup
+              longitude={truck.longitude}
+              latitude={truck.latitude}
+              anchor="bottom"
+              closeButton={true}
+              onClose={() => setPopupTruckId(null)}
+              offset={[0, -14]}
+            >
+              <div className="text-right" dir="rtl" style={{ fontSize: 13 }}>
+                <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8 }}>{truck.truckName}</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   <div>
-                    <span className="font-medium">رقم الشاحنة:</span>{' '}
-                    {truck.truckId}
+                    <span style={{ fontWeight: 600 }}>رقم الشاحنة:</span> {truck.truckId}
                   </div>
                   <div>
-                    <span className="font-medium">الحالة:</span>{' '}
-                    <span
-                      className={`font-bold ${
-                        truck.status === 'Disponible'
-                          ? 'text-green-600'
-                          : truck.status === 'En route'
-                          ? 'text-orange-600'
-                          : 'text-red-600'
-                      }`}
-                    >
-                      {truck.status}
-                    </span>
+                    <span style={{ fontWeight: 600 }}>الحالة:</span>{' '}
+                    <span style={{ fontWeight: 800, color: truckColor(truck.status) }}>{truck.status}</span>
                   </div>
                   {truck.assignedTo && (
                     <div>
-                      <span className="font-medium">موزعة على:</span>{' '}
-                      {truck.assignedTo}
+                      <span style={{ fontWeight: 600 }}>موزعة على:</span> {truck.assignedTo}
                     </div>
                   )}
-                  <div className="text-xs text-gray-500 mt-2">
+                  <div style={{ marginTop: 8, fontSize: 12, opacity: 0.7 }}>
                     {truck.latitude.toFixed(6)}, {truck.longitude.toFixed(6)}
                   </div>
                 </div>
               </div>
             </Popup>
-          </Marker>
-        ))}
-      </MapContainer>
+          );
+        })()}
+      </ReactMapGL>
 
       {/* Legend */}
-      <div className="absolute bottom-6 left-6 bg-white rounded-lg shadow-lg p-4 z-[1000]">
-        <div className="text-sm font-bold mb-3 text-right">حالات الشاحنات</div>
+      <div className="absolute bottom-6 left-6 z-[1000] rounded-lg bg-white p-4 shadow-lg">
+        <div className="mb-3 text-right text-sm font-bold">حالات الشاحنات</div>
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <div className="text-green-600">
-              <Icon name="truck" aria-hidden="true" size={20} />
+              <Icon name="truck" aria-hidden={true} size={20} />
             </div>
             <span className="text-sm">Disponible (متاحة)</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="text-orange-600">
-              <Icon name="truck" aria-hidden="true" size={20} />
+              <Icon name="truck" aria-hidden={true} size={20} />
             </div>
             <span className="text-sm">En route (في الطريق)</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="text-red-600">
-              <Icon name="truck" aria-hidden="true" size={20} />
+              <Icon name="truck" aria-hidden={true} size={20} />
             </div>
             <span className="text-sm">Sur place (في الموقع)</span>
           </div>

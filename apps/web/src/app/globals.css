@@ -2,9 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Import Leaflet CSS */
-@import 'leaflet/dist/leaflet.css';
-
 @layer base {
   :root {
     --background: 24 20% 99%;
@@ -12,15 +9,15 @@
     --surface: 0 0% 100%;
     --surface-2: 220 14% 96%;
     --muted: 220 10% 92%;
-    --muted-foreground: 220 9% 46%;
+    --muted-foreground: 220 9% 42%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 19 86% 54%;
-    --primary: 19 86% 54%;
+    --ring: 19 86% 42%;
+    --primary: 19 86% 42%;
     --primary-foreground: 0 0% 100%;
     --success: 142 71% 45%;
-    --warning: 38 92% 50%;
-    --danger: 0 84% 60%;
+    --warning: 38 92% 40%;
+    --danger: 0 72% 42%;
     --radius: 12px;
   }
 
@@ -33,12 +30,12 @@
     --muted-foreground: 215 20% 65%;
     --border: 215 28% 21%;
     --input: 215 28% 21%;
-    --ring: 19 86% 54%;
-    --primary: 19 86% 54%;
+    --ring: 19 86% 42%;
+    --primary: 19 86% 42%;
     --primary-foreground: 0 0% 100%;
     --success: 142 71% 45%;
     --warning: 38 92% 50%;
-    --danger: 0 84% 60%;
+    --danger: 0 72% 42%;
   }
 
   * {
@@ -53,27 +50,6 @@
   body {
     @apply bg-background text-foreground font-sans antialiased;
   }
-}
-
-/* Leaflet RTL adjustments */
-.leaflet-control-container .leaflet-top.leaflet-right {
-  right: auto;
-  left: 10px;
-}
-
-.leaflet-control-container .leaflet-top.leaflet-left {
-  left: auto;
-  right: 10px;
-}
-
-.leaflet-control-container .leaflet-bottom.leaflet-right {
-  right: auto;
-  left: 10px;
-}
-
-.leaflet-control-container .leaflet-bottom.leaflet-left {
-  left: auto;
-  right: 10px;
 }
 
 /* Custom scrollbar */
@@ -93,4 +69,62 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: #555;
+}
+
+/* Map popup styling */
+.incident-popup .maplibregl-popup-content {
+  border-radius: 0.75rem;
+  box-shadow:
+    0 10px 25px -5px rgb(0 0 0 / 0.15),
+    0 4px 6px -2px rgb(0 0 0 / 0.08);
+  padding: 0;
+  background-color: hsl(var(--surface));
+  color: hsl(var(--foreground));
+  overflow: hidden;
+  animation: popup-enter 0.2s ease-out;
+}
+
+.incident-popup .maplibregl-popup-tip {
+  border-top-color: hsl(var(--surface));
+}
+
+@keyframes popup-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Fullscreen map */
+div[data-ricer-map-ready]:fullscreen {
+  background: hsl(var(--background));
+}
+
+/* MapLibre controls theme */
+.maplibregl-ctrl-group {
+  border-radius: 0.5rem !important;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.12) !important;
+  overflow: hidden;
+}
+
+.maplibregl-ctrl-group button {
+  width: 36px !important;
+  height: 36px !important;
+}
+
+/* Geolocate animation */
+.maplibregl-user-location-accuracy-circle {
+  background-color: hsl(var(--primary) / 0.12) !important;
+}
+
+.maplibregl-user-location-dot::before {
+  background-color: hsl(var(--primary)) !important;
+}
+
+.maplibregl-user-location-dot::after {
+  border-color: hsl(var(--primary)) !important;
 }

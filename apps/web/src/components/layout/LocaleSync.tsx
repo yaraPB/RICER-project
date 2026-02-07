@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useLanguageStore } from '@/store/languageStore';
+import { useLanguageStore } from '@/store/useLanguageStore';
 
 function setLocaleDocument(language: 'ar' | 'fr' | 'en') {
   const dir = language === 'ar' ? 'rtl' : 'ltr';

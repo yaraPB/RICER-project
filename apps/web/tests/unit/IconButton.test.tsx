@@ -9,11 +9,12 @@ describe('IconButton', () => {
   it('requires a label and passes basic a11y checks', async () => {
     const { container } = render(
       <IconButton label="Notifications">
-        <Icon name="notifications" aria-hidden="true" />
+        <Icon name="notifications" aria-hidden={true} />
       </IconButton>
     );
 
     expect(screen.getByRole('button', { name: 'Notifications' })).toBeInTheDocument();
-    expect(await axe(container)).toHaveNoViolations();
+    const results = await axe(container);
+    expect(results.violations.length).toBe(0);
   });
 });

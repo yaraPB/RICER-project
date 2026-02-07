@@ -64,7 +64,7 @@ export default function WeatherPage() {
         <div className="bg-white rounded-xl shadow-lg p-6">
           <div className="flex items-center justify-between mb-4">
             <span className="text-red-600">
-              <Icon name="thermostat" aria-hidden="true" size={40} />
+              <Icon name="thermostat" aria-hidden={true} size={40} />
             </span>
             <div className={textAlign}>
               <div className="text-sm text-gray-500 mb-1">{t('temperature')}</div>
@@ -80,7 +80,7 @@ export default function WeatherPage() {
         <div className="bg-white rounded-xl shadow-lg p-6">
           <div className="flex items-center justify-between mb-4">
             <span className="text-blue-600">
-              <Icon name="air" aria-hidden="true" size={40} />
+              <Icon name="air" aria-hidden={true} size={40} />
             </span>
             <div className={textAlign}>
               <div className="text-sm text-gray-500 mb-1">{t('windSpeed')}</div>
@@ -96,7 +96,7 @@ export default function WeatherPage() {
         <div className="bg-white rounded-xl shadow-lg p-6">
           <div className="flex items-center justify-between mb-4">
             <span className="text-green-600">
-              <Icon name="compass" aria-hidden="true" size={40} />
+              <Icon name="compass" aria-hidden={true} size={40} />
             </span>
             <div className={textAlign}>
               <div className="text-sm text-gray-500 mb-1">{t('windDirection')}</div>
@@ -115,7 +115,7 @@ export default function WeatherPage() {
       <div className="mt-8 bg-gradient-to-r from-orange-50 to-red-50 rounded-xl p-6 border border-orange-200">
         <div className="flex items-start gap-4">
           <span className="text-warning">
-            <Icon name="warning" aria-hidden="true" size={28} />
+            <Icon name="warning" aria-hidden={true} size={28} />
           </span>
           <div className={`flex-1 ${textAlign}`}>
             <h3 className="font-bold text-lg text-gray-900 mb-2">{t('windAlertTitle')}</h3>

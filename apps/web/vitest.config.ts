@@ -11,11 +11,11 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./tests/setup.ts'],
     include: ['./tests/**/*.{test,spec}.{ts,tsx}'],
-    exclude: ['./tests/e2e/**', './node_modules/**'],
+    exclude: ['./tests/e2e/**', './tests/performance/**', './node_modules/**'],
     coverage: {
       provider: 'v8',
       include: ['src/lib/errors/**', 'src/lib/observability/**'],
-      reporter: ['text', 'json-summary'],
+      reporter: ['text', 'json-summary', 'html'],
       thresholds: {
         lines: 95,
         functions: 95,

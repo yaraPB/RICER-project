@@ -53,7 +53,7 @@ export const DEPARTMENTS_FR = {
   PN: 'Promotion Nationale',
 } as const;
 
-export function getDepartmentName(code: keyof typeof DEPARTMENTS, language: 'ar' | 'fr'): string {
+export function getDepartmentName(code: keyof typeof DEPARTMENTS, language: 'ar' | 'fr' | 'en'): string {
   if (language === 'fr') {
     return DEPARTMENTS_FR[code];
   }
@@ -79,9 +79,9 @@ export function windDirectionIndexFromDegrees(degrees: number): number {
   return Math.round(degrees / 45) % 8;
 }
 
-export function formatDateTime(date: Date | string, language: 'ar' | 'fr'): string {
+export function formatDateTime(date: Date | string, language: 'ar' | 'fr' | 'en'): string {
   const d = new Date(date);
-  return d.toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-FR', {
+  return d.toLocaleString(language === 'ar' ? 'ar-MA' : language === 'fr' ? 'fr-FR' : 'en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',

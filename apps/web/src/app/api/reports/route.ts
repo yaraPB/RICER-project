@@ -1,16 +1,39 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import twilio from 'twilio';
 import type { Prisma } from '@prisma/client';
 import { withApiHandler } from '@/lib/errors/withApiHandler';
 import { AppError } from '@/lib/errors/AppError';
+import { enqueueNotification } from '@/lib/notifications/queue';
+import { isTwilioConfigured } from '@/lib/notifications/twilio';
+import { DEFAULT_LIMITS } from '@/types/pagination';
+import type { CursorPaginationResponse } from '@/types/pagination';
 
-export const GET = withApiHandler(async () => {
-  const currentUser = await getCurrentUser();
+export const GET = withApiHandler(async (request: Request) => {
+  const currentUser = await getCurrentUser(request);
   if (!currentUser) throw new AppError(2000);
 
+  const url = new URL(request.url);
+  const limit = Math.min(
+    parseInt(url.searchParams.get('limit') || String(DEFAULT_LIMITS.REPORTS)),
+    100
+  );
+  const cursor = url.searchParams.get('cursor') || undefined;
+  const withoutIncident = url.searchParams.get('withoutIncident') === 'true';
+
+  // Build query
+  const where: Prisma.ReportWhereInput = {};
+  if (cursor) {
+    where.id = { lt: cursor };
+  }
+  if (withoutIncident) {
+    where.incidentId = null;
+  }
+
+  // Fetch one extra to determine if there are more results
   const reports = await prisma.report.findMany({
+    where,
+    take: limit + 1,
     include: {
       user: {
         select: {
@@ -19,15 +42,33 @@ export const GET = withApiHandler(async () => {
           role: true,
         },
       },
+      incident: true,
     },
     orderBy: { createdAt: 'desc' },
   });
 
-  return NextResponse.json({ reports });
+  // Get total count (cached for 1 minute in production)
+  const total = await prisma.report.count();
+
+  // Determine if there are more results
+  const hasMore = reports.length > limit;
+  const data = hasMore ? reports.slice(0, limit) : reports;
+  const nextCursor = hasMore ? data[data.length - 1].id : null;
+
+  const response: CursorPaginationResponse<typeof data[number]> = {
+    data,
+    pagination: {
+      cursor: nextCursor,
+      hasMore,
+      total,
+    },
+  };
+
+  return NextResponse.json(response);
 });
 
 export const POST = withApiHandler(async (request: Request) => {
-  const currentUser = await getCurrentUser();
+  const currentUser = await getCurrentUser(request);
   if (!currentUser) throw new AppError(2000);
 
   let body: unknown;
@@ -37,18 +78,20 @@ export const POST = withApiHandler(async (request: Request) => {
     throw new AppError(1000, { cause: error });
   }
 
-  const latitude = (body as { latitude?: unknown })?.latitude;
-  const longitude = (body as { longitude?: unknown })?.longitude;
+  const latitudeRaw = (body as { latitude?: unknown })?.latitude;
+  const longitudeRaw = (body as { longitude?: unknown })?.longitude;
   const description = typeof (body as { description?: unknown })?.description === 'string' ? (body as { description: string }).description.trim() : '';
   const cause = typeof (body as { cause?: unknown })?.cause === 'string' ? (body as { cause: string }).cause : undefined;
 
   const fields = [];
-  if (typeof latitude !== 'number') fields.push({ field: 'latitude', code: 'required' });
-  if (typeof longitude !== 'number') fields.push({ field: 'longitude', code: 'required' });
+  const latitude = typeof latitudeRaw === 'number' ? latitudeRaw : Number(latitudeRaw);
+  const longitude = typeof longitudeRaw === 'number' ? longitudeRaw : Number(longitudeRaw);
+  if (!Number.isFinite(latitude)) fields.push({ field: 'latitude', code: 'required' });
+  if (!Number.isFinite(longitude)) fields.push({ field: 'longitude', code: 'required' });
   if (!description) fields.push({ field: 'description', code: 'required' });
   if (fields.length) throw new AppError(1001, { fields });
 
-  const report = await prisma.report.create({
+  const report: ReportWithUser = await prisma.report.create({
     data: {
       userId: currentUser.userId,
       latitude,
@@ -69,10 +112,13 @@ export const POST = withApiHandler(async (request: Request) => {
     },
   });
 
-  try {
-    await sendWhatsAppNotifications(report);
-  } catch (error) {
-    console.error('WhatsApp error (non-blocking):', error);
+  // Enqueue notification for background processing (non-blocking)
+  if (isTwilioConfigured()) {
+    try {
+      await enqueueWhatsAppNotification(report);
+    } catch (error) {
+      console.error('Failed to enqueue notification (non-blocking):', error);
+    }
   }
 
   return NextResponse.json({ report });
@@ -90,20 +136,8 @@ type ReportWithUser = Prisma.ReportGetPayload<{
   };
 }>;
 
-async function sendWhatsAppNotifications(report: ReportWithUser) {
-  const accountSid = process.env.TWILIO_ACCOUNT_SID;
-  const authToken = process.env.TWILIO_AUTH_TOKEN;
-  const whatsappFrom = process.env.TWILIO_WHATSAPP_NUMBER;
+async function enqueueWhatsAppNotification(report: ReportWithUser): Promise<void> {
   const testPhone = process.env.TEST_PHONE_NUMBER;
-
-  if (!accountSid || !authToken || !whatsappFrom) {
-    console.log('Twilio not configured');
-    return;
-  }
-
-  console.log('Twilio configured, attempting to send...');
-
-  const client = twilio(accountSid, authToken);
 
   // Get officials
   const officials = await prisma.user.findMany({
@@ -127,7 +161,7 @@ async function sendWhatsAppNotifications(report: ReportWithUser) {
   }
 
   const googleMapsLink = `https://www.google.com/maps?q=${report.latitude},${report.longitude}`;
-  
+
   const message = `*ALERTE INCENDIE - RICER Ifrane*
 
 *Localisation:*
@@ -144,27 +178,7 @@ ID: ${report.id}
 
 *Action requise immédiatement*`;
 
-  console.log(`Sending to ${recipients.length} recipient(s)`);
-
-  for (const recipient of recipients) {
-    try {
-      console.log(`Sending to: ${recipient}`);
-      
-      const result = await client.messages.create({
-        from: whatsappFrom,
-        to: recipient,
-        body: message,
-      });
-
-      console.log(`Sent. SID: ${result.sid}`);
-    } catch (error) {
-      const err = error instanceof Error ? error : new Error('Unknown error');
-      const anyErr = err;
-      console.error(`Failed to ${recipient}:`, anyErr.message);
-      const maybeCode = (error && typeof error === 'object' && 'code' in error) ? error.code : undefined;
-      if (maybeCode) console.error('Error code:', maybeCode);
-    }
-    
-    await new Promise((r) => setTimeout(r, 1000));
-  }
+  // Enqueue the notification job
+  await enqueueNotification(report.id, recipients, message);
+  console.log(`Notification enqueued for ${recipients.length} recipient(s)`);
 }

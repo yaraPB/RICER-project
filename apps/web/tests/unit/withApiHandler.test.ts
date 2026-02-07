@@ -52,9 +52,33 @@ describe('withApiHandler', () => {
     expect(response.headers.get('x-request-id')).toBeTruthy();
   });
 
+  it('does not rate limit 401 and 403 auth errors', async () => {
+    const handler403 = async () => {
+      throw new AppError(2001); // 403 Forbidden
+    };
+
+    const wrapped = withApiHandler(handler403);
+    const ip = `test-${Date.now()}`;
+    const request = new Request('http://localhost/api/test', {
+      method: 'GET',
+      headers: { 'x-forwarded-for': ip },
+    });
+
+    // Make 20 requests (well over normal rate limit of 15)
+    for (let i = 0; i < 20; i++) {
+      const res = await wrapped(request, {});
+      expect(res.status).toBe(403); // Should never become 429
+      const json = await res.json();
+      expect(json.error.code).toBe(2001);
+    }
+  });
+
   it('does not include debug stack in production unless explicitly enabled', async () => {
-    const originalEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = 'production';
+    const originalEnv = process.env;
+    Object.defineProperty(process, 'env', {
+      value: { ...originalEnv, NODE_ENV: 'production' },
+      configurable: true,
+    });
     try {
       const handler = async () => {
         throw new AppError(1000);
@@ -72,7 +96,7 @@ describe('withApiHandler', () => {
       const json2 = await res2.json();
       expect(json2.error.debug).toBeTruthy();
     } finally {
-      process.env.NODE_ENV = originalEnv;
+      Object.defineProperty(process, 'env', { value: originalEnv, configurable: true });
     }
   });
 });

@@ -9,7 +9,8 @@ describe('Button', () => {
   it('renders with an accessible name and passes basic a11y checks', async () => {
     const { container } = render(<Button>Save</Button>);
     expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
-    expect(await axe(container)).toHaveNoViolations();
+    const results = await axe(container);
+    expect(results.violations.length).toBe(0);
   });
 
   it('can be focused and clicked via keyboard', async () => {

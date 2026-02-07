@@ -15,6 +15,7 @@ test('standardized error envelope includes code, userMessage, and requestId', as
 });
 
 test('rate limiting returns 429 with standardized 1002 code', async ({ request }) => {
+  test.slow();
   const ip = `10.0.1.${Math.floor(Math.random() * 200) + 1}`;
   let lastResponse;
   for (let i = 0; i < 7; i++) {

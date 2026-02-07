@@ -4,33 +4,87 @@ import { prisma } from '@/lib/prisma';
 import { withApiHandler } from '@/lib/errors/withApiHandler';
 import { AppError } from '@/lib/errors/AppError';
 
-export const GET = withApiHandler(async () => {
-  const currentUser = await getCurrentUser();
+// Simple in-memory cache
+let analyticsCache: {
+  data: unknown;
+  timestamp: number;
+} | null = null;
+
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+export const GET = withApiHandler(async (request: Request) => {
+  const currentUser = await getCurrentUser(request);
   if (!currentUser) throw new AppError(2000);
+
+  // Check cache
+  const now = Date.now();
+  if (analyticsCache && now - analyticsCache.timestamp < CACHE_TTL_MS) {
+    return NextResponse.json(analyticsCache.data);
+  }
 
   const fourteenDaysAgo = new Date();
   fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
 
-  const reports = await prisma.report.findMany({
-    where: {
-      createdAt: {
-        gte: fourteenDaysAgo,
+  // Use MongoDB aggregation for better performance
+  const [byDateResult, byCauseResult, totalCount] = await Promise.all([
+    // Group by date using aggregation
+    prisma.report.aggregateRaw({
+      pipeline: [
+        {
+          $match: {
+            createdAt: { $gte: { $date: fourteenDaysAgo.toISOString() } },
+          },
+        },
+        {
+          $group: {
+            _id: {
+              $dateToString: { format: '%Y-%m-%d', date: '$createdAt' },
+            },
+            count: { $sum: 1 },
+          },
+        },
+        {
+          $sort: { _id: 1 },
+        },
+      ],
+    }),
+
+    // Group by cause using aggregation
+    prisma.report.aggregateRaw({
+      pipeline: [
+        {
+          $match: {
+            createdAt: { $gte: { $date: fourteenDaysAgo.toISOString() } },
+          },
+        },
+        {
+          $group: {
+            _id: { $ifNull: ['$cause', 'UNKNOWN'] },
+            count: { $sum: 1 },
+          },
+        },
+      ],
+    }),
+
+    // Get total count
+    prisma.report.count({
+      where: {
+        createdAt: {
+          gte: fourteenDaysAgo,
+        },
       },
-    },
-    orderBy: { createdAt: 'asc' },
-  });
+    }),
+  ]);
 
+  // Process date aggregation results
   const reportsByDate: Record<string, number> = {};
-  const reportsByCause: Record<string, number> = {};
-
-  for (const report of reports) {
-    const date = report.createdAt.toISOString().split('T')[0];
-    reportsByDate[date] = (reportsByDate[date] || 0) + 1;
-
-    const cause = report.cause || 'UNKNOWN';
-    reportsByCause[cause] = (reportsByCause[cause] || 0) + 1;
+  if (Array.isArray(byDateResult)) {
+    for (const item of byDateResult as Array<{ _id: string; count: number }>) {
+      reportsByDate[item._id] = item.count;
+    }
   }
 
+  // Create timeline with all 14 days (fill gaps with 0)
   const timeline: { date: string; count: number }[] = [];
   for (let i = 13; i >= 0; i--) {
     const date = new Date();
@@ -39,18 +93,32 @@ export const GET = withApiHandler(async () => {
     timeline.push({ date: dateStr, count: reportsByDate[dateStr] || 0 });
   }
 
-  const causes = Object.entries(reportsByCause).map(([cause, count]) => ({ cause, count }));
-  const totalReports = reports.length;
-  const daysWithFires = Object.keys(reportsByDate).length;
-  const dailyAverage = daysWithFires > 0 ? (totalReports / daysWithFires).toFixed(1) : '0';
+  // Process cause aggregation results
+  const causes: { cause: string; count: number }[] = [];
+  if (Array.isArray(byCauseResult)) {
+    for (const item of byCauseResult as Array<{ _id: string; count: number }>) {
+      causes.push({ cause: item._id, count: item.count });
+    }
+  }
 
-  return NextResponse.json({
+  const daysWithFires = Object.keys(reportsByDate).length;
+  const dailyAverage = daysWithFires > 0 ? (totalCount / daysWithFires).toFixed(1) : '0';
+
+  const responseData = {
     timeline,
     causes,
     stats: {
-      totalIncidents: totalReports,
+      totalIncidents: totalCount,
       daysWithFires,
       dailyAverage,
     },
-  });
+  };
+
+  // Update cache
+  analyticsCache = {
+    data: responseData,
+    timestamp: now,
+  };
+
+  return NextResponse.json(responseData);
 });

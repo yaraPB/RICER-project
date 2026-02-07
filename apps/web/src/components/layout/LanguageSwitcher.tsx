@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useLanguageStore } from '@/store/languageStore';
+import { useLanguageStore } from '@/store/useLanguageStore';
 import { cn } from '@/lib/cn';
 import { useTranslation } from '@/hooks/useTranslation';
 
@@ -23,7 +23,7 @@ export default function LanguageSwitcher() {
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
           language === 'ar'
             ? 'bg-surface text-primary shadow-sm'
-            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+            : 'text-foreground/80 hover:bg-muted hover:text-foreground'
         )}
       >
         العربية
@@ -36,7 +36,7 @@ export default function LanguageSwitcher() {
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
           language === 'fr'
             ? 'bg-surface text-primary shadow-sm'
-            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+            : 'text-foreground/80 hover:bg-muted hover:text-foreground'
         )}
       >
         Français
@@ -49,7 +49,7 @@ export default function LanguageSwitcher() {
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
           language === 'en'
             ? 'bg-surface text-primary shadow-sm'
-            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+            : 'text-foreground/80 hover:bg-muted hover:text-foreground'
         )}
       >
         English

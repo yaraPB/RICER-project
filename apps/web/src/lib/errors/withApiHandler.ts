@@ -3,12 +3,20 @@ import { AppError } from '@/lib/errors/AppError';
 import { getCatalogEntry } from '@/lib/errors/catalog';
 import { mapUnknownToAppError } from '@/lib/errors/mapError';
 import type { ApiErrorEnvelope, ApiErrorResponse } from '@/lib/errors/types';
-import { translations } from '@/utils/translations';
+import { translations } from '@/i18n/translations';
 import { logger } from '@/lib/observability/logger';
 import { captureException } from '@/lib/observability/monitoring';
 import { checkErrorRateLimit, getClientIp } from '@/lib/errors/rateLimit';
 
 type SupportedLocale = keyof typeof translations;
+type ProblemDetails = {
+  type: string;
+  title: string;
+  status: number;
+  detail?: string;
+  instance?: string;
+  error: ApiErrorEnvelope;
+};
 
 function pickLocaleFromAcceptLanguage(value: string | null): SupportedLocale | null {
   if (!value) return null;
@@ -51,6 +59,18 @@ function isDebugEnabled(request: Request): boolean {
   return request.headers.get('x-debug') === '1';
 }
 
+function toProblemDetails(request: Request, entry: ReturnType<typeof getCatalogEntry>, envelope: ApiErrorEnvelope): ProblemDetails {
+  const status = entry.httpStatus;
+  return {
+    type: `https://ricer.app/problems/${entry.code}`,
+    title: entry.developerMessage,
+    status,
+    detail: envelope.userMessage,
+    instance: new URL(request.url).pathname,
+    error: envelope,
+  };
+}
+
 export type ApiHandlerContext = { params?: Record<string, string> };
 
 export type ApiHandler<TCtx extends ApiHandlerContext = ApiHandlerContext> = (
@@ -87,8 +107,12 @@ export function withApiHandler<TCtx extends ApiHandlerContext>(
       const durationMs = Math.max(0, Math.round(performance.now() - startedAt));
       const route = request.url;
       const ip = getClientIp(request);
+      // Skip rate limiting for auth errors (401, 403)
+      const shouldRateLimit = entry.httpStatus !== 401 && entry.httpStatus !== 403;
       const limitKey = `${ip}:${entry.code}`;
-      const rateLimit = checkErrorRateLimit(limitKey);
+      const rateLimit = shouldRateLimit
+        ? checkErrorRateLimit(limitKey)
+        : { limited: false, retryAfterSeconds: 0 };
       const isRateLimited = rateLimit.limited;
       if (isRateLimited) entry = getCatalogEntry(1002);
 
@@ -136,14 +160,24 @@ export function withApiHandler<TCtx extends ApiHandlerContext>(
       });
 
       const body: ApiErrorResponse = { error: envelope };
-      return NextResponse.json(body, {
-        status: entry.httpStatus,
-        headers: {
-          'x-request-id': requestId,
-          'x-response-time-ms': `${durationMs}`,
-          ...(isRateLimited ? { 'retry-after': String(rateLimit.retryAfterSeconds) } : {}),
-        },
+      const problem = toProblemDetails(request, entry, envelope);
+      const responseBody = JSON.stringify({ ...problem, ...body });
+      const retryAfterFromMeta =
+        entry.code === 1002 && typeof (envelope.meta as { retryAfterSeconds?: unknown } | undefined)?.retryAfterSeconds === 'number'
+          ? String((envelope.meta as { retryAfterSeconds: number }).retryAfterSeconds)
+          : undefined;
+      const headers = new Headers({
+        'content-type': 'application/problem+json; charset=utf-8',
+        'x-request-id': requestId,
+        'x-response-time-ms': `${durationMs}`,
+        ...(isRateLimited
+          ? { 'retry-after': String(rateLimit.retryAfterSeconds) }
+          : retryAfterFromMeta
+            ? { 'retry-after': retryAfterFromMeta }
+            : {}),
       });
+
+      return new Response(responseBody, { status: entry.httpStatus, headers });
     }
   };
 }

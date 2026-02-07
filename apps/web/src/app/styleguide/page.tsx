@@ -22,7 +22,7 @@ export default function StyleguidePage() {
       <header className="space-y-2">
         <div className="flex items-center gap-3">
           <div className="grid h-10 w-10 place-items-center rounded-md bg-primary text-primary-foreground shadow-elev-1">
-            <Icon name="fire" aria-hidden="true" size={20} />
+            <Icon name="fire" aria-hidden={true} size={20} />
           </div>
           <div>
             <h1 className="text-2xl font-extrabold tracking-tight">RICER UI Style Guide</h1>
@@ -77,7 +77,7 @@ export default function StyleguidePage() {
             <div className="text-sm font-bold text-muted-foreground">Buttons</div>
             <div className="flex flex-wrap gap-2">
               <Button variant="primary">
-                <Icon name="campaign" aria-hidden="true" size={20} />
+                <Icon name="campaign" aria-hidden={true} size={20} />
                 Primary
               </Button>
               <Button variant="secondary">Secondary</Button>
@@ -100,12 +100,12 @@ export default function StyleguidePage() {
           <Card className="space-y-4 p-5">
             <div className="text-sm font-bold text-muted-foreground">Icons</div>
             <div className="flex flex-wrap items-center gap-3 text-muted-foreground">
-              <Icon name="map" aria-hidden="true" size={22} />
-              <Icon name="analytics" aria-hidden="true" size={22} />
-              <Icon name="warning" aria-hidden="true" size={22} />
-              <Icon name="truck" aria-hidden="true" size={22} />
-              <Icon name="notifications" aria-hidden="true" size={22} />
-              <Icon name="refresh" aria-hidden="true" size={22} />
+              <Icon name="map" aria-hidden={true} size={22} />
+              <Icon name="analytics" aria-hidden={true} size={22} />
+              <Icon name="warning" aria-hidden={true} size={22} />
+              <Icon name="truck" aria-hidden={true} size={22} />
+              <Icon name="notifications" aria-hidden={true} size={22} />
+              <Icon name="refresh" aria-hidden={true} size={22} />
             </div>
           </Card>
 
@@ -121,7 +121,7 @@ export default function StyleguidePage() {
                     <div className="mt-2 text-2xl font-extrabold text-danger">High</div>
                   </div>
                   <div className="grid h-10 w-10 place-items-center rounded-md bg-surface-2">
-                    <Icon name="warning" aria-hidden="true" size={22} />
+                    <Icon name="warning" aria-hidden={true} size={22} />
                   </div>
                 </div>
               </Card>
