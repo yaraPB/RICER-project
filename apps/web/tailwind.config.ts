@@ -24,6 +24,12 @@ const config: Config = {
         success: "hsl(var(--success))",
         warning: "hsl(var(--warning))",
         danger: "hsl(var(--danger))",
+        "success-muted": "hsl(var(--success-muted))",
+        "success-foreground": "hsl(var(--success-foreground))",
+        "warning-muted": "hsl(var(--warning-muted))",
+        "warning-foreground": "hsl(var(--warning-foreground))",
+        "danger-muted": "hsl(var(--danger-muted))",
+        "danger-foreground": "hsl(var(--danger-foreground))",
 
         "primary-scale": {
           50: "#fef2f2",

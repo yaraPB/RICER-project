@@ -69,7 +69,7 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
     };
 
     fetchRecentReports();
-  }, [isOpen]);
+  }, [isOpen, t]);
 
   if (!isOpen) return null;
 
@@ -90,7 +90,7 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
       />
 
       {/* Panel */}
-      <div className="fixed right-4 top-16 z-50 w-96 max-w-[calc(100vw-2rem)] rounded-lg border border-border bg-surface shadow-elev-2">
+      <div className="fixed right-4 top-16 z-50 w-full max-w-md sm:w-96 rounded-lg border border-border bg-surface shadow-elev-2">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <h2 className="text-sm font-bold">{t('notifications')}</h2>

@@ -28,7 +28,8 @@ if (process.env.NODE_ENV !== 'production') {
 // Health check utility
 export async function checkDatabaseHealth(): Promise<boolean> {
   try {
-    await prisma.$queryRaw`SELECT 1`;
+    // For MongoDB, we can't use $queryRaw. Use $connect instead.
+    await prisma.$connect();
     return true;
   } catch (error) {
     console.error('Database health check failed:', error);

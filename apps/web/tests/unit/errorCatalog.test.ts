@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ERROR_CATALOG, getCatalogEntry } from '@/lib/errors/catalog';
 import { ERROR_CODE_RANGES } from '@/lib/errors/types';
-import { translations } from '@/utils/translations';
+import { translations } from '@/i18n/translations';
 
 describe('ERROR_CATALOG', () => {
   it('uses unique numeric codes', () => {

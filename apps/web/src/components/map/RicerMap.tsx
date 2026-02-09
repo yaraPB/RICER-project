@@ -15,7 +15,6 @@ import ReactMapGL, {
 } from 'react-map-gl';
 import { MapboxOverlay } from '@deck.gl/mapbox';
 import type { MapboxOverlayProps } from '@deck.gl/mapbox/typed';
-import { IconLayer, PathLayer } from '@deck.gl/layers';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useMapStore } from '@/store/useMapStore';
 import MapControls from '@/components/map/MapControls';
@@ -23,7 +22,7 @@ import MapLegend from './MapLegend';
 import { useTranslation } from '@/hooks/useTranslation';
 import { getMapStyle } from '@/lib/map/styles';
 import { INCIDENT_STATUS_COLORS } from '@/lib/map/colors';
-import { circleIcon, asGeoJSON } from '@/lib/map/helpers';
+import { asGeoJSON } from '@/lib/map/helpers';
 import { createResourceLayer, createInfrastructureLayers } from '@/lib/map/layers';
 import type {
   GeoFeatureCollection,
@@ -36,7 +35,7 @@ import type {
 /* ────────── component ────────── */
 
 function DeckGLOverlay(props: MapboxOverlayProps) {
-  const overlay = useControl<MapboxOverlay>(() => new MapboxOverlay(props));
+  const overlay = useControl(() => new (MapboxOverlay as any)(props));
   overlay.setProps(props);
   return null;
 }
@@ -196,9 +195,9 @@ export default function RicerMap() {
   useEffect(() => {
     if (prevIs3D.current !== is3DEnabled) {
       prevIs3D.current = is3DEnabled;
-      setViewState((prev) => ({ ...prev, pitch: is3DEnabled ? 50 : 0 }));
+      setViewState({ ...viewState, pitch: is3DEnabled ? 50 : 0 });
     }
-  }, [is3DEnabled, setViewState]);
+  }, [is3DEnabled, setViewState, viewState]);
 
   /* ═══════════ Fullscreen ═══════════ */
 

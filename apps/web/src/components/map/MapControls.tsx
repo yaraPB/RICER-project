@@ -32,14 +32,14 @@ export default function MapControls() {
   const setIsHeatmapEnabled = useMapStore((s) => s.setIsHeatmapEnabled);
 
   return (
-    <div className="absolute top-3 left-3 z-10 flex flex-col gap-2">
+    <div className="absolute top-3 left-3 z-10 flex flex-col gap-2 max-w-[calc(100vw-1.5rem)] sm:max-w-xs">
       {/* Basemap selector */}
-      <div className="flex flex-wrap overflow-hidden rounded-lg border border-border shadow-elev-1">
+      <div className="flex flex-wrap overflow-hidden rounded-lg border border-border shadow-elev-1 w-full">
         {BASEMAPS.map(({ value, labelKey }) => (
           <button
             key={value}
             type="button"
-            className={`px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${
+            className={`px-2.5 py-1.5 text-[11px] font-semibold transition-colors flex-1 min-w-[4rem] ${
               basemap === value
                 ? 'bg-primary text-white'
                 : 'bg-surface text-foreground hover:bg-surface-2'
@@ -52,10 +52,10 @@ export default function MapControls() {
       </div>
 
       {/* Mode toggles */}
-      <div className="flex gap-1.5">
+      <div className="flex flex-col sm:flex-row gap-1.5 w-full">
         <button
           type="button"
-          className={`flex-1 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold shadow-elev-1 transition-colors ${
+          className={`flex-1 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold shadow-elev-1 transition-colors whitespace-nowrap ${
             is3DEnabled
               ? 'bg-primary text-white'
               : 'bg-surface text-foreground hover:bg-surface-2'
@@ -66,7 +66,7 @@ export default function MapControls() {
         </button>
         <button
           type="button"
-          className={`flex-1 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold shadow-elev-1 transition-colors ${
+          className={`flex-1 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold shadow-elev-1 transition-colors whitespace-nowrap ${
             isHeatmapEnabled
               ? 'bg-primary text-white'
               : 'bg-surface text-foreground hover:bg-surface-2'

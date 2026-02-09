@@ -18,6 +18,12 @@
     --success: 142 71% 45%;
     --warning: 38 92% 40%;
     --danger: 0 72% 42%;
+    --success-muted: 142 71% 95%;
+    --warning-muted: 38 92% 95%;
+    --danger-muted: 0 72% 95%;
+    --success-foreground: 142 71% 25%;
+    --warning-foreground: 38 92% 25%;
+    --danger-foreground: 0 72% 25%;
     --radius: 12px;
   }
 
@@ -36,6 +42,12 @@
     --success: 142 71% 45%;
     --warning: 38 92% 50%;
     --danger: 0 72% 42%;
+    --success-muted: 142 71% 15%;
+    --warning-muted: 38 92% 15%;
+    --danger-muted: 0 72% 15%;
+    --success-foreground: 142 71% 85%;
+    --warning-foreground: 38 92% 85%;
+    --danger-foreground: 0 72% 85%;
   }
 
   * {

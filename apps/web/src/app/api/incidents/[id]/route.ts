@@ -13,16 +13,7 @@ export const GET = withApiHandler(async (request: Request, context?: ApiHandlerC
   if (!id || typeof id !== 'string') throw new AppError(1000);
 
   const incident = await prisma.incident.findUnique({
-    where: { id },
-    include: {
-      report: {
-        include: {
-          user: {
-            select: { cin: true, phone: true, role: true }
-          }
-        }
-      }
-    }
+    where: { id }
   });
 
   if (!incident) throw new AppError(1002, { message: 'Incident not found' });
@@ -81,15 +72,6 @@ export const PATCH = withApiHandler(async (request: Request, context?: ApiHandle
       ...(status && { status }),
       ...(severity !== undefined && { severity }),
       ...(description !== undefined && { description })
-    },
-    include: {
-      report: {
-        include: {
-          user: {
-            select: { cin: true, phone: true, role: true }
-          }
-        }
-      }
     }
   });
 

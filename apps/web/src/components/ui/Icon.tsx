@@ -13,12 +13,14 @@ import {
   LogOut,
   Map,
   Megaphone,
+  Moon,
   Pin,
   Phone,
   RefreshCw,
   Search,
   Share2,
   Siren,
+  Sun,
   Thermometer,
   Truck,
   Wind,
@@ -50,7 +52,9 @@ export type IconName =
   | 'calendar'
   | 'id'
   | 'phone'
-  | 'key';
+  | 'key'
+  | 'moon'
+  | 'sun';
 
 export type IconProps = {
   name: IconName;
@@ -108,7 +112,11 @@ export function Icon({ name, className, size = 20, title, ...props }: IconProps)
                                                 ? Phone
                                                 : name === 'key'
                                                   ? KeyRound
-                                                  : Compass;
+                                                  : name === 'moon'
+                                                    ? Moon
+                                                    : name === 'sun'
+                                                      ? Sun
+                                                      : Compass;
 
   return (
     <IconComponent

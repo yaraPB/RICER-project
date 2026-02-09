@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, beforeEach } from 'vitest';
 import LanguageSwitcher from '@/components/layout/LanguageSwitcher';
-import { useLanguageStore } from '@/store/languageStore';
+import { useLanguageStore } from '@/store/useLanguageStore';
 
 describe('LanguageSwitcher', () => {
   beforeEach(() => {

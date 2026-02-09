@@ -6,6 +6,8 @@ import { useTranslation } from '@/hooks/useTranslation';
 import type { Report } from '@/types';
 import type { TranslationKey } from '@/i18n/translations';
 import { Icon } from '@/components/ui/Icon';
+import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
 import { getApiErrorUserMessage } from '@/lib/errors/sdk';
 import { CreateIncidentModal } from '@/components/reports/CreateIncidentModal';
 
@@ -78,13 +80,13 @@ export default function ReportsListPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'PENDING':
-        return 'bg-red-100 text-red-800';
+        return 'bg-danger-muted text-danger-foreground';
       case 'IN_PROGRESS':
-        return 'bg-orange-100 text-orange-800';
+        return 'bg-warning-muted text-warning-foreground';
       case 'COMPLETED':
-        return 'bg-green-100 text-green-800';
+        return 'bg-success-muted text-success-foreground';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-muted text-muted-foreground';
     }
   };
 
@@ -149,10 +151,10 @@ export default function ReportsListPage() {
   return (
     <div className="max-w-7xl mx-auto p-6">
       <div className="mb-8">
-        <h1 className={`text-3xl font-bold text-gray-900 mb-2 ${textAlign}`}>
+        <h1 className={`text-3xl font-bold text-foreground mb-2 ${textAlign}`}>
           {t('reportsListTitle')}
         </h1>
-        <p className={`text-gray-600 ${textAlign}`}>
+        <p className={`text-muted-foreground ${textAlign}`}>
           {t('reportsListDesc')}
         </p>
       </div>
@@ -167,21 +169,22 @@ export default function ReportsListPage() {
       ) : null}
 
       {reports.length === 0 ? (
-        <div className="bg-gray-50 rounded-lg p-12 text-center">
+        <Card tone="elevated" className="p-12 text-center">
           <div className="mb-4 flex justify-center text-muted-foreground">
             <Icon name="clipboard" aria-hidden={true} size={52} />
           </div>
-          <h3 className="text-xl font-bold text-gray-700 mb-2">
+          <h3 className="text-xl font-bold text-foreground mb-2">
             {t('noReports')}
           </h3>
-          <p className="text-gray-500">{t('noReportsDesc')}</p>
-        </div>
+          <p className="text-muted-foreground">{t('noReportsDesc')}</p>
+        </Card>
       ) : (
         <div className="grid grid-cols-1 gap-6">
           {reports.map((report) => (
-            <div
+            <Card
               key={report.id}
-              className="bg-white rounded-lg shadow-lg p-6 border border-gray-200"
+              tone="elevated"
+              className="p-6"
               dir={isRTL ? 'rtl' : 'ltr'}
             >
               <div className={`flex items-start ${isRTL ? 'flex-row-reverse' : 'flex-row'} justify-between mb-4`}>
@@ -194,53 +197,54 @@ export default function ReportsListPage() {
                     >
                       {getStatusLabel(report.status)}
                     </span>
-                    <div className="text-sm text-gray-500">
+                    <div className="text-sm text-muted-foreground">
                       {formatDate(report.createdAt)}
                     </div>
                   </div>
 
-                  <div className={`text-sm text-gray-600 mb-1 ${textAlign}`}>
+                  <div className={`text-sm text-muted-foreground mb-1 ${textAlign}`}>
                     <span className="font-medium">{t('reporter')}:</span> {report.user?.cin ?? '—'}
                   </div>
 
                   {report.cause && (
-                    <div className={`text-sm text-gray-600 mb-1 ${textAlign}`}>
+                    <div className={`text-sm text-muted-foreground mb-1 ${textAlign}`}>
                       <span className="font-medium">{t('cause')}:</span>{' '}
                       {getCauseLabel(report.cause)}
                     </div>
                   )}
 
-                  <div className={`text-sm text-gray-600 ${textAlign}`}>
+                  <div className={`text-sm text-muted-foreground ${textAlign}`}>
                     <span className="font-medium">{t('location')}:</span>{' '}
                     {formatCoordinates(report.latitude, report.longitude)}
                   </div>
                 </div>
 
-                <div className={isRTL ? 'mr-4 text-red-600' : 'ml-4 text-red-600'}>
+                <div className={isRTL ? 'mr-4 text-danger' : 'ml-4 text-danger'}>
                   <Icon name="fire" aria-hidden={true} size={28} />
                 </div>
               </div>
 
-              <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                <div className={`text-sm font-medium text-gray-700 mb-2 ${textAlign}`}>
+              <div className="bg-muted rounded-lg p-4 mb-4">
+                <div className={`text-sm font-medium text-foreground mb-2 ${textAlign}`}>
                   {t('description')}:
                 </div>
-                <p className={`text-gray-800 ${textAlign}`}>{report.description}</p>
+                <p className={`text-foreground ${textAlign}`}>{report.description}</p>
               </div>
 
               {user?.role === 'OFFICIAL' && (
                 <div className="space-y-2">
                   <div className="flex gap-2" aria-busy={updatingId === report.id}>
-                    <button
+                    <Button
                       onClick={() => handleStatusUpdate(report.id, 'PENDING')}
                       disabled={
                         report.status === 'PENDING' || updatingId === report.id
                       }
-                      className="flex-1 px-4 py-2 bg-red-100 hover:bg-red-200 disabled:bg-gray-100 disabled:text-gray-400 text-red-700 rounded-lg text-sm font-medium transition-colors"
+                      variant="secondary"
+                      className="flex-1 bg-danger-muted hover:bg-danger-muted/80 disabled:bg-muted disabled:text-muted-foreground text-danger-foreground"
                     >
                       {t('pending')}
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       onClick={() =>
                         handleStatusUpdate(report.id, 'IN_PROGRESS')
                       }
@@ -248,42 +252,45 @@ export default function ReportsListPage() {
                         report.status === 'IN_PROGRESS' ||
                         updatingId === report.id
                       }
-                      className="flex-1 px-4 py-2 bg-orange-100 hover:bg-orange-200 disabled:bg-gray-100 disabled:text-gray-400 text-orange-700 rounded-lg text-sm font-medium transition-colors"
+                      variant="secondary"
+                      className="flex-1 bg-warning-muted hover:bg-warning-muted/80 disabled:bg-muted disabled:text-muted-foreground text-warning-foreground"
                     >
                       {t('inProgress')}
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       onClick={() => handleStatusUpdate(report.id, 'COMPLETED')}
                       disabled={
                         report.status === 'COMPLETED' || updatingId === report.id
                       }
-                      className="flex-1 px-4 py-2 bg-green-100 hover:bg-green-200 disabled:bg-gray-100 disabled:text-gray-400 text-green-700 rounded-lg text-sm font-medium transition-colors"
+                      variant="secondary"
+                      className="flex-1 bg-success-muted hover:bg-success-muted/80 disabled:bg-muted disabled:text-muted-foreground text-success-foreground"
                     >
                       {t('completed')}
-                    </button>
+                    </Button>
                   </div>
 
                   <div className="flex gap-2">
                     {!report.incidentId && (
-                      <button
+                      <Button
                         onClick={() => setReportToConvert(report)}
-                        className="flex-1 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                        variant="primary"
+                        className="flex-1 flex items-center justify-center gap-2"
                       >
                         <Icon name="fire" size={16} />
                         {t('createIncident')}
-                      </button>
+                      </Button>
                     )}
 
                     {report.incidentId && (
-                      <div className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-green-100 px-4 py-2 text-sm font-medium text-green-800">
-                        <Icon name="check-circle" size={16} />
+                      <div className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-success-muted px-4 py-2 text-sm font-medium text-success-foreground">
+                        <Icon name="fire" size={16} />
                         {t('incidentCreated')}
                       </div>
                     )}
                   </div>
                 </div>
               )}
-            </div>
+            </Card>
           ))}
         </div>
       )}

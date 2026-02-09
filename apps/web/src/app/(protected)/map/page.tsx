@@ -245,7 +245,7 @@ export default function MapPage() {
       <section className="flex flex-1 flex-col gap-4 overflow-auto p-4 md:p-6">
         {weatherError || incidentsError ? (
           <div role="alert" className="rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
-            {t(weatherError ?? incidentsError ?? '')} {/* Translate error key in render */}
+            {weatherError ?? incidentsError}
           </div>
         ) : null}
 
