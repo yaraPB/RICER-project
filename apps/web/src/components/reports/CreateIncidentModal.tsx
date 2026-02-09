@@ -64,7 +64,7 @@ export function CreateIncidentModal({ report, open, onClose, onSuccess }: Create
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-xl font-semibold">{t('createIncident')}</h2>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
-            <Icon name="x" />
+            <Icon name="close" />
           </button>
         </div>
 

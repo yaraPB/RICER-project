@@ -18,7 +18,9 @@ export function circleIcon(color: string): string {
  * @param fc - Feature collection to cast
  * @returns The feature collection as any type for library compatibility
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function asGeoJSON(fc: unknown): any {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return fc as any;
 }
 

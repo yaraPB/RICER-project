@@ -7,6 +7,8 @@ import dynamic from 'next/dynamic';
 import { FIRE_CAUSE_KEYS } from '@/config/constants';
 import type { TranslationKey } from '@/i18n/translations';
 import { Icon } from '@/components/ui/Icon';
+import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
 import { getApiErrorUserMessage } from '@/lib/errors/sdk';
 import { ErrorDisplay } from '@/components/ui/ErrorDisplay';
 import { clientLogger } from '@/lib/observability/clientLogger';
@@ -14,7 +16,7 @@ import { clientLogger } from '@/lib/observability/clientLogger';
 function LocationPickerLoading() {
   const { t } = useTranslation();
   return (
-    <div className="h-[400px] flex items-center justify-center bg-gray-100 rounded-lg">
+    <div className="h-[400px] flex items-center justify-center bg-muted rounded-lg">
       {t('loadingMap')}
     </div>
   );
@@ -137,13 +139,13 @@ export default function ReportPage() {
   if (success) {
     return (
       <div className="max-w-4xl mx-auto p-6">
-        <div className="bg-green-50 border border-green-200 rounded-lg p-8 text-center">
+        <Card tone="elevated" className="p-8 text-center">
           <div className="text-6xl mb-4">✅</div>
-          <h2 className="text-2xl font-bold text-green-800 mb-2">
+          <h2 className="text-2xl font-bold text-success mb-2">
             {t('reportSuccess')}
           </h2>
-          <p className="text-green-700">{t('redirecting')}</p>
-        </div>
+          <p className="text-success-foreground">{t('redirecting')}</p>
+        </Card>
       </div>
     );
   }
@@ -151,10 +153,10 @@ export default function ReportPage() {
   return (
     <div className="max-w-4xl mx-auto p-6">
       <div className="mb-8">
-        <h1 className={`text-3xl font-bold text-gray-900 mb-2 ${textAlign}`}>
+        <h1 className={`text-3xl font-bold text-foreground mb-2 ${textAlign}`}>
           {t('reportFireTitle')}
         </h1>
-        <p className={`text-gray-600 ${textAlign}`}>
+        <p className={`text-muted-foreground ${textAlign}`}>
           {t('reportFireDesc')}
         </p>
       </div>
@@ -172,7 +174,7 @@ export default function ReportPage() {
 
         {/* Location Picker */}
         <div>
-          <label className={`block text-lg font-medium text-gray-700 mb-3 ${textAlign}`}>
+          <label className={`block text-lg font-medium text-foreground mb-3 ${textAlign}`}>
             {t('fireLocation')}
           </label>
           <LocationPicker
@@ -180,7 +182,7 @@ export default function ReportPage() {
             selectedLocation={formData.location || undefined}
           />
           {formData.location && (
-            <div className={`mt-2 text-sm text-gray-600 ${textAlign}`}>
+            <div className={`mt-2 text-sm text-muted-foreground ${textAlign}`}>
               {t('selectedLocation')}: {formData.location.lat.toFixed(6)},{' '}
               {formData.location.lng.toFixed(6)}
             </div>
@@ -189,7 +191,7 @@ export default function ReportPage() {
 
         {/* Description */}
         <div>
-          <label className={`block text-lg font-medium text-gray-700 mb-3 ${textAlign}`}>
+          <label className={`block text-lg font-medium text-foreground mb-3 ${textAlign}`}>
             {t('fireDescription')}
           </label>
           <textarea
@@ -197,7 +199,7 @@ export default function ReportPage() {
             onChange={(e) =>
               setFormData({ ...formData, description: e.target.value })
             }
-            className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent ${textAlign}`}
+            className={`w-full px-4 py-3 border border-input rounded-lg bg-surface text-foreground focus:ring-2 focus:ring-ring focus:border-transparent ${textAlign}`}
             rows={5}
             placeholder={t('descriptionPlaceholder')}
             required
@@ -206,7 +208,7 @@ export default function ReportPage() {
 
         {/* Cause */}
         <div>
-          <label className={`block text-lg font-medium text-gray-700 mb-3 ${textAlign}`}>
+          <label className={`block text-lg font-medium text-foreground mb-3 ${textAlign}`}>
             {t('probableCause')}
           </label>
           <select
@@ -214,7 +216,7 @@ export default function ReportPage() {
             onChange={(e) =>
               setFormData({ ...formData, cause: e.target.value })
             }
-            className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent ${textAlign}`}
+            className={`w-full px-4 py-3 border border-input rounded-lg bg-surface text-foreground focus:ring-2 focus:ring-ring focus:border-transparent ${textAlign}`}
           >
             <option value="">{t('selectCause')}</option>
             {FIRE_CAUSE_KEYS.map((key) => (
@@ -227,17 +229,19 @@ export default function ReportPage() {
 
         {/* Submit Button */}
         <div className="flex gap-4">
-          <button
+          <Button
             type="button"
+            variant="secondary"
             onClick={() => router.back()}
-            className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-3 rounded-lg transition-colors"
+            className="flex-1"
           >
             {t('cancel')}
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
+            variant="primary"
             disabled={loading}
-            className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-red-300 text-white font-medium py-3 rounded-lg transition-colors"
+            className="flex-1 bg-danger hover:bg-danger/90"
           >
             {loading ? (
               t('submitting')
@@ -247,7 +251,7 @@ export default function ReportPage() {
                 {t('submitReport')}
               </span>
             )}
-          </button>
+          </Button>
         </div>
       </form>
     </div>

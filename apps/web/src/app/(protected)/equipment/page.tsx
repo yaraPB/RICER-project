@@ -11,12 +11,14 @@ import type {
   Infrastructure,
   TruckDeployment,
 } from '@/types';
+import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
 import { getApiErrorUserMessage } from '@/lib/errors/sdk';
 
 function TruckMapLoading() {
   const { t } = useTranslation();
   return (
-    <div className="h-[400px] flex items-center justify-center bg-gray-100 rounded-lg">
+    <div className="h-[400px] flex items-center justify-center bg-muted rounded-lg">
       {t('loadingMap')}
     </div>
   );
@@ -134,7 +136,7 @@ export default function EquipmentPage() {
   if (!data) {
     return (
       <div className="max-w-7xl mx-auto p-6">
-        <div className="bg-red-50 text-red-600 p-4 rounded-lg text-center">
+        <div className="bg-danger-muted text-danger-foreground p-4 rounded-lg text-center border border-danger/30">
           {error ?? t('errorServer')}
         </div>
       </div>
@@ -142,9 +144,9 @@ export default function EquipmentPage() {
   }
 
   const getConditionColor = (condition: string) => {
-    if (condition === 'Bon') return 'bg-green-100 text-green-800';
-    if (condition === 'Moyen') return 'bg-yellow-100 text-yellow-800';
-    return 'bg-red-100 text-red-800';
+    if (condition === 'Bon') return 'bg-success-muted text-success-foreground';
+    if (condition === 'Moyen') return 'bg-warning-muted text-warning-foreground';
+    return 'bg-danger-muted text-danger-foreground';
   };
 
   const getConditionLabel = (condition: string) => {
@@ -156,47 +158,47 @@ export default function EquipmentPage() {
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-8">
       <div className="mb-8">
-        <h1 className={`text-3xl font-bold text-gray-900 mb-2 ${textAlign}`}>
+        <h1 className={`text-3xl font-bold text-foreground mb-2 ${textAlign}`}>
           {t('equipmentTitle')}
         </h1>
-        <p className={`text-gray-600 ${textAlign}`}>{t('equipmentDesc')}</p>
+        <p className={`text-muted-foreground ${textAlign}`}>{t('equipmentDesc')}</p>
       </div>
 
       {/* Truck Deployment Map */}
-      <div className="bg-white rounded-xl shadow-lg p-6">
+      <Card tone="elevated" className="p-6">
         <h2 className={`text-2xl font-bold mb-4 ${textAlign}`}>{t('truckDeploymentMap')}</h2>
         <TruckMap trucks={data.truckDeployments} />
-      </div>
+      </Card>
 
       {/* Equipment Table */}
-      <div className="bg-white rounded-xl shadow-lg p-6">
+      <Card tone="elevated" className="p-6">
         <h2 className={`text-2xl font-bold mb-4 ${textAlign}`}>{t('equipmentInventory')}</h2>
         <div className="overflow-x-auto">
           <table className={`w-full ${textAlign}`}>
             <thead>
-              <tr className="border-b-2 border-gray-200">
-                <th className={`py-3 px-4 font-bold ${textAlign}`}>{t('category')}</th>
-                <th className={`py-3 px-4 font-bold ${textAlign}`}>{t('name')}</th>
-                <th className={`py-3 px-4 font-bold ${textAlign}`}>{t('quantity')}</th>
-                <th className={`py-3 px-4 font-bold ${textAlign}`}>{t('condition')}</th>
-                <th className={`py-3 px-4 font-bold ${textAlign}`}>{t('locationLabel')}</th>
-                <th className={`py-3 px-4 font-bold ${textAlign}`}>{t('lastMaintenance')}</th>
-                <th className={`py-3 px-4 font-bold ${textAlign}`}></th>
+              <tr className="border-b-2 border-border">
+                <th className={`py-3 px-4 font-bold text-foreground ${textAlign}`}>{t('category')}</th>
+                <th className={`py-3 px-4 font-bold text-foreground ${textAlign}`}>{t('name')}</th>
+                <th className={`py-3 px-4 font-bold text-foreground ${textAlign}`}>{t('quantity')}</th>
+                <th className={`py-3 px-4 font-bold text-foreground ${textAlign}`}>{t('condition')}</th>
+                <th className={`py-3 px-4 font-bold text-foreground ${textAlign}`}>{t('locationLabel')}</th>
+                <th className={`py-3 px-4 font-bold text-foreground ${textAlign}`}>{t('lastMaintenance')}</th>
+                <th className={`py-3 px-4 font-bold text-foreground ${textAlign}`}></th>
               </tr>
             </thead>
             <tbody>
               {data.equipment.map((item) => (
-                <tr key={item.id} className="border-b border-gray-100">
+                <tr key={item.id} className="border-b border-border/50">
                   <td className="py-3 px-4">{item.category}</td>
                   <td className="py-3 px-4">{item.name}</td>
-                  <td className="py-3 px-4">
+                  <td className="py-3 px-4 text-foreground">
                     {editingId === item.id ? (
                       <input
                         type="number"
                         min="0"
                         value={editValues.quantity}
                         onChange={(e) => setEditValues({ ...editValues, quantity: parseInt(e.target.value) || 0 })}
-                        className={`w-20 px-2 py-1 border border-gray-300 rounded ${textAlign}`}
+                        className={`w-20 px-2 py-1 border border-input bg-surface text-foreground rounded ${textAlign}`}
                       />
                     ) : (
                       item.quantity
@@ -207,7 +209,7 @@ export default function EquipmentPage() {
                       <select
                         value={editValues.condition}
                         onChange={(e) => setEditValues({ ...editValues, condition: e.target.value })}
-                        className={`px-2 py-1 border border-gray-300 rounded ${textAlign}`}
+                        className={`px-2 py-1 border border-input bg-surface text-foreground rounded ${textAlign}`}
                       >
                         <option value="Bon">{t('good')}</option>
                         <option value="Moyen">{t('average')}</option>
@@ -219,8 +221,8 @@ export default function EquipmentPage() {
                       </span>
                     )}
                   </td>
-                  <td className="py-3 px-4">{item.location}</td>
-                  <td className="py-3 px-4 text-sm text-gray-500">
+                  <td className="py-3 px-4 text-foreground">{item.location}</td>
+                  <td className="py-3 px-4 text-sm text-muted-foreground">
                     {item.lastMaintenance
                       ? new Date(item.lastMaintenance).toLocaleDateString(locale)
                       : '-'}
@@ -228,28 +230,31 @@ export default function EquipmentPage() {
                   <td className="py-3 px-4">
                     {editingId === item.id ? (
                       <div className="flex gap-2">
-                        <button
+                        <Button
                           onClick={() => saveEdit(item.id)}
                           disabled={saving}
-                          className="px-3 py-1 bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white text-sm rounded transition-colors"
+                          variant="primary"
+                          className="bg-success hover:bg-success/90 text-sm"
                         >
                           {saving ? t('saving') : t('save')}
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                           onClick={cancelEdit}
                           disabled={saving}
-                          className="px-3 py-1 bg-gray-300 hover:bg-gray-400 text-gray-700 text-sm rounded transition-colors"
+                          variant="secondary"
+                          className="text-sm"
                         >
                           {t('cancel')}
-                        </button>
+                        </Button>
                       </div>
                     ) : (
-                      <button
+                      <Button
                         onClick={() => startEdit(item)}
-                        className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors"
+                        variant="primary"
+                        className="text-sm"
                       >
                         {t('edit')}
-                      </button>
+                      </Button>
                     )}
                   </td>
                 </tr>
@@ -257,30 +262,30 @@ export default function EquipmentPage() {
             </tbody>
           </table>
         </div>
-      </div>
+      </Card>
 
       {/* Retardant Products */}
-      <div className="bg-white rounded-xl shadow-lg p-6">
+      <Card tone="elevated" className="p-6">
         <h2 className={`text-2xl font-bold mb-4 ${textAlign}`}>{t('retardantProducts')}</h2>
         <div className="overflow-x-auto">
           <table className={`w-full ${textAlign}`}>
             <thead>
-              <tr className="border-b-2 border-gray-200">
-                <th className={`py-3 px-4 font-bold ${textAlign}`}>{t('productName')}</th>
-                <th className={`py-3 px-4 font-bold ${textAlign}`}>{t('quantityLiters')}</th>
-                <th className={`py-3 px-4 font-bold ${textAlign}`}>{t('locationLabel')}</th>
-                <th className={`py-3 px-4 font-bold ${textAlign}`}>{t('acquisitionDate')}</th>
+              <tr className="border-b-2 border-border">
+                <th className={`py-3 px-4 font-bold text-foreground ${textAlign}`}>{t('productName')}</th>
+                <th className={`py-3 px-4 font-bold text-foreground ${textAlign}`}>{t('quantityLiters')}</th>
+                <th className={`py-3 px-4 font-bold text-foreground ${textAlign}`}>{t('locationLabel')}</th>
+                <th className={`py-3 px-4 font-bold text-foreground ${textAlign}`}>{t('acquisitionDate')}</th>
               </tr>
             </thead>
             <tbody>
               {data.retardantProducts.map((product) => (
-                <tr key={product.id} className="border-b border-gray-100">
-                  <td className="py-3 px-4">{product.productName}</td>
-                  <td className="py-3 px-4 font-bold text-blue-600">
+                <tr key={product.id} className="border-b border-border/50">
+                  <td className="py-3 px-4 text-foreground">{product.productName}</td>
+                  <td className="py-3 px-4 font-bold text-primary">
                     {product.quantity.toLocaleString()}
                   </td>
-                  <td className="py-3 px-4">{product.storageLocation}</td>
-                  <td className="py-3 px-4 text-sm text-gray-500">
+                  <td className="py-3 px-4 text-foreground">{product.storageLocation}</td>
+                  <td className="py-3 px-4 text-sm text-muted-foreground">
                     {new Date(product.acquisitionDate).toLocaleDateString(locale)}
                   </td>
                 </tr>
@@ -288,8 +293,8 @@ export default function EquipmentPage() {
             </tbody>
           </table>
         </div>
-        <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-          <div className={`${textAlign} font-bold text-blue-800`}>
+        <div className="mt-4 p-4 bg-primary/10 rounded-lg border border-primary/20">
+          <div className={`${textAlign} font-bold text-primary`}>
             {t('totalAmount')}:{' '}
             {data.retardantProducts
               .reduce((sum, p) => sum + p.quantity, 0)
@@ -297,43 +302,43 @@ export default function EquipmentPage() {
             {t('liters')}
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Infrastructure */}
-      <div className="bg-white rounded-xl shadow-lg p-6">
+      <Card tone="elevated" className="p-6">
         <h2 className={`text-2xl font-bold mb-4 ${textAlign}`}>{t('infrastructure')}</h2>
         <div className="overflow-x-auto">
           <table className={`w-full ${textAlign}`}>
             <thead>
-              <tr className="border-b-2 border-gray-200">
-                <th className={`py-3 px-4 font-bold ${textAlign}`}>{t('type')}</th>
-                <th className={`py-3 px-4 font-bold ${textAlign}`}>{t('name')}</th>
-                <th className={`py-3 px-4 font-bold ${textAlign}`}>{t('status')}</th>
-                <th className={`py-3 px-4 font-bold ${textAlign}`}>{t('description')}</th>
-                <th className={`py-3 px-4 font-bold ${textAlign}`}>{t('locationLabel')}</th>
+              <tr className="border-b-2 border-border">
+                <th className={`py-3 px-4 font-bold text-foreground ${textAlign}`}>{t('type')}</th>
+                <th className={`py-3 px-4 font-bold text-foreground ${textAlign}`}>{t('name')}</th>
+                <th className={`py-3 px-4 font-bold text-foreground ${textAlign}`}>{t('status')}</th>
+                <th className={`py-3 px-4 font-bold text-foreground ${textAlign}`}>{t('description')}</th>
+                <th className={`py-3 px-4 font-bold text-foreground ${textAlign}`}>{t('locationLabel')}</th>
               </tr>
             </thead>
             <tbody>
               {data.infrastructure.map((item) => (
-                <tr key={item.id} className="border-b border-gray-100">
-                  <td className="py-3 px-4">{item.type}</td>
-                  <td className="py-3 px-4">{item.name}</td>
+                <tr key={item.id} className="border-b border-border/50">
+                  <td className="py-3 px-4 text-foreground">{item.type}</td>
+                  <td className="py-3 px-4 text-foreground">{item.name}</td>
                   <td className="py-3 px-4">
                     <span
                       className={`px-2 py-1 rounded text-sm ${
                         item.status.includes('Opérationnel') ||
                         item.status.includes('Bon')
-                          ? 'bg-green-100 text-green-800'
+                          ? 'bg-success-muted text-success-foreground'
                           : item.status.includes('Excellent')
-                          ? 'bg-blue-100 text-blue-800'
-                          : 'bg-yellow-100 text-yellow-800'
+                          ? 'bg-primary/10 text-primary'
+                          : 'bg-warning-muted text-warning-foreground'
                       }`}
                     >
                       {item.status}
                     </span>
                   </td>
-                  <td className="py-3 px-4 text-sm">{item.description}</td>
-                  <td className="py-3 px-4 text-sm text-gray-500">
+                  <td className="py-3 px-4 text-sm text-foreground">{item.description}</td>
+                  <td className="py-3 px-4 text-sm text-muted-foreground">
                     {item.latitude && item.longitude
                       ? `${item.latitude.toFixed(4)}, ${item.longitude.toFixed(4)}`
                       : '-'}
@@ -343,7 +348,7 @@ export default function EquipmentPage() {
             </tbody>
           </table>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }

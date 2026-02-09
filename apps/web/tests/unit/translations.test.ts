@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { translations } from '@/utils/translations';
+import { translations } from '@/i18n/translations';
 
 describe('translations', () => {
   it('keeps ar, fr, and en keys in sync', () => {

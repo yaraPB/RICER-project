@@ -9,6 +9,15 @@ import { ErrorProvider } from '@/contexts/ErrorContext';
 export const metadata: Metadata = {
   title: 'RICER Ifrane - نظام الإبلاغ عن الحرائق',
   description: 'نظام إدارة الحرائق والإبلاغ عنها في إفران، المغرب',
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/logos/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/logos/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180' }],
+  },
+  manifest: '/manifest.json',
 };
 
 export const viewport: Viewport = {

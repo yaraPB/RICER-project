@@ -3,7 +3,7 @@
 import * as React from 'react';
 import LanguageSwitcher from '@/components/layout/LanguageSwitcher';
 import { Card } from '@/components/ui/Card';
-import { Icon } from '@/components/ui/Icon';
+import { Logo } from '@/components/ui/Logo';
 
 export type AuthShellProps = {
   title: string;
@@ -26,8 +26,8 @@ export function AuthShell({ title, subtitle, children, footer, isRTL }: AuthShel
       <div className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center p-4 sm:p-6">
         <Card tone="elevated" className="p-6 sm:p-8" dir={isRTL ? 'rtl' : 'ltr'}>
           <div className="mb-6 text-center">
-            <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-xl bg-primary text-primary-foreground shadow-elev-1">
-              <Icon name="fire" aria-hidden={true} size={26} />
+            <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-xl bg-surface shadow-elev-1 p-2">
+              <Logo variant="badge" size="lg" priority />
             </div>
             <h1 className="text-2xl font-extrabold tracking-tight text-foreground">{title}</h1>
             {subtitle ? <p className="mt-2 text-sm text-muted-foreground">{subtitle}</p> : null}

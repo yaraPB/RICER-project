@@ -40,7 +40,8 @@ export default function WeatherPage() {
     return (
       <div className="max-w-7xl mx-auto p-6">
         <div className="bg-red-50 text-red-600 p-4 rounded-lg text-center">
-          {t(error)} {/* Translate error key in render */}
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+          {error ? t(error as any) : t('weatherLoadFailed')}
         </div>
       </div>
     );

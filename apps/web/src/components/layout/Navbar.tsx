@@ -7,6 +7,8 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import LanguageSwitcher from './LanguageSwitcher';
 import { NotificationsPanel } from './NotificationsPanel';
+import { ThemeToggle } from './ThemeToggle';
+import { Footer } from './Footer';
 import { AppShell } from '@/components/shell/AppShell';
 import { Topbar } from '@/components/shell/Topbar';
 import { SidebarRail } from '@/components/shell/SidebarRail';
@@ -15,6 +17,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { IconButton } from '@/components/ui/IconButton';
 import { Icon } from '@/components/ui/Icon';
+import { Logo } from '@/components/ui/Logo';
 import { SearchInput } from '@/components/ui/SearchInput';
 
 export default function Navbar({ children }: { children: React.ReactNode }) {
@@ -70,9 +73,9 @@ export default function Navbar({ children }: { children: React.ReactNode }) {
             left={
               <div className="flex items-center gap-3">
                 <Link href="/map" className="flex items-center gap-3" aria-label={t('brandTitle')}>
-                  <span className="grid h-9 w-9 place-items-center rounded-md bg-primary text-primary-foreground shadow-elev-1">
-                    <Icon name="fire" aria-hidden={true} size={20} />
-                  </span>
+                  <div className="grid h-9 w-9 place-items-center rounded-md bg-surface shadow-elev-1 p-1">
+                    <Logo variant="badge" size="sm" priority />
+                  </div>
                   <span className="sr-only">{t('brandTitle')}</span>
                   <div className="hidden sm:block leading-tight">
                     <div className="text-sm font-extrabold tracking-tight">{t('brandTitle')}</div>
@@ -100,6 +103,7 @@ export default function Navbar({ children }: { children: React.ReactNode }) {
             }
             right={
               <div className="flex items-center gap-2">
+                <ThemeToggle />
                 <LanguageSwitcher />
 
                 <IconButton
@@ -135,7 +139,10 @@ export default function Navbar({ children }: { children: React.ReactNode }) {
         }
         sidebar={<SidebarRail items={navItems} />}
       >
-        {children}
+        <div className="flex flex-col min-h-screen">
+          <div className="flex-1">{children}</div>
+          <Footer />
+        </div>
       </AppShell>
 
       <NotificationsPanel isOpen={notificationsOpen} onClose={() => setNotificationsOpen(false)} />

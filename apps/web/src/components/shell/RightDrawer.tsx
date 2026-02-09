@@ -92,7 +92,7 @@ export function RightDrawer({
         aria-labelledby={titleId}
         ref={drawerRef}
         className={cn(
-          'fixed right-0 top-16 z-50 h-[calc(100vh-4rem)] w-[380px] max-w-[95vw] overflow-hidden border-l border-border bg-surface shadow-elev-2 transition-transform md:relative md:top-0 md:z-0 md:h-full md:translate-x-0 md:shadow-none',
+          'fixed right-0 top-16 z-50 h-[calc(100vh-4rem)] w-full sm:w-[380px] max-w-[95vw] overflow-hidden border-l border-border bg-surface shadow-elev-2 transition-transform md:relative md:top-0 md:z-0 md:h-full md:translate-x-0 md:shadow-none',
           open ? 'translate-x-0' : 'translate-x-full md:translate-x-0',
           className
         )}

@@ -16,6 +16,8 @@ import {
 import { useTranslation } from '@/hooks/useTranslation';
 import type { TranslationKey } from '@/i18n/translations';
 import { Icon } from '@/components/ui/Icon';
+import { KpiCard } from '@/components/ui/KpiCard';
+import { Card } from '@/components/ui/Card';
 import { getApiErrorUserMessage } from '@/lib/errors/sdk';
 
 interface AnalyticsData {
@@ -29,15 +31,14 @@ interface AnalyticsData {
 }
 
 const COLORS = [
-  '#ef4444',
-  '#f97316',
-  '#f59e0b',
-  '#eab308',
-  '#84cc16',
-  '#22c55e',
-  '#10b981',
-  '#14b8a6',
-  '#06b6d4',
+  'hsl(var(--danger))',
+  'hsl(var(--primary))',
+  'hsl(var(--warning))',
+  'hsl(38 92% 50%)',
+  'hsl(142 71% 45%)',
+  'hsl(142 71% 55%)',
+  'hsl(180 71% 45%)',
+  'hsl(200 71% 45%)',
 ];
 
 export default function AnalyticsPage() {
@@ -95,7 +96,7 @@ export default function AnalyticsPage() {
   if (!data) {
     return (
       <div className="max-w-7xl mx-auto p-6">
-        <div className="bg-red-50 text-red-600 p-4 rounded-lg text-center">
+        <div className="rounded-lg border border-danger/30 bg-danger-muted px-4 py-3 text-center text-danger-foreground">
           {error ?? t('analyticsLoadFailed')}
         </div>
       </div>
@@ -114,68 +115,56 @@ export default function AnalyticsPage() {
   return (
     <div className="max-w-7xl mx-auto p-6">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+        <h1 className="text-3xl font-bold text-foreground mb-2">
           {t('analyticsTitle')}
         </h1>
-        <p className="text-gray-600">{t('analyticsDesc')}</p>
+        <p className="text-muted-foreground">{t('analyticsDesc')}</p>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white rounded-xl shadow-lg p-6">
-          <div className="text-center">
-            <div className="mb-2 flex justify-center text-red-600">
-              <Icon name="fire" aria-hidden={true} size={28} />
-            </div>
-            <div className="text-3xl font-bold text-red-600">
-              {data.stats.totalIncidents}
-            </div>
-            <div className="text-sm text-gray-600 mt-1">{t('totalFires')}</div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-lg p-6">
-          <div className="text-center">
-            <div className="mb-2 flex justify-center text-orange-600">
-              <Icon name="calendar" aria-hidden={true} size={28} />
-            </div>
-            <div className="text-3xl font-bold text-orange-600">
-              {data.stats.daysWithFires}
-            </div>
-            <div className="text-sm text-gray-600 mt-1">{t('daysWithFires')}</div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-lg p-6">
-          <div className="text-center">
-            <div className="mb-2 flex justify-center text-blue-600">
-              <Icon name="analytics" aria-hidden={true} size={28} />
-            </div>
-            <div className="text-3xl font-bold text-blue-600">
-              {data.stats.dailyAverage}
-            </div>
-            <div className="text-sm text-gray-600 mt-1">{t('dailyAverage')}</div>
-          </div>
-        </div>
+        <KpiCard
+          label={t('totalFires')}
+          value={data.stats.totalIncidents}
+          tone="danger"
+          icon={<Icon name="fire" aria-hidden size={28} className="text-danger" />}
+        />
+        <KpiCard
+          label={t('daysWithFires')}
+          value={data.stats.daysWithFires}
+          tone="warning"
+          icon={<Icon name="calendar" aria-hidden size={28} className="text-warning" />}
+        />
+        <KpiCard
+          label={t('dailyAverage')}
+          value={data.stats.dailyAverage}
+          tone="primary"
+          icon={<Icon name="analytics" aria-hidden size={28} className="text-primary" />}
+        />
       </div>
 
       {/* Timeline Chart */}
-      <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-        <h2 className="text-xl font-bold mb-4 text-right">
-          {t('fireEvolution')}
-        </h2>
+      <Card tone="elevated" className="p-6 mb-8">
+        <h2 className="text-xl font-bold mb-4">{t('fireEvolution')}</h2>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={data.timeline}>
-            <CartesianGrid strokeDasharray="3 3" />
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
             <XAxis
               dataKey="date"
+              tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
               tickFormatter={(value) => {
                 const date = new Date(value);
                 return `${date.getDate()}/${date.getMonth() + 1}`;
               }}
             />
-            <YAxis />
+            <YAxis tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} />
             <Tooltip
+              contentStyle={{
+                backgroundColor: 'hsl(var(--surface))',
+                border: '1px solid hsl(var(--border))',
+                borderRadius: '8px',
+                color: 'hsl(var(--foreground))',
+              }}
               labelFormatter={(value) => {
                 const date = new Date(value);
                 return date.toLocaleDateString(
@@ -187,19 +176,17 @@ export default function AnalyticsPage() {
             <Line
               type="monotone"
               dataKey="count"
-              stroke="#ef4444"
+              stroke="hsl(var(--danger))"
               strokeWidth={2}
-              dot={{ fill: '#ef4444', r: 4 }}
+              dot={{ fill: 'hsl(var(--danger))', r: 4 }}
             />
           </LineChart>
         </ResponsiveContainer>
-      </div>
+      </Card>
 
       {/* Causes Pie Chart */}
-      <div className="bg-white rounded-xl shadow-lg p-6">
-        <h2 className="text-xl font-bold mb-4 text-right">
-          {t('distributionByCause')}
-        </h2>
+      <Card tone="elevated" className="p-6">
+        <h2 className="text-xl font-bold mb-4">{t('distributionByCause')}</h2>
         <div className="flex flex-col md:flex-row items-center gap-8">
           <ResponsiveContainer width="100%" height={350}>
             <PieChart>
@@ -208,9 +195,7 @@ export default function AnalyticsPage() {
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={false}
                 outerRadius={120}
-                fill="#8884d8"
                 dataKey="count"
               >
                 {causesData.map((entry, index) => (
@@ -223,17 +208,14 @@ export default function AnalyticsPage() {
               <Tooltip
                 formatter={(value, name, props) => [
                   `${value} ${fireLabel}`,
-                  props.payload.name
+                  props.payload.name,
                 ]}
                 contentStyle={{
-                  backgroundColor: 'white',
-                  border: '1px solid #ccc',
+                  backgroundColor: 'hsl(var(--surface))',
+                  border: '1px solid hsl(var(--border))',
                   borderRadius: '8px',
-                  padding: '10px',
-                  color: '#000',
+                  color: 'hsl(var(--foreground))',
                 }}
-                labelStyle={{ color: '#000', fontWeight: 'bold' }}
-                itemStyle={{ color: '#000' }}
               />
             </PieChart>
           </ResponsiveContainer>
@@ -245,15 +227,15 @@ export default function AnalyticsPage() {
                 <div
                   className="w-4 h-4 rounded flex-shrink-0"
                   style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                ></div>
-                <span className="text-sm">
+                />
+                <span className="text-sm text-foreground">
                   {entry.name}: {entry.count}
                 </span>
               </div>
             ))}
           </div>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }

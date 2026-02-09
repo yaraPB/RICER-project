@@ -44,7 +44,6 @@ export const GET = withApiHandler(async (request: Request) => {
           role: true,
         },
       },
-      incident: true,
     },
     orderBy: { createdAt: 'desc' },
   });

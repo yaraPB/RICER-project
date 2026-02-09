@@ -5,7 +5,7 @@ import {
   formatDateTime,
   DEPARTMENTS,
   DEPARTMENTS_FR,
-} from '@/utils/constants';
+} from '@/config/constants';
 
 // ── windDirectionIndexFromDegrees ─────────────────────────────────────────────
 

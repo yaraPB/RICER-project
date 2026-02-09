@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { withApiHandler } from '@/lib/errors/withApiHandler';
 import { AppError } from '@/lib/errors/AppError';
-import { translations } from '@/utils/translations';
+import { translations } from '@/i18n/translations';
 
 describe('withApiHandler', () => {
   it('returns standardized error envelopes with requestId', async () => {
