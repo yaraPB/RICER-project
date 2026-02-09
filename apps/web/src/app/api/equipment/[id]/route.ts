@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { withApiHandler } from '@/lib/errors/withApiHandler';
 import { AppError } from '@/lib/errors/AppError';
+import { formatValueForError } from '@/lib/errors/context';
 
 export const PATCH = withApiHandler(async (request: Request, context) => {
   const currentUser = await getCurrentUser(request);
@@ -22,15 +23,37 @@ export const PATCH = withApiHandler(async (request: Request, context) => {
   const quantity = body.quantity;
   const condition = body.condition;
 
-  if (quantity !== undefined && (typeof quantity !== 'number' || quantity < 0 || !Number.isInteger(quantity))) {
-    throw new AppError(1001, { fields: [{ field: 'quantity', code: 'invalid' }] });
-  }
-
   const validConditions = ['Bon', 'Moyen', 'Mauvais'] as const;
   type EquipmentCondition = (typeof validConditions)[number];
 
+  const fields = [];
+
+  if (quantity !== undefined && (typeof quantity !== 'number' || quantity < 0 || !Number.isInteger(quantity))) {
+    fields.push({
+      field: 'quantity',
+      code: 'invalid',
+      message: `Quantity must be a non-negative integer, got: ${formatValueForError(quantity)}`,
+    });
+  }
+
   if (condition !== undefined && (typeof condition !== 'string' || !validConditions.includes(condition as EquipmentCondition))) {
-    throw new AppError(1001, { fields: [{ field: 'condition', code: 'invalid' }] });
+    fields.push({
+      field: 'condition',
+      code: 'invalid',
+      message: `Condition must be one of ${validConditions.join(', ')}, got: ${formatValueForError(condition)}`,
+    });
+  }
+
+  if (fields.length) {
+    throw new AppError(1001, {
+      fields,
+      meta: {
+        invalidValues: {
+          quantity,
+          condition,
+        },
+      },
+    });
   }
 
   const updateData: { quantity?: number; condition?: EquipmentCondition } = {};

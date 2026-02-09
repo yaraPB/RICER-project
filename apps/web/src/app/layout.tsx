@@ -3,6 +3,8 @@ import { Public_Sans, Roboto_Mono } from 'next/font/google';
 import { cookies } from 'next/headers';
 import './globals.css';
 import LocaleSync from '@/components/layout/LocaleSync';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { ErrorProvider } from '@/contexts/ErrorContext';
 
 export const metadata: Metadata = {
   title: 'RICER Ifrane - نظام الإبلاغ عن الحرائق',
@@ -41,8 +43,12 @@ export default function RootLayout({
   return (
     <html lang={language} dir={dir} suppressHydrationWarning>
       <body className={`${fontSans.variable} ${fontMono.variable}`}>
-        <LocaleSync />
-        {children}
+        <ErrorBoundary>
+          <ErrorProvider>
+            <LocaleSync />
+            {children}
+          </ErrorProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );

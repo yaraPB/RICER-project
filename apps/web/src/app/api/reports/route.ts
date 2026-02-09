@@ -8,6 +8,8 @@ import { enqueueNotification } from '@/lib/notifications/queue';
 import { isTwilioConfigured } from '@/lib/notifications/twilio';
 import { DEFAULT_LIMITS } from '@/types/pagination';
 import type { CursorPaginationResponse } from '@/types/pagination';
+import { formatValueForError } from '@/lib/errors/context';
+import { logger } from '@/lib/observability/logger';
 
 export const GET = withApiHandler(async (request: Request) => {
   const currentUser = await getCurrentUser(request);
@@ -86,10 +88,43 @@ export const POST = withApiHandler(async (request: Request) => {
   const fields = [];
   const latitude = typeof latitudeRaw === 'number' ? latitudeRaw : Number(latitudeRaw);
   const longitude = typeof longitudeRaw === 'number' ? longitudeRaw : Number(longitudeRaw);
-  if (!Number.isFinite(latitude)) fields.push({ field: 'latitude', code: 'required' });
-  if (!Number.isFinite(longitude)) fields.push({ field: 'longitude', code: 'required' });
-  if (!description) fields.push({ field: 'description', code: 'required' });
-  if (fields.length) throw new AppError(1001, { fields });
+
+  if (!Number.isFinite(latitude)) {
+    fields.push({
+      field: 'latitude',
+      code: typeof latitudeRaw === 'undefined' ? 'required' : 'invalid_number',
+      message: typeof latitudeRaw !== 'undefined'
+        ? `Expected number, got: ${formatValueForError(latitudeRaw)}`
+        : undefined,
+    });
+  }
+
+  if (!Number.isFinite(longitude)) {
+    fields.push({
+      field: 'longitude',
+      code: typeof longitudeRaw === 'undefined' ? 'required' : 'invalid_number',
+      message: typeof longitudeRaw !== 'undefined'
+        ? `Expected number, got: ${formatValueForError(longitudeRaw)}`
+        : undefined,
+    });
+  }
+
+  if (!description) {
+    fields.push({ field: 'description', code: 'required' });
+  }
+
+  if (fields.length) {
+    throw new AppError(1001, {
+      fields,
+      meta: {
+        invalidValues: {
+          latitude: latitudeRaw,
+          longitude: longitudeRaw,
+          description,
+        },
+      },
+    });
+  }
 
   const report: ReportWithUser = await prisma.report.create({
     data: {
@@ -117,7 +152,18 @@ export const POST = withApiHandler(async (request: Request) => {
     try {
       await enqueueWhatsAppNotification(report);
     } catch (error) {
-      console.error('Failed to enqueue notification (non-blocking):', error);
+      logger.error({
+        event: 'notification_enqueue_failed',
+        meta: {
+          reportId: report.id,
+          nonBlocking: true,
+        },
+        error: {
+          name: (error as Error)?.name,
+          message: (error as Error)?.message,
+          stack: (error as Error)?.stack,
+        },
+      });
     }
   }
 

@@ -126,16 +126,9 @@ model RetardantProduct {
   updatedAt       DateTime @updatedAt
 }
 
-enum InfrastructureType {
-  WATCHTOWER
-  WATER_POINT
-  FIREBREAK
-  STATION
-}
-
 model Infrastructure {
   id          String             @id @default(auto()) @map("_id") @db.ObjectId
-  type        InfrastructureType
+  type        String
   name        String
   geometry    Json?
   status      String

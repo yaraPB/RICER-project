@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { withApiHandler } from '@/lib/errors/withApiHandler';
 import { AppError } from '@/lib/errors/AppError';
+import { labelOperation } from '@/lib/errors/context';
 
 // Simple in-memory cache
 let analyticsCache: {
@@ -28,52 +29,61 @@ export const GET = withApiHandler(async (request: Request) => {
   // Use MongoDB aggregation for better performance
   const [byDateResult, byCauseResult, totalCount] = await Promise.all([
     // Group by date using aggregation
-    prisma.report.aggregateRaw({
-      pipeline: [
-        {
-          $match: {
-            createdAt: { $gte: { $date: fourteenDaysAgo.toISOString() } },
-          },
-        },
-        {
-          $group: {
-            _id: {
-              $dateToString: { format: '%Y-%m-%d', date: '$createdAt' },
+    labelOperation(
+      prisma.report.aggregateRaw({
+        pipeline: [
+          {
+            $match: {
+              createdAt: { $gte: { $date: fourteenDaysAgo.toISOString() } },
             },
-            count: { $sum: 1 },
           },
-        },
-        {
-          $sort: { _id: 1 },
-        },
-      ],
-    }),
+          {
+            $group: {
+              _id: {
+                $dateToString: { format: '%Y-%m-%d', date: '$createdAt' },
+              },
+              count: { $sum: 1 },
+            },
+          },
+          {
+            $sort: { _id: 1 },
+          },
+        ],
+      }),
+      'analytics:by_date_aggregation'
+    ),
 
     // Group by cause using aggregation
-    prisma.report.aggregateRaw({
-      pipeline: [
-        {
-          $match: {
-            createdAt: { $gte: { $date: fourteenDaysAgo.toISOString() } },
+    labelOperation(
+      prisma.report.aggregateRaw({
+        pipeline: [
+          {
+            $match: {
+              createdAt: { $gte: { $date: fourteenDaysAgo.toISOString() } },
+            },
           },
-        },
-        {
-          $group: {
-            _id: { $ifNull: ['$cause', 'UNKNOWN'] },
-            count: { $sum: 1 },
+          {
+            $group: {
+              _id: { $ifNull: ['$cause', 'UNKNOWN'] },
+              count: { $sum: 1 },
+            },
           },
-        },
-      ],
-    }),
+        ],
+      }),
+      'analytics:by_cause_aggregation'
+    ),
 
     // Get total count
-    prisma.report.count({
-      where: {
-        createdAt: {
-          gte: fourteenDaysAgo,
+    labelOperation(
+      prisma.report.count({
+        where: {
+          createdAt: {
+            gte: fourteenDaysAgo,
+          },
         },
-      },
-    }),
+      }),
+      'analytics:total_count'
+    ),
   ]);
 
   // Process date aggregation results

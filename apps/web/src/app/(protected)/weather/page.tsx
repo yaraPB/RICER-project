@@ -18,11 +18,11 @@ export default function WeatherPage() {
       const data = await response.json();
       setWeather(data);
     } catch {
-      setError(t('weatherLoadFailed'));
+      setError('weatherLoadFailed'); // Store key, not translated message
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, []); // Remove [t] dependency
 
   useEffect(() => {
     fetchWeather();
@@ -40,7 +40,7 @@ export default function WeatherPage() {
     return (
       <div className="max-w-7xl mx-auto p-6">
         <div className="bg-red-50 text-red-600 p-4 rounded-lg text-center">
-          {error}
+          {t(error)} {/* Translate error key in render */}
         </div>
       </div>
     );

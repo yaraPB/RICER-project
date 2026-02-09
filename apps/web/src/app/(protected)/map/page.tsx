@@ -105,17 +105,17 @@ export default function MapPage() {
       const data = (await response.json().catch(() => null)) as unknown;
       if (!response.ok) {
         setWeather(null);
-        setWeatherError(getApiErrorUserMessage(data, t('weatherLoadFailed')));
+        setWeatherError(getApiErrorUserMessage(data, 'weatherLoadFailed')); // Store key, not translated message
         return;
       }
       setWeather(data as WeatherData);
     } catch {
       setWeather(null);
-      setWeatherError(t('connectionError'));
+      setWeatherError('connectionError'); // Store key, not translated message
     } finally {
       setWeatherLoading(false);
     }
-  }, [t]);
+  }, []); // Remove [t] dependency
 
   const fetchIncidents = useCallback(async () => {
     setIncidentsError(null);
@@ -124,16 +124,16 @@ export default function MapPage() {
       const data = (await response.json().catch(() => null)) as unknown;
       if (!response.ok) {
         setIncidents({ type: 'FeatureCollection', features: [] });
-        setIncidentsError(getApiErrorUserMessage(data, t('errorServer')));
+        setIncidentsError(getApiErrorUserMessage(data, 'errorServer')); // Store key, not translated message
         return;
       }
       setIncidents(data as GeoFeatureCollection<GeoIncidentProps>);
       setLastUpdated(Date.now());
     } catch {
       setIncidents({ type: 'FeatureCollection', features: [] });
-      setIncidentsError(t('connectionError'));
+      setIncidentsError('connectionError'); // Store key, not translated message
     }
-  }, [t]);
+  }, []); // Remove [t] dependency
 
   const handleUpdateIncident = async (field: 'status' | 'severity' | 'description', value: IncidentStatus | number | string) => {
     if (!selectedIncidentId) return;
@@ -245,7 +245,7 @@ export default function MapPage() {
       <section className="flex flex-1 flex-col gap-4 overflow-auto p-4 md:p-6">
         {weatherError || incidentsError ? (
           <div role="alert" className="rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
-            {weatherError ?? incidentsError}
+            {t(weatherError ?? incidentsError ?? '')} {/* Translate error key in render */}
           </div>
         ) : null}
 

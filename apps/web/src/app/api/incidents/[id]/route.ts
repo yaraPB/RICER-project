@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { withApiHandler, type ApiHandlerContext } from '@/lib/errors/withApiHandler';
 import { AppError } from '@/lib/errors/AppError';
+import { formatValueForError } from '@/lib/errors/context';
 
 export const GET = withApiHandler(async (request: Request, context?: ApiHandlerContext) => {
   const currentUser = await getCurrentUser(request);
@@ -43,19 +44,34 @@ export const PATCH = withApiHandler(async (request: Request, context?: ApiHandle
   const { status, severity, description } = body;
 
   // Validate severity if provided
+  const fields = [];
   if (severity !== undefined && (severity < 1 || severity > 5)) {
-    throw new AppError(1001, {
-      fields: [{ field: 'severity', code: 'invalid' }],
-      message: 'Severity must be between 1 and 5'
+    fields.push({
+      field: 'severity',
+      code: 'invalid',
+      message: `Severity must be between 1 and 5, got: ${formatValueForError(severity)}`,
     });
   }
 
   // Validate status if provided
   const validStatuses = ['VIGILANCE', 'ALERTE', 'INTERVENTION', 'MAITRISE', 'ETEINT'];
   if (status !== undefined && !validStatuses.includes(status)) {
+    fields.push({
+      field: 'status',
+      code: 'invalid',
+      message: `Invalid incident status, got: ${formatValueForError(status)}. Valid values: ${validStatuses.join(', ')}`,
+    });
+  }
+
+  if (fields.length) {
     throw new AppError(1001, {
-      fields: [{ field: 'status', code: 'invalid' }],
-      message: 'Invalid incident status'
+      fields,
+      meta: {
+        invalidValues: {
+          severity,
+          status,
+        },
+      },
     });
   }
 

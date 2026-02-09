@@ -8,6 +8,8 @@ import { FIRE_CAUSE_KEYS } from '@/config/constants';
 import type { TranslationKey } from '@/i18n/translations';
 import { Icon } from '@/components/ui/Icon';
 import { getApiErrorUserMessage } from '@/lib/errors/sdk';
+import { ErrorDisplay } from '@/components/ui/ErrorDisplay';
+import { clientLogger } from '@/lib/observability/clientLogger';
 
 function LocationPickerLoading() {
   const { t } = useTranslation();
@@ -35,6 +37,8 @@ export default function ReportPage() {
     cause: '',
   });
   const [error, setError] = useState('');
+  const [errorCode, setErrorCode] = useState<number | undefined>();
+  const [requestId, setRequestId] = useState<string | undefined>();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const isRTL = language === 'ar';
@@ -47,6 +51,8 @@ export default function ReportPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setErrorCode(undefined);
+    setRequestId(undefined);
 
     if (!formData.location) {
       setError(t('locationRequired'));
@@ -72,10 +78,23 @@ export default function ReportPage() {
         }),
       });
 
+      const responseRequestId = response.headers.get('x-request-id');
       const data = await response.json();
 
       if (!response.ok) {
         setError(getApiErrorUserMessage(data, t('errorServer')));
+        setErrorCode(data.error?.code);
+        setRequestId(data.error?.requestId || responseRequestId || undefined);
+
+        clientLogger.error({
+          event: 'report_submission_failed',
+          route: '/api/reports',
+          requestId: responseRequestId || undefined,
+          meta: {
+            errorCode: data.error?.code,
+            status: response.status,
+          },
+        });
         return;
       }
 
@@ -83,8 +102,18 @@ export default function ReportPage() {
       setTimeout(() => {
         router.push('/reports-list');
       }, 2000);
-    } catch {
+    } catch (err) {
       setError(t('connectionError'));
+
+      clientLogger.error({
+        event: 'report_submission_exception',
+        route: '/api/reports',
+        error: {
+          name: (err as Error)?.name,
+          message: (err as Error)?.message,
+          stack: (err as Error)?.stack,
+        },
+      });
     } finally {
       setLoading(false);
     }
@@ -132,9 +161,13 @@ export default function ReportPage() {
 
       <form onSubmit={handleSubmit} className="space-y-6" noValidate>
         {error && (
-          <div className={`bg-red-50 text-red-600 p-4 rounded-lg ${textAlign}`}>
-            {error}
-          </div>
+          <ErrorDisplay
+            message={error}
+            code={errorCode}
+            requestId={requestId}
+            onRetry={() => handleSubmit(new Event('submit') as unknown as React.FormEvent)}
+            retrying={loading}
+          />
         )}
 
         {/* Location Picker */}

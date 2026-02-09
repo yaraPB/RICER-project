@@ -9,10 +9,12 @@ import ReactMapGL, {
   NavigationControl,
   ScaleControl,
   GeolocateControl,
+  useControl,
   type MapRef,
   type MapLayerMouseEvent,
 } from 'react-map-gl';
 import { MapboxOverlay } from '@deck.gl/mapbox';
+import type { MapboxOverlayProps } from '@deck.gl/mapbox/typed';
 import { IconLayer, PathLayer } from '@deck.gl/layers';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useMapStore } from '@/store/useMapStore';
@@ -32,6 +34,12 @@ import type {
 } from '@/types';
 
 /* ────────── component ────────── */
+
+function DeckGLOverlay(props: MapboxOverlayProps) {
+  const overlay = useControl<MapboxOverlay>(() => new MapboxOverlay(props));
+  overlay.setProps(props);
+  return null;
+}
 
 export default function RicerMap() {
   const { t } = useTranslation();
@@ -699,7 +707,7 @@ export default function RicerMap() {
           </Popup>
         )}
 
-        <MapboxOverlay layers={deckLayers} />
+        <DeckGLOverlay layers={deckLayers} />
       </ReactMapGL>
 
       {/* ═══ Overlay controls ═══ */}

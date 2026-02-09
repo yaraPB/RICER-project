@@ -5,6 +5,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { Icon } from '@/components/ui/Icon';
 import { STATUS_COLORS } from '@/config/constants';
 import type { Report } from '@/types';
+import { clientLogger } from '@/lib/observability/clientLogger';
 
 interface NotificationsPanelProps {
   isOpen: boolean;
@@ -15,20 +16,53 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
   const { t } = useTranslation();
   const [recentReports, setRecentReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [errorRequestId, setErrorRequestId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
 
     const fetchRecentReports = async () => {
       setLoading(true);
+      setError(null);
+      setErrorRequestId(null);
+
       try {
         const res = await fetch('/api/reports?limit=10');
+        const requestId = res.headers.get('x-request-id');
+
         if (res.ok) {
           const data = await res.json();
           setRecentReports(data.data || data.reports || []);
+          setError(null);
+        } else {
+          const errorData = await res.json().catch(() => ({}));
+          const errorMessage = errorData.error?.userMessage || t('errorLoadingReports') || 'Failed to load reports';
+          setError(errorMessage);
+          setErrorRequestId(errorData.error?.requestId || requestId || null);
+
+          clientLogger.error({
+            event: 'notifications_fetch_failed',
+            route: '/api/reports',
+            requestId: requestId || undefined,
+            meta: {
+              status: res.status,
+              errorCode: errorData.error?.code,
+            },
+          });
         }
-      } catch (error) {
-        console.error('Failed to fetch recent reports:', error);
+      } catch (err) {
+        setError(t('connectionError') || 'Connection error');
+
+        clientLogger.error({
+          event: 'notifications_fetch_exception',
+          route: '/api/reports',
+          error: {
+            name: (err as Error)?.name,
+            message: (err as Error)?.message,
+            stack: (err as Error)?.stack,
+          },
+        });
       } finally {
         setLoading(false);
       }
@@ -71,7 +105,18 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
 
         {/* Content */}
         <div className="max-h-[70vh] overflow-y-auto">
-          {loading ? (
+          {error ? (
+            <div className="p-4">
+              <div className="border border-red-200 bg-red-50 rounded-lg p-4">
+                <p className="text-sm font-medium text-red-900">{error}</p>
+                {errorRequestId && (
+                  <p className="text-xs text-red-700 mt-2">
+                    Request ID: {errorRequestId}
+                  </p>
+                )}
+              </div>
+            </div>
+          ) : loading ? (
             <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
               {t('loading')}...
             </div>

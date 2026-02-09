@@ -5,6 +5,7 @@ import { withApiHandler } from '@/lib/errors/withApiHandler';
 import { AppError } from '@/lib/errors/AppError';
 import { DEFAULT_LIMITS } from '@/types/pagination';
 import type { OffsetPaginationResponse } from '@/types/pagination';
+import { labelOperation } from '@/lib/errors/context';
 
 export const GET = withApiHandler(async (request: Request) => {
   const currentUser = await getCurrentUser(request);
@@ -22,10 +23,10 @@ export const GET = withApiHandler(async (request: Request) => {
   // If no specific type requested, return summary counts only
   if (!type) {
     const [equipmentCount, retardantCount, infrastructureCount, trucksCount] = await Promise.all([
-      prisma.equipment.count(),
-      prisma.retardantProduct.count(),
-      prisma.infrastructure.count(),
-      prisma.truckDeployment.count(),
+      labelOperation(prisma.equipment.count(), 'equipment:count'),
+      labelOperation(prisma.retardantProduct.count(), 'equipment:retardant_count'),
+      labelOperation(prisma.infrastructure.count(), 'equipment:infrastructure_count'),
+      labelOperation(prisma.truckDeployment.count(), 'equipment:trucks_count'),
     ]);
 
     return NextResponse.json({
@@ -45,45 +46,57 @@ export const GET = withApiHandler(async (request: Request) => {
   switch (type) {
     case 'equipment':
       [data, total] = await Promise.all([
-        prisma.equipment.findMany({
-          skip: offset,
-          take: limit,
-          orderBy: { category: 'asc' },
-        }),
-        prisma.equipment.count(),
+        labelOperation(
+          prisma.equipment.findMany({
+            skip: offset,
+            take: limit,
+            orderBy: { category: 'asc' },
+          }),
+          'equipment:find_equipment'
+        ),
+        labelOperation(prisma.equipment.count(), 'equipment:count_equipment'),
       ]);
       break;
 
     case 'retardant':
       [data, total] = await Promise.all([
-        prisma.retardantProduct.findMany({
-          skip: offset,
-          take: limit,
-          orderBy: { productName: 'asc' },
-        }),
-        prisma.retardantProduct.count(),
+        labelOperation(
+          prisma.retardantProduct.findMany({
+            skip: offset,
+            take: limit,
+            orderBy: { productName: 'asc' },
+          }),
+          'equipment:find_retardant'
+        ),
+        labelOperation(prisma.retardantProduct.count(), 'equipment:count_retardant'),
       ]);
       break;
 
     case 'infrastructure':
       [data, total] = await Promise.all([
-        prisma.infrastructure.findMany({
-          skip: offset,
-          take: limit,
-          orderBy: { type: 'asc' },
-        }),
-        prisma.infrastructure.count(),
+        labelOperation(
+          prisma.infrastructure.findMany({
+            skip: offset,
+            take: limit,
+            orderBy: { type: 'asc' },
+          }),
+          'equipment:find_infrastructure'
+        ),
+        labelOperation(prisma.infrastructure.count(), 'equipment:count_infrastructure'),
       ]);
       break;
 
     case 'trucks':
       [data, total] = await Promise.all([
-        prisma.truckDeployment.findMany({
-          skip: offset,
-          take: limit,
-          orderBy: { truckName: 'asc' },
-        }),
-        prisma.truckDeployment.count(),
+        labelOperation(
+          prisma.truckDeployment.findMany({
+            skip: offset,
+            take: limit,
+            orderBy: { truckName: 'asc' },
+          }),
+          'equipment:find_trucks'
+        ),
+        labelOperation(prisma.truckDeployment.count(), 'equipment:count_trucks'),
       ]);
       break;
 
