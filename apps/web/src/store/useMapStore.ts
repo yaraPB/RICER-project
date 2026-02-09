@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import type { ViewState } from 'react-map-gl';
 import type { Basemap } from '@/lib/map/styles';
 
-type ActiveLayer = 'incidents' | 'infrastructure' | 'resources' | 'riskBasins';
+type ActiveLayer = 'incidents' | 'infrastructure' | 'resources' | 'riskBasins' | 'firmsDetections';
 
 interface MapState {
   viewState: ViewState;
@@ -22,6 +22,7 @@ interface MapState {
     resources: string | null;
     infrastructure: string | null;
     riskBasins: string | null;
+    firmsDetections: string | null;
   };
   setDataError: (layer: keyof MapState['dataErrors'], error: string | null) => void;
   clearAllErrors: () => void;
@@ -39,7 +40,7 @@ const DEFAULT_VIEW: ViewState = {
 export const useMapStore = create<MapState>()((set) => ({
   viewState: DEFAULT_VIEW,
   setViewState: (viewState) => set({ viewState }),
-  activeLayers: new Set<ActiveLayer>(['incidents', 'infrastructure', 'resources', 'riskBasins']),
+  activeLayers: new Set<ActiveLayer>(['incidents', 'infrastructure', 'resources', 'riskBasins', 'firmsDetections']),
   toggleLayer: (layer) =>
     set((state) => {
       const next = new Set(state.activeLayers);
@@ -63,6 +64,7 @@ export const useMapStore = create<MapState>()((set) => ({
     resources: null,
     infrastructure: null,
     riskBasins: null,
+    firmsDetections: null,
   },
   setDataError: (layer, error) =>
     set((state) => ({
@@ -75,6 +77,7 @@ export const useMapStore = create<MapState>()((set) => ({
         resources: null,
         infrastructure: null,
         riskBasins: null,
+        firmsDetections: null,
       },
     }),
 }));

@@ -21,8 +21,9 @@ import MapControls from '@/components/map/MapControls';
 import MapLegend from './MapLegend';
 import { useTranslation } from '@/hooks/useTranslation';
 import { getMapStyle } from '@/lib/map/styles';
-import { INCIDENT_STATUS_COLORS } from '@/lib/map/colors';
+import { INCIDENT_STATUS_COLORS, FIRMS_CONFIDENCE_COLORS, getFRPColor } from '@/lib/map/colors';
 import { asGeoJSON } from '@/lib/map/helpers';
+import { logger } from '@/lib/observability/logger';
 import { createResourceLayer, createInfrastructureLayers } from '@/lib/map/layers';
 import type {
   GeoFeatureCollection,
@@ -30,6 +31,7 @@ import type {
   GeoResourceProps,
   GeoInfrastructureProps,
   RiskBasinProps,
+  GeoFirmsDetectionProps,
 } from '@/types';
 
 /* ────────── component ────────── */
@@ -73,10 +75,21 @@ export default function RicerMap() {
     type: 'FeatureCollection',
     features: [],
   });
+  const [firmsDetections, setFirmsDetections] = useState<GeoFeatureCollection<GeoFirmsDetectionProps>>({
+    type: 'FeatureCollection',
+    features: [],
+  });
+  const [firmsLastUpdate, setFirmsLastUpdate] = useState<Date | null>(null);
   const [hoveredIncident, setHoveredIncident] = useState<{
     id: string;
     properties: GeoIncidentProps;
     coordinates: [number, number];
+  } | null>(null);
+  const [hoverInfo, setHoverInfo] = useState<{
+    longitude: number;
+    latitude: number;
+    layer: string;
+    feature: any;
   } | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -155,14 +168,50 @@ export default function RicerMap() {
       }
     }
 
+    async function fetchFirms() {
+      if (cancelled) return;
+      try {
+        const res = await fetch('/api/firms/detections');
+        if (!res.ok) {
+          const errorText = await res.text().catch(() => '');
+          setDataError('firmsDetections', `HTTP ${res.status}: ${errorText.slice(0, 50)}`);
+          logger.warn({
+            event: 'firms_fetch_error',
+            meta: { status: res.status, error: errorText.slice(0, 100) }
+          });
+          return;
+        }
+        const data = await res.json();
+        setFirmsDetections(data);
+        setFirmsLastUpdate(new Date());
+        setDataError('firmsDetections', null);
+
+        // Log fetch success with detection count
+        const detectionCount = data.features?.length || 0;
+        logger.info({
+          event: 'firms_fetch_success_frontend',
+          meta: { detections: detectionCount }
+        });
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : 'Network error';
+        setDataError('firmsDetections', errorMsg);
+        logger.error({
+          event: 'firms_fetch_exception',
+          meta: { error: errorMsg }
+        });
+      }
+    }
+
     fetchIncidents();
     fetchResources();
     fetchStatic();
+    fetchFirms();
 
     const interval = setInterval(() => {
       tickCount++;
-      if (tickCount % 2 === 0 && !resourcesDisabled) fetchResources();
-      if (tickCount % 3 === 0) fetchIncidents();
+      if (tickCount % 2 === 0 && !resourcesDisabled) fetchResources(); // Every 10s
+      if (tickCount % 3 === 0) fetchIncidents(); // Every 15s
+      if (tickCount % 180 === 0) fetchFirms(); // Every 15 minutes (900 seconds)
     }, 5000);
 
     return () => {
@@ -292,9 +341,14 @@ export default function RicerMap() {
 
   const handleMouseEnter = useCallback((event: MapLayerMouseEvent) => {
     const features = event.features;
-    if (!features || features.length === 0) return;
+    if (!features || features.length === 0) {
+      setHoverInfo(null);
+      setHoveredIncident(null);
+      return;
+    }
     const feature = features[0];
-    if (!feature?.properties || feature.properties.cluster) return;
+    if (!feature?.properties) return;
+
     const geom = feature.geometry as { coordinates?: number[] };
     const coords = geom?.coordinates;
     if (
@@ -303,14 +357,46 @@ export default function RicerMap() {
       typeof coords[1] !== 'number'
     )
       return;
-    setHoveredIncident({
-      id: feature.properties.id as string,
-      properties: feature.properties as unknown as GeoIncidentProps,
-      coordinates: [coords[0], coords[1]],
-    });
+
+    // Handle cluster hover
+    if (feature.properties.cluster) {
+      setHoverInfo({
+        longitude: coords[0],
+        latitude: coords[1],
+        layer: feature.layer?.id || '',
+        feature,
+      });
+      setHoveredIncident(null);
+      return;
+    }
+
+    // Handle FIRMS detections
+    if (feature.layer?.id === 'firms-detections-unclustered') {
+      setHoverInfo({
+        longitude: coords[0],
+        latitude: coords[1],
+        layer: 'firms-detections-unclustered',
+        feature,
+      });
+      setHoveredIncident(null);
+      return;
+    }
+
+    // Handle incident hover (existing logic)
+    if (feature.properties.id && feature.layer?.id === 'incidents-unclustered') {
+      setHoveredIncident({
+        id: feature.properties.id as string,
+        properties: feature.properties as unknown as GeoIncidentProps,
+        coordinates: [coords[0], coords[1]],
+      });
+      setHoverInfo(null);
+    }
   }, []);
 
-  const handleMouseLeave = useCallback(() => setHoveredIncident(null), []);
+  const handleMouseLeave = useCallback(() => {
+    setHoveredIncident(null);
+    setHoverInfo(null);
+  }, []);
 
   /* ═══════════ Map style ═══════════ */
 
@@ -330,7 +416,12 @@ export default function RicerMap() {
         onMove={(e) => setViewState(e.viewState)}
         mapStyle={mapStyle as any}
         onClick={handleClick}
-        interactiveLayerIds={['incidents-unclustered', 'incidents-cluster']}
+        interactiveLayerIds={[
+          'incidents-unclustered',
+          'incidents-cluster',
+          'firms-detections-unclustered',
+          'firms-cluster',
+        ]}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         style={{ width: '100%', height: '100%' }}
@@ -496,6 +587,178 @@ export default function RicerMap() {
                 />
               </>
             )}
+          </Source>
+        )}
+
+        {/* ════════════════════════════════════════════════════════════
+            FIRMS SATELLITE FIRE DETECTIONS
+            ════════════════════════════════════════════════════════════ */}
+        {activeLayers.has('firmsDetections') && firmsDetections.features.length > 0 && (
+          <Source
+            id="firms-detections"
+            type="geojson"
+            data={asGeoJSON(firmsDetections)}
+            cluster={true}
+            clusterRadius={60}
+            clusterMaxZoom={13}
+          >
+            {/* ═══ Cluster Glow (outer ring for visual prominence) ═══ */}
+            <Layer
+              id="firms-cluster-glow"
+              type="circle"
+              filter={['has', 'point_count']}
+              paint={{
+                'circle-color': '#f97316',
+                'circle-radius': [
+                  'step',
+                  ['to-number', ['get', 'point_count']],
+                  30,
+                  5, 40,
+                  10, 50,
+                ],
+                'circle-blur': 0.8,
+                'circle-opacity': 0.2,
+              }}
+            />
+
+            {/* ═══ Cluster Solid Marker ═══ */}
+            <Layer
+              id="firms-cluster"
+              type="circle"
+              filter={['has', 'point_count']}
+              paint={{
+                'circle-color': [
+                  'step',
+                  ['to-number', ['get', 'point_count']],
+                  '#f59e0b',
+                  10, '#f97316',
+                  20, '#ef4444',
+                ],
+                'circle-radius': [
+                  'step',
+                  ['to-number', ['get', 'point_count']],
+                  18,
+                  5, 25,
+                  10, 32,
+                  20, 40,
+                ],
+                'circle-stroke-width': 2.5,
+                'circle-stroke-color': '#ffffff',
+                'circle-opacity': 0.9,
+              }}
+            />
+
+            {/* ═══ Cluster Count Label ═══ */}
+            <Layer
+              id="firms-cluster-count"
+              type="symbol"
+              filter={['has', 'point_count']}
+              layout={{
+                'text-field': ['to-string', ['get', 'point_count']],
+                'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold', 'sans-serif'],
+                'text-size': 13,
+              }}
+              paint={{
+                'text-color': '#ffffff',
+                'text-halo-color': '#000000',
+                'text-halo-width': 1,
+              }}
+            />
+
+            {/* ═══ Unclustered - Outer Glow (FRP-based intensity) ═══ */}
+            <Layer
+              id="firms-detections-glow"
+              type="circle"
+              filter={['!', ['has', 'point_count']]}
+              paint={{
+                'circle-color': [
+                  'match',
+                  ['get', 'confidence'],
+                  'low', FIRMS_CONFIDENCE_COLORS.low,
+                  'nominal', FIRMS_CONFIDENCE_COLORS.nominal,
+                  'high', FIRMS_CONFIDENCE_COLORS.high,
+                  FIRMS_CONFIDENCE_COLORS.nominal,
+                ],
+                'circle-radius': [
+                  'interpolate',
+                  ['linear'],
+                  ['to-number', ['get', 'frp']],
+                  0, 15,
+                  25, 22,
+                  50, 30,
+                  100, 40,
+                ],
+                'circle-blur': 0.9,
+                'circle-opacity': [
+                  'case',
+                  ['get', 'isRecent'], 0.3,
+                  0.2,
+                ],
+              }}
+            />
+
+            {/* ═══ Unclustered - Pulsing Ring (recent detections only) ═══ */}
+            <Layer
+              id="firms-detections-pulse"
+              type="circle"
+              filter={['all', ['!', ['has', 'point_count']], ['get', 'isRecent']]}
+              paint={{
+                'circle-color': '#ef4444',
+                'circle-radius': [
+                  'interpolate',
+                  ['linear'],
+                  ['to-number', ['get', 'frp']],
+                  0, 12,
+                  50, 18,
+                  100, 24,
+                ],
+                'circle-opacity': [
+                  'interpolate',
+                  ['linear'],
+                  ['%', ['/', ['to-number', ['+', ['*', ['time'], 0.001]]], 2000], 1],
+                  0, 0.1,
+                  0.5, 0.4,
+                  1, 0.1,
+                ],
+                'circle-blur': 0.5,
+              }}
+            />
+
+            {/* ═══ Unclustered - Solid Marker (confidence-colored, FRP-sized) ═══ */}
+            <Layer
+              id="firms-detections-unclustered"
+              type="circle"
+              filter={['!', ['has', 'point_count']]}
+              paint={{
+                'circle-color': [
+                  'match',
+                  ['get', 'confidence'],
+                  'low', FIRMS_CONFIDENCE_COLORS.low,
+                  'nominal', FIRMS_CONFIDENCE_COLORS.nominal,
+                  'high', FIRMS_CONFIDENCE_COLORS.high,
+                  FIRMS_CONFIDENCE_COLORS.nominal,
+                ],
+                'circle-radius': [
+                  'interpolate',
+                  ['linear'],
+                  ['to-number', ['get', 'frp']],
+                  0, 6,
+                  25, 9,
+                  50, 12,
+                  100, 16,
+                ],
+                'circle-stroke-width': 2,
+                'circle-stroke-color': '#ffffff',
+                'circle-opacity': [
+                  'match',
+                  ['get', 'confidence'],
+                  'low', 0.6,
+                  'nominal', 0.85,
+                  'high', 1.0,
+                  0.85,
+                ],
+              }}
+            />
           </Source>
         )}
 
@@ -702,6 +965,99 @@ export default function RicerMap() {
                   {t('clickForDetails')}
                 </div>
               </div>
+            </div>
+          </Popup>
+        )}
+
+        {/* ═══ FIRMS Detection Popup ═══ */}
+        {hoverInfo && hoverInfo.layer === 'firms-detections-unclustered' && hoverInfo.feature?.properties && (
+          <Popup
+            longitude={hoverInfo.longitude}
+            latitude={hoverInfo.latitude}
+            closeButton={false}
+            closeOnClick={false}
+            offset={[0, -12]}
+            className="firms-popup"
+          >
+            <div className="p-2 min-w-[200px]">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-orange-500">
+                  🛰️
+                </span>
+                <span className="font-bold text-sm">Satellite Detection</span>
+              </div>
+              <div className="space-y-1 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Fire Power:</span>
+                  <span className="font-semibold">{hoverInfo.feature.properties.frp} MW</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Confidence:</span>
+                  <span
+                    className="font-semibold capitalize"
+                    style={{
+                      color: FIRMS_CONFIDENCE_COLORS[hoverInfo.feature.properties.confidence] || FIRMS_CONFIDENCE_COLORS.nominal
+                    }}
+                  >
+                    {hoverInfo.feature.properties.confidence}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Temperature:</span>
+                  <span className="font-semibold">{hoverInfo.feature.properties.brightness}K</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Time:</span>
+                  <span className="font-semibold">{hoverInfo.feature.properties.acqDateTime}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Satellite:</span>
+                  <span className="font-semibold">{hoverInfo.feature.properties.instrument}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Day/Night:</span>
+                  <span className="font-semibold">{hoverInfo.feature.properties.daynight === 'D' ? 'Day' : 'Night'}</span>
+                </div>
+              </div>
+              <div className="mt-2 pt-2 border-t border-border text-[10px] text-muted-foreground">
+                NASA FIRMS • {hoverInfo.feature.properties.satellite}
+              </div>
+            </div>
+          </Popup>
+        )}
+
+        {/* ═══ FIRMS Cluster Popup ═══ */}
+        {hoverInfo && hoverInfo.layer === 'firms-cluster' && hoverInfo.feature?.properties?.point_count && (
+          <Popup
+            longitude={hoverInfo.longitude}
+            latitude={hoverInfo.latitude}
+            closeButton={false}
+            closeOnClick={false}
+            offset={[0, -12]}
+            className="cluster-popup"
+          >
+            <div className="p-2 text-center">
+              <div className="font-bold text-lg text-orange-500">{hoverInfo.feature.properties.point_count}</div>
+              <div className="text-xs text-muted-foreground">Satellite Detections</div>
+              <div className="text-[10px] text-muted-foreground mt-1">Zoom in to see details</div>
+            </div>
+          </Popup>
+        )}
+
+        {/* ═══ Incident Cluster Popup ═══ */}
+        {hoverInfo && hoverInfo.layer === 'incidents-cluster' && hoverInfo.feature?.properties?.point_count && (
+          <Popup
+            longitude={hoverInfo.longitude}
+            latitude={hoverInfo.latitude}
+            closeButton={false}
+            closeOnClick={false}
+            offset={[0, -12]}
+            className="cluster-popup"
+          >
+            <div className="p-2 text-center">
+              <div className="font-bold text-lg text-red-500">{hoverInfo.feature.properties.point_count}</div>
+              <div className="text-xs text-muted-foreground">Fire Incidents</div>
+              <div className="text-[10px] text-muted-foreground mt-1">Zoom in to see details</div>
             </div>
           </Popup>
         )}

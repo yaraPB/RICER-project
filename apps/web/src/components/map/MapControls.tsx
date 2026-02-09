@@ -4,13 +4,14 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { useMapStore } from '@/store/useMapStore';
 import type { Basemap } from '@/lib/map/styles';
 
-const LAYERS = ['incidents', 'infrastructure', 'resources', 'riskBasins'] as const;
+const LAYERS = ['incidents', 'infrastructure', 'resources', 'riskBasins', 'firmsDetections'] as const;
 
 const LAYER_KEY_MAP: Record<string, string> = {
   incidents: 'layerIncidents',
   infrastructure: 'layerInfrastructure',
   resources: 'layerResources',
   riskBasins: 'layerRiskZones',
+  firmsDetections: 'layerFirmsDetections',
 };
 
 const BASEMAPS: { value: Basemap; labelKey: string }[] = [

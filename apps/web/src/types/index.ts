@@ -166,3 +166,55 @@ export interface WeatherData {
   windDirection: number;
   timestamp: string;
 }
+
+/**
+ * NASA FIRMS fire detection from satellite (MODIS/VIIRS)
+ * Raw CSV format from FIRMS API
+ */
+export interface FirmsDetection {
+  id: string; // Generated: `${lat},${lon},${acq_time}`
+  latitude: number;
+  longitude: number;
+  brightness: number; // Brightness temperature (Kelvin)
+  scan: number; // Pixel size E-W (km)
+  track: number; // Pixel size N-S (km)
+  acq_date: string; // Acquisition date: YYYY-MM-DD
+  acq_time: string; // Acquisition time: HHMM (UTC)
+  satellite: string; // e.g., "N" (Suomi-NPP), "T" (Terra), "A" (Aqua)
+  instrument: string; // VIIRS or MODIS
+  confidence: 'low' | 'nominal' | 'high' | number; // Confidence level (0-100 or category)
+  version: string; // Data version
+  bright_t31: number; // Brightness temperature channel 31
+  frp: number; // Fire Radiative Power (MW) - fire intensity
+  daynight: 'D' | 'N'; // Day or night detection
+}
+
+/**
+ * GeoJSON properties for FIRMS detection visualization
+ * Simplified from raw detection for frontend rendering
+ */
+export interface GeoFirmsDetectionProps {
+  id: string;
+  brightness: number; // Kelvin
+  frp: number; // Fire Radiative Power in MW
+  confidence: 'low' | 'nominal' | 'high' | number;
+  satellite: string;
+  instrument: string;
+  acqDateTime: string; // Combined date + time for display (e.g., "2024-02-09 13:45")
+  daynight: 'D' | 'N';
+  isRecent: boolean; // True if detected within last 12 hours (for pulsing animation)
+}
+
+/**
+ * GeoJSON Feature for FIRMS detection
+ */
+export type GeoFirmsDetection = GeoFeature<GeoFirmsDetectionProps>;
+
+/**
+ * FIRMS detection cluster properties (for clustered map markers)
+ */
+export interface FirmsClusterProps {
+  cluster: true;
+  point_count: number;
+  point_count_abbreviated: string;
+}

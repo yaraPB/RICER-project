@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useTranslation } from '@/hooks/useTranslation';
 import type { TranslationKey } from '@/i18n/translations';
-import { INCIDENT_STATUS_COLORS, RESOURCE_TYPE_COLORS } from '@/lib/map/colors';
+import { INCIDENT_STATUS_COLORS, RESOURCE_TYPE_COLORS, FIRMS_CONFIDENCE_COLORS } from '@/lib/map/colors';
 
 const INCIDENT_COLORS = [
   { key: 'VIGILANCE', color: INCIDENT_STATUS_COLORS.VIGILANCE, label: 'statusVigilance' },
@@ -25,6 +25,12 @@ const RISK_LEVELS = [
   { level: 3, color: '#f97316', label: 'riskLevel3' },
   { level: 4, color: '#ef4444', label: 'riskLevel4' },
   { level: 5, color: '#991b1b', label: 'riskLevel5' },
+];
+
+const FIRMS_CONFIDENCE_ITEMS = [
+  { key: 'high', color: FIRMS_CONFIDENCE_COLORS.high, label: 'firmsConfidenceHigh' },
+  { key: 'nominal', color: FIRMS_CONFIDENCE_COLORS.nominal, label: 'firmsConfidenceNominal' },
+  { key: 'low', color: FIRMS_CONFIDENCE_COLORS.low, label: 'firmsConfidenceLow' },
 ];
 
 export default function MapLegend() {
@@ -107,6 +113,40 @@ export default function MapLegend() {
                   <span>{t(label as TranslationKey)}</span>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* FIRMS Satellite Detections */}
+          <div>
+            <div className="mb-2 flex items-center gap-2">
+              <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                {t('firmsDetections')}
+              </div>
+              <div className="text-[10px] text-muted-foreground italic">
+                (NASA)
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              {FIRMS_CONFIDENCE_ITEMS.map(({ key, color, label }) => (
+                <div key={key} className="flex items-center gap-2 text-xs">
+                  <div
+                    className="h-3.5 w-3.5 rounded-full border-2 border-white shadow-sm flex-shrink-0"
+                    style={{ backgroundColor: color }}
+                  />
+                  <span>{t(label as TranslationKey)}</span>
+                </div>
+              ))}
+              <div className="mt-2 pt-2 border-t border-border/50 space-y-1">
+                <div className="text-[10px] text-muted-foreground leading-relaxed">
+                  • {t('firmsLegendSize')}
+                </div>
+                <div className="text-[10px] text-muted-foreground leading-relaxed">
+                  • {t('firmsLegendRecent')}
+                </div>
+              </div>
+              <div className="mt-2 pt-2 border-t border-border/50 text-[9px] text-muted-foreground italic leading-relaxed">
+                {t('firmsDataSource')}
+              </div>
             </div>
           </div>
         </div>
