@@ -2,12 +2,22 @@ import { create } from 'zustand';
 import type { ViewState } from 'react-map-gl';
 import type { Basemap } from '@/lib/map/styles';
 
-type ActiveLayer = 'incidents' | 'infrastructure' | 'resources' | 'riskBasins' | 'firmsDetections';
+type ActiveLayer = 'incidents' | 'infrastructure' | 'resources' | 'riskBasins' | 'firmsDetections' | 'routes' | 'activeTeams' | 'isochrones';
 
 interface MapState {
   viewState: ViewState;
   setViewState: (vs: ViewState) => void;
-  activeLayers: Set<ActiveLayer>;
+  // Individual layer visibility flags (more performant than Set)
+  layers: {
+    incidents: boolean;
+    infrastructure: boolean;
+    resources: boolean;
+    riskBasins: boolean;
+    firmsDetections: boolean;
+    routes: boolean; // Dispatch routes (MVP)
+    activeTeams: boolean; // Active dispatch teams (MVP)
+    isochrones: boolean; // Isochrones (reachability polygons)
+  };
   toggleLayer: (layer: ActiveLayer) => void;
   selectedIncidentId: string | null;
   setSelectedIncidentId: (id: string | null) => void;
@@ -40,17 +50,23 @@ const DEFAULT_VIEW: ViewState = {
 export const useMapStore = create<MapState>()((set) => ({
   viewState: DEFAULT_VIEW,
   setViewState: (viewState) => set({ viewState }),
-  activeLayers: new Set<ActiveLayer>(['incidents', 'infrastructure', 'resources', 'riskBasins', 'firmsDetections']),
+  layers: {
+    incidents: true,
+    infrastructure: true,
+    resources: true,
+    riskBasins: true,
+    firmsDetections: true,
+    routes: true, // Dispatch routes enabled by default
+    activeTeams: true, // Active teams enabled by default
+    isochrones: true, // Isochrones enabled by default
+  },
   toggleLayer: (layer) =>
-    set((state) => {
-      const next = new Set(state.activeLayers);
-      if (next.has(layer)) {
-        next.delete(layer);
-      } else {
-        next.add(layer);
-      }
-      return { activeLayers: next };
-    }),
+    set((state) => ({
+      layers: {
+        ...state.layers,
+        [layer]: !state.layers[layer],
+      },
+    })),
   selectedIncidentId: null,
   setSelectedIncidentId: (id) => set({ selectedIncidentId: id }),
   is3DEnabled: false,

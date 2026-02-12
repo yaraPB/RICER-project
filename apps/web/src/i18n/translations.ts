@@ -3,6 +3,7 @@ export const translations = {
     language: 'اللغة',
     loading: 'جاري التحميل...',
     search: 'بحث',
+    outOf: 'من',
 
     // Navbar
     fireMap: 'خريطة الحرائق',
@@ -24,6 +25,19 @@ export const translations = {
     skipToContent: 'انتقل إلى المحتوى',
     closePanel: 'إغلاق اللوحة',
     primaryNavigation: 'التنقل الرئيسي',
+
+    // Footer
+    footerDescription: 'نظام إدارة والإبلاغ عن حرائق الغابات في إفران، المغرب',
+    footerNavigation: 'التنقل',
+    footerFireMap: 'خريطة الحرائق',
+    footerAnalytics: 'التحليلات',
+    footerReportFire: 'إبلاغ عن حريق',
+    footerEmergency: 'حالات الطوارئ',
+    footerCivilProtection: '15 - الحماية المدنية',
+    footerWaterForests: '190 - المياه والغابات',
+    footerInformation: 'معلومات',
+    footerErrorCodes: 'رموز الخطأ',
+    footerAllRightsReserved: 'جميع الحقوق محفوظة',
 
     // Auth
     appTitle: 'RICER Ifrane',
@@ -89,6 +103,20 @@ export const translations = {
     errorWeatherFailed: 'خدمة الطقس غير متاحة. حاول مرة أخرى لاحقاً',
     errorConfigMissing:
       'إعدادات الخادم ناقصة. أنشئ ملف .env.local اعتماداً على .env.example ثم أعد تشغيل الخادم',
+    errorExternalTimeout: 'انتهت مهلة الطلب. حاول مرة أخرى لاحقاً',
+    errorExternalApiAuth: 'فشل مصادقة API الخارجي. تحقق من بيانات الاعتماد',
+
+    // Dispatch System Errors
+    errorRoutingTimeout: 'انتهت مهلة خدمة التوجيه. حاول مرة أخرى',
+    errorRouteNotFound: 'لم يتم العثور على مسار بين الموقعين',
+    errorInvalidCoordinates: 'الإحداثيات غير صالحة',
+    errorTeamUnavailable: 'الفريق غير متاح للإرسال',
+    errorMaxTeamsExceeded: 'تم تجاوز الحد الأقصى من الفرق (5)',
+    errorDuplicateAssignment: 'هذا الفريق معين بالفعل لهذا الحادث',
+    errorRoutingServiceUnavailable: 'خدمة التوجيه غير متاحة. حاول مرة أخرى لاحقاً',
+    errorInvalidRoute: 'بيانات المسار غير صالحة',
+    errorIncidentNotFound: 'الحادث غير موجود',
+    errorTeamNotFound: 'الفريق غير موجود',
 
     // Map Page
     fireMapTitle: 'خريطة الحرائق',
@@ -143,6 +171,9 @@ export const translations = {
     layerRiskZones: 'مناطق المخاطر',
     layerFirmsDetections: 'الكشف عن الحرائق عبر الأقمار الصناعية',
     layerHeatmap: 'خريطة حرارية',
+    layerRoutes: 'المسارات',
+    layerActiveTeams: 'الفرق النشطة',
+    layerIsochrones: 'الأيزوكرونات',
     firmsDetections: 'الكشف عبر الأقمار الصناعية',
     firmsConfidenceHigh: 'ثقة عالية',
     firmsConfidenceNominal: 'ثقة اسمية',
@@ -156,6 +187,17 @@ export const translations = {
     firmsLegendRecent: 'علامات نابضة = حديثة (<12 ساعة)',
     firmsLastUpdate: 'تحديث بيانات الأقمار الصناعية',
     firmsNoDetections: 'لا توجد كشوفات للحريق عبر الأقمار الصناعية في المنطقة',
+    firmsClusterHelp: 'انقر على المجموعات للتكبير ورؤية الكشوفات الفردية',
+    firmsConfidence: 'الثقة',
+    firmsDayNight: 'نهار/ليل',
+    firmsDay: 'نهار',
+    firmsNight: 'ليل',
+    firmsSatelliteDetection: 'كشف عبر القمر الصناعي',
+    firmsSatelliteDetections: 'كشوفات عبر الأقمار الصناعية',
+    firmsZoomToSeeDetails: 'قم بالتكبير لرؤية التفاصيل',
+    firmsFirePower: 'قوة الحريق',
+    firmsTemperature: 'درجة الحرارة',
+    firmsTime: 'الوقت',
     toggle3D: 'وضع ثلاثي الأبعاد',
     basemapStreets: 'شوارع',
     basemapLight: 'فاتح',
@@ -302,6 +344,7 @@ export const translations = {
     language: 'Langue',
     loading: 'Chargement…',
     search: 'Rechercher',
+    outOf: 'sur',
 
     // Navbar
     fireMap: 'Carte des Incendies',
@@ -323,6 +366,19 @@ export const translations = {
     skipToContent: 'Aller au contenu',
     closePanel: 'Fermer le panneau',
     primaryNavigation: 'Navigation principale',
+
+    // Footer
+    footerDescription: 'Système de gestion et de signalement des incendies pour Ifrane, Maroc',
+    footerNavigation: 'Navigation',
+    footerFireMap: 'Carte des incendies',
+    footerAnalytics: 'Analytique',
+    footerReportFire: 'Signaler un incendie',
+    footerEmergency: 'Urgences',
+    footerCivilProtection: '15 - Protection Civile',
+    footerWaterForests: '190 - Eaux et Forêts',
+    footerInformation: 'Informations',
+    footerErrorCodes: "Codes d'erreur",
+    footerAllRightsReserved: 'Tous droits réservés',
 
     // Auth
     appTitle: 'RICER Ifrane',
@@ -388,6 +444,20 @@ export const translations = {
     errorWeatherFailed: 'Service météo indisponible. Réessayez plus tard.',
     errorConfigMissing:
       'Configuration serveur manquante. Créez un fichier .env.local à partir de .env.example puis redémarrez le serveur',
+    errorExternalTimeout: 'Délai d\'attente dépassé. Réessayez plus tard',
+    errorExternalApiAuth: 'Échec d\'authentification de l\'API externe. Vérifiez les informations d\'identification',
+
+    // Erreurs du système de répartition
+    errorRoutingTimeout: 'Délai d\'attente du service de routage dépassé. Réessayez',
+    errorRouteNotFound: 'Aucun itinéraire trouvé entre les deux points',
+    errorInvalidCoordinates: 'Coordonnées invalides',
+    errorTeamUnavailable: 'L\'équipe n\'est pas disponible pour l\'envoi',
+    errorMaxTeamsExceeded: 'Maximum d\'équipes dépassé (5)',
+    errorDuplicateAssignment: 'Cette équipe est déjà assignée à cet incident',
+    errorRoutingServiceUnavailable: 'Service de routage indisponible. Réessayez plus tard',
+    errorInvalidRoute: 'Données d\'itinéraire invalides',
+    errorIncidentNotFound: 'Incident introuvable',
+    errorTeamNotFound: 'Équipe introuvable',
 
     // Map Page
     fireMapTitle: 'Carte des Incendies',
@@ -442,6 +512,9 @@ export const translations = {
     layerRiskZones: 'Zones de risque',
     layerFirmsDetections: 'Détections Satellitaires de Feux',
     layerHeatmap: 'Carte thermique',
+    layerRoutes: 'Routes',
+    layerActiveTeams: 'Équipes Actives',
+    layerIsochrones: 'Isochrones',
     firmsDetections: 'Détections Satellitaires',
     firmsConfidenceHigh: 'Haute Confiance',
     firmsConfidenceNominal: 'Confiance Nominale',
@@ -455,6 +528,17 @@ export const translations = {
     firmsLegendRecent: 'Marqueurs pulsants = Récent (<12h)',
     firmsLastUpdate: 'Données satellitaires mises à jour',
     firmsNoDetections: 'Aucune détection satellitaire de feu dans la zone',
+    firmsClusterHelp: 'Cliquez sur les groupes pour zoomer et voir les détections individuelles',
+    firmsConfidence: 'Confiance',
+    firmsDayNight: 'Jour/Nuit',
+    firmsDay: 'Jour',
+    firmsNight: 'Nuit',
+    firmsSatelliteDetection: 'Détection Satellitaire',
+    firmsSatelliteDetections: 'Détections Satellitaires',
+    firmsZoomToSeeDetails: 'Zoomer pour voir les détails',
+    firmsFirePower: 'Puissance du Feu',
+    firmsTemperature: 'Température',
+    firmsTime: 'Heure',
     toggle3D: 'Mode 3D',
     basemapStreets: 'Rues',
     basemapLight: 'Clair',
@@ -601,6 +685,7 @@ export const translations = {
     language: 'Language',
     loading: 'Loading…',
     search: 'Search',
+    outOf: 'out of',
 
     // Navbar
     fireMap: 'Fire Map',
@@ -622,6 +707,19 @@ export const translations = {
     skipToContent: 'Skip to content',
     closePanel: 'Close panel',
     primaryNavigation: 'Primary navigation',
+
+    // Footer
+    footerDescription: 'Fire management and reporting system for Ifrane, Morocco',
+    footerNavigation: 'Navigation',
+    footerFireMap: 'Fire map',
+    footerAnalytics: 'Analytics',
+    footerReportFire: 'Report a fire',
+    footerEmergency: 'Emergency',
+    footerCivilProtection: '15 - Civil Protection',
+    footerWaterForests: '190 - Water and Forests',
+    footerInformation: 'Information',
+    footerErrorCodes: 'Error codes',
+    footerAllRightsReserved: 'All rights reserved',
 
     // Auth
     appTitle: 'RICER Ifrane',
@@ -686,6 +784,20 @@ export const translations = {
     errorNotificationFailed: 'Notification delivery failed. Please try again later.',
     errorWeatherFailed: 'Weather provider unavailable. Please try again later.',
     errorConfigMissing: 'Server configuration is missing. Create .env.local and restart the server.',
+    errorExternalTimeout: 'Request timeout. Please try again later',
+    errorExternalApiAuth: 'External API authentication failed. Check credentials',
+
+    // Dispatch System Errors
+    errorRoutingTimeout: 'Routing service timeout. Please try again',
+    errorRouteNotFound: 'No route found between the two locations',
+    errorInvalidCoordinates: 'Invalid coordinates',
+    errorTeamUnavailable: 'Team is not available for dispatch',
+    errorMaxTeamsExceeded: 'Maximum teams exceeded (5)',
+    errorDuplicateAssignment: 'This team is already assigned to this incident',
+    errorRoutingServiceUnavailable: 'Routing service unavailable. Please try again later',
+    errorInvalidRoute: 'Invalid route data',
+    errorIncidentNotFound: 'Incident not found',
+    errorTeamNotFound: 'Team not found',
 
     // Map Page
     fireMapTitle: 'Fire Map',
@@ -740,6 +852,9 @@ export const translations = {
     layerRiskZones: 'Risk zones',
     layerFirmsDetections: 'Satellite Fire Detections',
     layerHeatmap: 'Heatmap',
+    layerRoutes: 'Routes',
+    layerActiveTeams: 'Active Teams',
+    layerIsochrones: 'Isochrones',
     firmsDetections: 'Satellite Detections',
     firmsConfidenceHigh: 'High Confidence',
     firmsConfidenceNominal: 'Nominal Confidence',
@@ -753,6 +868,17 @@ export const translations = {
     firmsLegendRecent: 'Pulsing markers = Recent (<12h)',
     firmsLastUpdate: 'Satellite data updated',
     firmsNoDetections: 'No satellite fire detections in the area',
+    firmsClusterHelp: 'Click clusters to zoom in and see individual detections',
+    firmsConfidence: 'Confidence',
+    firmsDayNight: 'Day/Night',
+    firmsDay: 'Day',
+    firmsNight: 'Night',
+    firmsSatelliteDetection: 'Satellite Detection',
+    firmsSatelliteDetections: 'Satellite Detections',
+    firmsZoomToSeeDetails: 'Zoom in to see details',
+    firmsFirePower: 'Fire Power',
+    firmsTemperature: 'Temperature',
+    firmsTime: 'Time',
     toggle3D: '3D mode',
     basemapStreets: 'Streets',
     basemapLight: 'Light',

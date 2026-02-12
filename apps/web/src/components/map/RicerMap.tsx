@@ -17,14 +17,21 @@ import { MapboxOverlay } from '@deck.gl/mapbox';
 import type { MapboxOverlayProps } from '@deck.gl/mapbox/typed';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useMapStore } from '@/store/useMapStore';
+import { useDispatchStore } from '@/store/useDispatchStore';
 import MapControls from '@/components/map/MapControls';
 import MapLegend from './MapLegend';
 import { useTranslation } from '@/hooks/useTranslation';
 import { getMapStyle } from '@/lib/map/styles';
-import { INCIDENT_STATUS_COLORS, FIRMS_CONFIDENCE_COLORS, getFRPColor } from '@/lib/map/colors';
+import { INCIDENT_STATUS_COLORS, FIRMS_CONFIDENCE_COLORS } from '@/lib/map/colors';
 import { asGeoJSON } from '@/lib/map/helpers';
 import { logger } from '@/lib/observability/logger';
 import { createResourceLayer, createInfrastructureLayers } from '@/lib/map/layers';
+import {
+  createRouteLayer,
+  createActiveTeamsLayer,
+  transformRouteToLayerData,
+  transformTeamToLayerData,
+} from '@/lib/map/dispatchLayers';
 import type {
   GeoFeatureCollection,
   GeoIncidentProps,
@@ -33,6 +40,26 @@ import type {
   RiskBasinProps,
   GeoFirmsDetectionProps,
 } from '@/types';
+
+/* ────────── helpers ────────── */
+
+/**
+ * Format time ago from date (e.g., "2 minutes ago", "1 hour ago")
+ */
+function formatTimeAgo(date: Date): string {
+  const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+
+  if (seconds < 60) return `${seconds}s ago`;
+
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
 
 /* ────────── component ────────── */
 
@@ -50,13 +77,17 @@ export default function RicerMap() {
   /* store */
   const viewState = useMapStore((s) => s.viewState);
   const setViewState = useMapStore((s) => s.setViewState);
-  const activeLayers = useMapStore((s) => s.activeLayers);
+  const layers = useMapStore((s) => s.layers);
   const selectedIncidentId = useMapStore((s) => s.selectedIncidentId);
   const setSelectedIncidentId = useMapStore((s) => s.setSelectedIncidentId);
   const is3DEnabled = useMapStore((s) => s.is3DEnabled);
   const basemap = useMapStore((s) => s.basemap);
   const isHeatmapEnabled = useMapStore((s) => s.isHeatmapEnabled);
   const setDataError = useMapStore((s) => s.setDataError);
+
+  /* dispatch store */
+  const activeRoutes = useDispatchStore((s) => s.activeRoutes);
+  const selectedTeams = useDispatchStore((s) => s.selectedTeams);
 
   /* local state */
   const [incidents, setIncidents] = useState<GeoFeatureCollection<GeoIncidentProps>>({
@@ -101,11 +132,12 @@ export default function RicerMap() {
     let cancelled = false;
     let tickCount = 0;
     let resourcesDisabled = false; // Track if resources should be skipped
+    const abortController = new AbortController();
 
     async function fetchIncidents() {
       if (cancelled) return;
       try {
-        const res = await fetch('/api/geo/incidents');
+        const res = await fetch('/api/geo/incidents', { signal: abortController.signal });
         if (!res.ok) {
           setDataError('incidents', `HTTP ${res.status}`);
           return;
@@ -113,7 +145,8 @@ export default function RicerMap() {
         const data = await res.json();
         setIncidents(data);
         setDataError('incidents', null);
-      } catch {
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') return;
         setDataError('incidents', 'Network error');
       }
     }
@@ -121,7 +154,7 @@ export default function RicerMap() {
     async function fetchResources() {
       if (cancelled || resourcesDisabled) return;
       try {
-        const res = await fetch('/api/geo/resources');
+        const res = await fetch('/api/geo/resources', { signal: abortController.signal });
         if (!res.ok) {
           if (res.status === 403) {
             // Permission denied - stop polling this endpoint
@@ -135,7 +168,8 @@ export default function RicerMap() {
         const data = await res.json();
         setResources(data);
         setDataError('resources', null);
-      } catch {
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') return;
         setDataError('resources', 'Network error');
       }
     }
@@ -144,10 +178,10 @@ export default function RicerMap() {
       if (cancelled) return;
       try {
         const [infraRes, riskRes] = await Promise.allSettled([
-          fetch('/api/geo/infrastructure').then((r) =>
+          fetch('/api/geo/infrastructure', { signal: abortController.signal }).then((r) =>
             r.ok ? r.json() : Promise.reject(`HTTP ${r.status}`),
           ),
-          fetch('/api/geo/risk-basins').then((r) =>
+          fetch('/api/geo/risk-basins', { signal: abortController.signal }).then((r) =>
             r.ok ? r.json() : Promise.reject(`HTTP ${r.status}`),
           ),
         ]);
@@ -155,15 +189,22 @@ export default function RicerMap() {
           setInfrastructure(infraRes.value);
           setDataError('infrastructure', null);
         } else {
-          setDataError('infrastructure', String(infraRes.reason));
+          const reason = String(infraRes.reason);
+          if (!reason.includes('AbortError')) {
+            setDataError('infrastructure', reason);
+          }
         }
         if (riskRes.status === 'fulfilled') {
           setRiskBasins(riskRes.value);
           setDataError('riskBasins', null);
         } else {
-          setDataError('riskBasins', String(riskRes.reason));
+          const reason = String(riskRes.reason);
+          if (!reason.includes('AbortError')) {
+            setDataError('riskBasins', reason);
+          }
         }
       } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') return;
         console.error('Failed to fetch static data:', error);
       }
     }
@@ -171,7 +212,7 @@ export default function RicerMap() {
     async function fetchFirms() {
       if (cancelled) return;
       try {
-        const res = await fetch('/api/firms/detections');
+        const res = await fetch('/api/firms/detections', { signal: abortController.signal });
         if (!res.ok) {
           const errorText = await res.text().catch(() => '');
           setDataError('firmsDetections', `HTTP ${res.status}: ${errorText.slice(0, 50)}`);
@@ -193,6 +234,7 @@ export default function RicerMap() {
           meta: { detections: detectionCount }
         });
       } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') return;
         const errorMsg = error instanceof Error ? error.message : 'Network error';
         setDataError('firmsDetections', errorMsg);
         logger.error({
@@ -216,6 +258,7 @@ export default function RicerMap() {
 
     return () => {
       cancelled = true;
+      abortController.abort();
       clearInterval(interval);
     };
   }, [setDataError]);
@@ -269,7 +312,7 @@ export default function RicerMap() {
 
   const incidentSourceData = useMemo(() => ({
     type: 'FeatureCollection' as const,
-    features: (activeLayers.has('incidents') ? incidents.features : []).map((f) => ({
+    features: (layers.incidents ? incidents.features : []).map((f) => ({
       type: 'Feature' as const,
       geometry: f.geometry,
       properties: {
@@ -278,7 +321,7 @@ export default function RicerMap() {
         isActive: f.properties.status !== 'ETEINT' ? 1 : 0,
       },
     })),
-  }), [incidents.features, activeLayers]);
+  }), [incidents.features, layers.incidents]);
 
   const heatmapData = useMemo(() => ({
     type: 'FeatureCollection' as const,
@@ -292,16 +335,39 @@ export default function RicerMap() {
   /* ═══════════ Deck.gl layers ═══════════ */
 
   const deckLayers = useMemo(() => {
-    const layers: any[] = [];
+    const deckLayersList: any[] = [];
 
-    const resourceLayer = createResourceLayer(resources, activeLayers.has('resources'));
-    if (resourceLayer) layers.push(resourceLayer);
+    const resourceLayer = createResourceLayer(resources, layers.resources);
+    if (resourceLayer) deckLayersList.push(resourceLayer);
 
-    const infraLayers = createInfrastructureLayers(infrastructure, activeLayers.has('infrastructure'));
-    layers.push(...infraLayers);
+    const infraLayers = createInfrastructureLayers(infrastructure, layers.infrastructure);
+    deckLayersList.push(...infraLayers);
 
-    return layers;
-  }, [activeLayers, resources, infrastructure]);
+    // Dispatch routes layer (MVP)
+    const routeLayerData = activeRoutes.map((route) =>
+      transformRouteToLayerData(route.route, route.routeId, true)
+    );
+    const routeLayer = createRouteLayer(routeLayerData, layers.routes);
+    if (routeLayer) deckLayersList.push(routeLayer);
+
+    // Active teams layer (MVP)
+    const activeTeamsData = selectedTeams
+      .filter((team) => team.location && team.location.coordinates)
+      .map((team) => transformTeamToLayerData(team));
+    const activeTeamsLayer = createActiveTeamsLayer(activeTeamsData, layers.activeTeams);
+    if (activeTeamsLayer) deckLayersList.push(activeTeamsLayer);
+
+    return deckLayersList;
+  }, [
+    layers.resources,
+    layers.infrastructure,
+    layers.routes,
+    layers.activeTeams,
+    resources,
+    infrastructure,
+    activeRoutes,
+    selectedTeams,
+  ]);
 
   /* ═══════════ Click handler ═══════════ */
 
@@ -337,63 +403,80 @@ export default function RicerMap() {
     [viewState, setSelectedIncidentId],
   );
 
-  /* ═══════════ Hover handlers ═══════════ */
+  /* ═══════════ Hover handlers with debouncing ═══════════ */
+
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleMouseEnter = useCallback((event: MapLayerMouseEvent) => {
-    const features = event.features;
-    if (!features || features.length === 0) {
-      setHoverInfo(null);
-      setHoveredIncident(null);
-      return;
-    }
-    const feature = features[0];
-    if (!feature?.properties) return;
-
-    const geom = feature.geometry as { coordinates?: number[] };
-    const coords = geom?.coordinates;
-    if (
-      !coords ||
-      typeof coords[0] !== 'number' ||
-      typeof coords[1] !== 'number'
-    )
-      return;
-
-    // Handle cluster hover
-    if (feature.properties.cluster) {
-      setHoverInfo({
-        longitude: coords[0],
-        latitude: coords[1],
-        layer: feature.layer?.id || '',
-        feature,
-      });
-      setHoveredIncident(null);
-      return;
+    // Clear any pending hover updates
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
     }
 
-    // Handle FIRMS detections
-    if (feature.layer?.id === 'firms-detections-unclustered') {
-      setHoverInfo({
-        longitude: coords[0],
-        latitude: coords[1],
-        layer: 'firms-detections-unclustered',
-        feature,
-      });
-      setHoveredIncident(null);
-      return;
-    }
+    // Debounce hover state updates by 100ms
+    hoverTimeoutRef.current = setTimeout(() => {
+      const features = event.features;
+      if (!features || features.length === 0) {
+        setHoverInfo(null);
+        setHoveredIncident(null);
+        return;
+      }
+      const feature = features[0];
+      if (!feature?.properties) return;
 
-    // Handle incident hover (existing logic)
-    if (feature.properties.id && feature.layer?.id === 'incidents-unclustered') {
-      setHoveredIncident({
-        id: feature.properties.id as string,
-        properties: feature.properties as unknown as GeoIncidentProps,
-        coordinates: [coords[0], coords[1]],
-      });
-      setHoverInfo(null);
-    }
+      const geom = feature.geometry as { coordinates?: number[] };
+      const coords = geom?.coordinates;
+      if (
+        !coords ||
+        typeof coords[0] !== 'number' ||
+        typeof coords[1] !== 'number'
+      )
+        return;
+
+      // Handle cluster hover
+      if (feature.properties.cluster) {
+        setHoverInfo({
+          longitude: coords[0],
+          latitude: coords[1],
+          layer: feature.layer?.id || '',
+          feature,
+        });
+        setHoveredIncident(null);
+        return;
+      }
+
+      // Handle FIRMS detections
+      if (feature.layer?.id === 'firms-detections-unclustered') {
+        setHoverInfo({
+          longitude: coords[0],
+          latitude: coords[1],
+          layer: 'firms-detections-unclustered',
+          feature,
+        });
+        setHoveredIncident(null);
+        return;
+      }
+
+      // Handle incident hover (existing logic)
+      if (feature.properties.id && feature.layer?.id === 'incidents-unclustered') {
+        setHoveredIncident({
+          id: feature.properties.id as string,
+          properties: feature.properties as unknown as GeoIncidentProps,
+          coordinates: [coords[0], coords[1]],
+        });
+        setHoverInfo(null);
+      }
+    }, 100);
   }, []);
 
   const handleMouseLeave = useCallback(() => {
+    // Clear pending hover updates
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+
+    // Immediately clear hover state on leave
     setHoveredIncident(null);
     setHoverInfo(null);
   }, []);
@@ -430,7 +513,7 @@ export default function RicerMap() {
       >
         {/* ═══ Heatmap layer ═══ */}
         {isHeatmapEnabled &&
-          activeLayers.has('incidents') &&
+          layers.incidents &&
           incidents.features.length > 0 && (
             <Source
               id="incidents-heat"
@@ -507,7 +590,7 @@ export default function RicerMap() {
           )}
 
         {/* ═══ Risk basin polygons / 3D extrusions ═══ */}
-        {activeLayers.has('riskBasins') && riskBasins.features.length > 0 && (
+        {layers.riskBasins && riskBasins.features.length > 0 && (
           <Source
             id="risk-basins"
             type="geojson"
@@ -593,7 +676,7 @@ export default function RicerMap() {
         {/* ════════════════════════════════════════════════════════════
             FIRMS SATELLITE FIRE DETECTIONS
             ════════════════════════════════════════════════════════════ */}
-        {activeLayers.has('firmsDetections') && firmsDetections.features.length > 0 && (
+        {layers.firmsDetections && firmsDetections.features.length > 0 && (
           <Source
             id="firms-detections"
             type="geojson"
@@ -763,7 +846,7 @@ export default function RicerMap() {
         )}
 
         {/* ═══ Incident clusters with glow effect ═══ */}
-        {activeLayers.has('incidents') && (
+        {layers.incidents && (
           <Source
             id="incidents"
             type="geojson"
@@ -984,15 +1067,15 @@ export default function RicerMap() {
                 <span className="text-orange-500">
                   🛰️
                 </span>
-                <span className="font-bold text-sm">Satellite Detection</span>
+                <span className="font-bold text-sm">{t('firmsSatelliteDetection')}</span>
               </div>
               <div className="space-y-1 text-xs">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Fire Power:</span>
+                  <span className="text-muted-foreground">{t('firmsFirePower')}:</span>
                   <span className="font-semibold">{hoverInfo.feature.properties.frp} MW</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Confidence:</span>
+                  <span className="text-muted-foreground">{t('firmsConfidence')}:</span>
                   <span
                     className="font-semibold capitalize"
                     style={{
@@ -1003,20 +1086,20 @@ export default function RicerMap() {
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Temperature:</span>
+                  <span className="text-muted-foreground">{t('firmsTemperature')}:</span>
                   <span className="font-semibold">{hoverInfo.feature.properties.brightness}K</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Time:</span>
+                  <span className="text-muted-foreground">{t('firmsTime')}:</span>
                   <span className="font-semibold">{hoverInfo.feature.properties.acqDateTime}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Satellite:</span>
+                  <span className="text-muted-foreground">{t('firmsSatellite')}:</span>
                   <span className="font-semibold">{hoverInfo.feature.properties.instrument}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Day/Night:</span>
-                  <span className="font-semibold">{hoverInfo.feature.properties.daynight === 'D' ? 'Day' : 'Night'}</span>
+                  <span className="text-muted-foreground">{t('firmsDayNight')}:</span>
+                  <span className="font-semibold">{hoverInfo.feature.properties.daynight === 'D' ? t('firmsDay') : t('firmsNight')}</span>
                 </div>
               </div>
               <div className="mt-2 pt-2 border-t border-border text-[10px] text-muted-foreground">
@@ -1038,8 +1121,8 @@ export default function RicerMap() {
           >
             <div className="p-2 text-center">
               <div className="font-bold text-lg text-orange-500">{hoverInfo.feature.properties.point_count}</div>
-              <div className="text-xs text-muted-foreground">Satellite Detections</div>
-              <div className="text-[10px] text-muted-foreground mt-1">Zoom in to see details</div>
+              <div className="text-xs text-muted-foreground">{t('firmsSatelliteDetections')}</div>
+              <div className="text-[10px] text-muted-foreground mt-1">{t('firmsZoomToSeeDetails')}</div>
             </div>
           </Popup>
         )}
@@ -1068,6 +1151,13 @@ export default function RicerMap() {
       {/* ═══ Overlay controls ═══ */}
       <MapControls />
       <MapLegend />
+
+      {/* FIRMS data timestamp */}
+      {firmsLastUpdate && layers.firmsDetections && (
+        <div className="absolute top-4 right-4 text-xs text-muted-foreground bg-background/80 backdrop-blur-sm px-3 py-1.5 rounded-md border border-border/50 shadow-sm">
+          <span className="font-medium">FIRMS:</span> {formatTimeAgo(firmsLastUpdate)}
+        </div>
+      )}
 
       {/* Fullscreen toggle */}
       <button
@@ -1105,6 +1195,13 @@ export default function RicerMap() {
           )}
         </svg>
       </button>
+
+      {/* Tooltip for dispatch layers */}
+      <div
+        id="map-tooltip"
+        className="pointer-events-none fixed z-50 hidden rounded-md border border-border bg-surface px-3 py-2 text-xs shadow-elev-3"
+        style={{ transform: 'translate(-50%, -100%) translateY(-8px)' }}
+      />
     </div>
   );
 }
