@@ -32,6 +32,7 @@ import {
   transformRouteToLayerData,
   transformTeamToLayerData,
 } from '@/lib/map/dispatchLayers';
+import { detectGPUCapabilities, type GPUTier } from '@/lib/gpu/detection';
 import type {
   GeoFeatureCollection,
   GeoIncidentProps,
@@ -123,8 +124,22 @@ export default function RicerMap() {
     feature: any;
   } | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [gpuTier, setGpuTier] = useState<GPUTier>('tier-c'); // Start with safest tier
 
   const prevIs3D = useRef(is3DEnabled);
+
+  /* ═══════════ GPU Detection (non-blocking) ═══════════ */
+
+  useEffect(() => {
+    // Detect GPU capabilities asynchronously, never blocks map boot
+    detectGPUCapabilities(2000).then((capabilities) => {
+      setGpuTier(capabilities.tier);
+      console.info('[Map] GPU tier set:', capabilities.tier, capabilities);
+    }).catch((error) => {
+      console.error('[Map] GPU detection error, using Tier C:', error);
+      setGpuTier('tier-c');
+    });
+  }, []);
 
   /* ═══════════ Data fetching ═══════════ */
 
