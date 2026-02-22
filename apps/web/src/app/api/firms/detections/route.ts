@@ -2,15 +2,43 @@ import { NextResponse } from 'next/server';
 import { withApiHandler } from '@/lib/errors/withApiHandler';
 import { AppError } from '@/lib/errors/AppError';
 import { getCircuitBreaker } from '@/lib/platform/circuitBreaker';
-import { getCachedFirmsDetections, setCachedFirmsDetections } from '@/lib/firms/cache';
+import { getCachedFirmsDetections, setCachedFirmsDetections, clearFirmsCache } from '@/lib/firms/cache';
 import { transformFirmsToGeoJSON, isFirmsCSVResponse, getFirmsStats } from '@/lib/firms/transform';
-import { captureExternalApiError, type ExternalApiContext } from '@/lib/errors/context';
+import { fetchFirmsWithFallback, FIRMS_ENDPOINTS } from '@/lib/firms/client';
+import { captureExternalApiError } from '@/lib/errors/context';
 import { getCurrentUser } from '@/lib/auth';
 import { logger } from '@/lib/observability/logger';
+import { createFirmsRateLimiter } from '@/lib/ratelimit/slidingWindow';
 
-// Ifrane region with 10km buffer (±0.1° ≈ 11km)
-// Core: 33.4°N - 33.6°N, -5.2°W - -5.0°W
-// Buffer: 33.3°N - 33.7°N, -5.3°W - -4.9°W
+/**
+ * Ifrane region bounding box with 10km buffer (±0.1° ≈ 11km)
+ *
+ * Coverage Area:
+ * - Core: 33.4°N - 33.6°N, -5.2°W - -5.0°W (Ifrane city center)
+ * - Buffer: 33.3°N - 33.7°N, -5.3°W - -4.9°W (±10km for early detection)
+ *
+ * The buffer zone extends beyond the city limits to capture fires that may
+ * spread toward Ifrane, enabling proactive wildfire risk assessment.
+ *
+ * To expand coverage to other regions:
+ * 1. Update IFRANE_BBOX coordinates below with new region's bounds
+ * 2. Consider renaming constant to COVERAGE_BBOX or REGION_BBOX
+ * 3. Update translation keys if region name changes (firmsDetections, etc.)
+ * 4. Test with different bbox sizes - larger areas return more data:
+ *    - Small region (<0.5° span): ~50-200 detections/day
+ *    - Medium region (0.5-1° span): ~200-1000 detections/day
+ *    - Large region (>1° span): May exceed API limits, consider splitting
+ *
+ * Note: FIRMS API supports multiple bbox formats:
+ * - CSV format (current): "minLat,minLon,maxLat,maxLon" (e.g., "33.3,-5.3,33.7,-4.9")
+ * - WKT format: "POLYGON((lon1 lat1, lon2 lat2, ...))"
+ * - GeoJSON format: {"type":"Polygon","coordinates":[[[lon,lat],...]]}
+ *
+ * For multiple regions, consider:
+ * - Making bbox a query parameter for dynamic region selection
+ * - Creating separate API endpoints per region (/api/firms/ifrane, /api/firms/fez)
+ * - Using a database table to store region configurations
+ */
 const IFRANE_BBOX = {
   minLat: 33.3,
   maxLat: 33.7,
@@ -19,11 +47,24 @@ const IFRANE_BBOX = {
 };
 
 const FIRMS_CONFIG = {
-  baseUrl: 'https://firms.modaps.eosdis.nasa.gov/api/area',
   source: 'VIIRS_SNPP_NRT', // VIIRS from Suomi-NPP satellite (375m resolution, ~3hr updates)
   dayRange: 1, // Last 24 hours of detections
   timeout: 10000, // 10 second timeout
 } as const;
+
+/**
+ * Validate NASA FIRMS API key format
+ * MAP_KEY must be a 32-character hexadecimal string
+ */
+function validateFirmsApiKey(key: string): { valid: boolean; error?: string } {
+  if (!/^[a-f0-9]{32}$/i.test(key)) {
+    return {
+      valid: false,
+      error: 'Invalid format - NASA FIRMS MAP_KEY must be 32 hexadecimal characters'
+    };
+  }
+  return { valid: true };
+}
 
 export const GET = withApiHandler(async (request: Request) => {
   // 1. Authentication & Authorization
@@ -31,7 +72,60 @@ export const GET = withApiHandler(async (request: Request) => {
   if (!user) throw new AppError(2000); // Unauthorized
   if (!user.scopes.includes('map:read')) throw new AppError(2001); // Forbidden
 
-  // 2. Validate API key configuration
+  // 1b. Reset circuit breaker if requested (e.g. user clicked "Retry")
+  const url = new URL(request.url);
+  const resetRequested = url.searchParams.get('reset') === 'true';
+  if (resetRequested) {
+    for (const ep of FIRMS_ENDPOINTS) {
+      getCircuitBreaker(ep.id).reset();
+    }
+    clearFirmsCache();
+    logger.info({ event: 'firms_circuit_breaker_reset', meta: { userId: user.userId } });
+  }
+
+  // 2. Rate Limiting (10 req/min for civilians, 100 req/min for officials)
+  const isOfficial = user.role === 'OFFICIAL';
+  const rateLimiter = createFirmsRateLimiter(isOfficial);
+  const rateLimit = await rateLimiter.checkLimit(user.userId);
+
+  if (!rateLimit.allowed) {
+    logger.warn({
+      event: 'firms_rate_limited',
+      meta: {
+        userId: user.userId,
+        role: user.role,
+        remaining: rateLimit.remaining,
+        resetAt: new Date(rateLimit.resetAt).toISOString(),
+      },
+    });
+
+    const response = NextResponse.json(
+      {
+        error: {
+          code: 1002,
+          name: 'RATE_LIMITED',
+          userMessage: 'Too many requests. Please wait before trying again.',
+          developerMessage: `Rate limit exceeded. Retry after ${rateLimit.retryAfter} seconds.`,
+        },
+      },
+      { status: 429 }
+    );
+
+    response.headers.set('X-RateLimit-Limit', String(isOfficial ? 100 : 10));
+    response.headers.set('X-RateLimit-Remaining', String(rateLimit.remaining));
+    response.headers.set('X-RateLimit-Reset', String(Math.floor(rateLimit.resetAt / 1000)));
+    response.headers.set('Retry-After', String(rateLimit.retryAfter || 60));
+
+    return response;
+  }
+
+  // Set rate limit headers on successful requests
+  const headers = new Headers();
+  headers.set('X-RateLimit-Limit', String(isOfficial ? 100 : 10));
+  headers.set('X-RateLimit-Remaining', String(rateLimit.remaining));
+  headers.set('X-RateLimit-Reset', String(Math.floor(rateLimit.resetAt / 1000)));
+
+  // 3. Validate API key configuration
   const apiKey = process.env.FIRMS_MAP_KEY;
   if (!apiKey) {
     logger.error({
@@ -41,6 +135,22 @@ export const GET = withApiHandler(async (request: Request) => {
     throw new AppError(5001, {
       message: 'FIRMS_MAP_KEY environment variable not configured',
       meta: { missingVar: 'FIRMS_MAP_KEY' },
+    });
+  }
+
+  // Validate API key format
+  const validation = validateFirmsApiKey(apiKey);
+  if (!validation.valid) {
+    logger.error({
+      event: 'firms_api_key_invalid_format',
+      meta: { error: validation.error }
+    });
+    throw new AppError(5004, {
+      message: validation.error,
+      meta: {
+        hint: 'Obtain a valid API key from https://firms.modaps.eosdis.nasa.gov/api/area/',
+        expectedFormat: '32 hexadecimal characters (a-f, 0-9)'
+      }
     });
   }
 
@@ -57,146 +167,77 @@ export const GET = withApiHandler(async (request: Request) => {
     response.headers.set('X-Detection-Count', String(cached.data.features.length));
     response.headers.set('X-High-Confidence-Count', String(stats.highConfidence));
     response.headers.set('X-Recent-Count', String(stats.recentCount));
+    // Add rate limit headers
+    headers.forEach((value, key) => response.headers.set(key, value));
     return response;
   }
 
-  // 4. Check circuit breaker (prevents cascading failures)
-  const breaker = getCircuitBreaker('nasa-firms');
-  if (!breaker.canRequest()) {
-    logger.warn({
-      event: 'firms_circuit_breaker_open',
-      meta: { reason: 'too_many_failures' }
-    });
-    throw new AppError(4002, {
-      meta: { reason: 'circuit_breaker_open', provider: 'nasa-firms' },
-      message: 'FIRMS service temporarily unavailable due to repeated failures',
-    });
-  }
+  // 4. Fetch from FIRMS API with multi-endpoint fallback
+  const result = await fetchFirmsWithFallback({
+    apiKey,
+    source: FIRMS_CONFIG.source,
+    bbox: bboxString,
+    dayRange: FIRMS_CONFIG.dayRange,
+    timeoutMs: FIRMS_CONFIG.timeout,
+  });
 
-  // 5. Build FIRMS API URL
-  const apiUrl = new URL(FIRMS_CONFIG.baseUrl);
-  apiUrl.searchParams.set('map_key', apiKey);
-  apiUrl.searchParams.set('source', FIRMS_CONFIG.source);
-  apiUrl.searchParams.set('area', bboxString);
-  apiUrl.searchParams.set('day_range', String(FIRMS_CONFIG.dayRange));
-  apiUrl.searchParams.set('date', ''); // Use current date
-
-  const apiContext: ExternalApiContext = {
-    provider: 'nasa-firms',
-    url: apiUrl.toString().replace(apiKey, 'REDACTED'), // Never log API key
-    method: 'GET',
-    startedAt: performance.now(),
-  };
-
-  try {
-    // 6. Fetch from FIRMS API with timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), FIRMS_CONFIG.timeout);
-
-    const response = await fetch(apiUrl.toString(), {
-      headers: {
-        'User-Agent': 'RICER-Fire-Platform/2.1 (Ifrane-Morocco)',
-      },
-      signal: controller.signal,
-    }).finally(() => clearTimeout(timeoutId));
-
-    apiContext.responseStatus = response.status;
-    apiContext.responseHeaders = Object.fromEntries(response.headers.entries());
-    apiContext.durationMs = performance.now() - apiContext.startedAt;
-
-    // 7. Handle HTTP errors
-    if (!response.ok) {
-      const bodyText = await response.text().catch(() => '');
-      apiContext.responseBodyPreview = bodyText.slice(0, 500);
-      breaker.onFailure();
-
-      logger.error({
-        event: 'firms_api_error',
-        meta: {
-          status: response.status,
-          body: bodyText.slice(0, 200),
-          duration: apiContext.durationMs
-        }
-      });
-
-      throw captureExternalApiError(
-        apiContext,
-        new Error(`FIRMS API returned HTTP ${response.status}: ${bodyText.slice(0, 100)}`)
-      );
-    }
-
-    // 8. Parse CSV response
-    const csvText = await response.text();
-
-    if (!isFirmsCSVResponse(csvText)) {
-      apiContext.responseBodyPreview = csvText.slice(0, 500);
-      breaker.onFailure();
-
-      logger.error({
-        event: 'firms_invalid_response',
-        meta: {
-          bodyLength: csvText.length,
-          bodyPreview: csvText.slice(0, 200)
-        }
-      });
-
-      throw captureExternalApiError(
-        apiContext,
-        new Error('Invalid FIRMS API response structure - expected CSV format')
-      );
-    }
-
-    // 9. Transform CSV to GeoJSON
-    const geoJSON = transformFirmsToGeoJSON(csvText);
-    const stats = getFirmsStats(geoJSON);
-
-    // 10. Cache successful response
-    await setCachedFirmsDetections(bboxString, FIRMS_CONFIG.source, FIRMS_CONFIG.dayRange, geoJSON);
-    breaker.onSuccess();
-
-    logger.info({
-      event: 'firms_fetch_success',
+  // 5. Validate CSV response
+  if (!isFirmsCSVResponse(result.csvText)) {
+    logger.error({
+      event: 'firms_invalid_response',
       meta: {
-        detections: geoJSON.features.length,
-        highConfidence: stats.highConfidence,
-        avgFRP: stats.avgFRP,
-        duration: apiContext.durationMs
-      }
+        bodyLength: result.csvText.length,
+        bodyPreview: result.csvText.slice(0, 200),
+        endpointUsed: result.endpointUsed,
+      },
     });
 
-    // 11. Return successful response with metadata headers
-    const apiResponse = NextResponse.json(geoJSON);
-    apiResponse.headers.set('X-Cache', 'MISS');
-    apiResponse.headers.set('Cache-Control', 'public, s-maxage=900, stale-while-revalidate=300');
-    apiResponse.headers.set('X-Detection-Count', String(geoJSON.features.length));
-    apiResponse.headers.set('X-High-Confidence-Count', String(stats.highConfidence));
-    apiResponse.headers.set('X-Recent-Count', String(stats.recentCount));
-    apiResponse.headers.set('X-API-Duration-Ms', String(Math.round(apiContext.durationMs)));
-    apiResponse.headers.set('X-Avg-FRP', String(stats.avgFRP));
-
-    return apiResponse;
-
-  } catch (error) {
-    // 12. Handle fetch errors (timeout, network, etc.)
-    breaker.onFailure();
-
-    if (error instanceof AppError) throw error;
-
-    // Handle abort/timeout
-    if (error instanceof Error && error.name === 'AbortError') {
-      logger.error({
-        event: 'firms_timeout',
-        meta: { timeout: FIRMS_CONFIG.timeout }
-      });
-      throw new AppError(5003, {
-        message: `FIRMS API request timeout after ${FIRMS_CONFIG.timeout}ms`,
-        meta: { timeout: FIRMS_CONFIG.timeout },
-      });
-    }
-
-    // Generic external API error
-    throw captureExternalApiError(apiContext, error);
+    throw captureExternalApiError(
+      {
+        provider: result.endpointUsed,
+        url: 'REDACTED',
+        method: 'GET',
+        startedAt: performance.now() - result.durationMs,
+        durationMs: result.durationMs,
+      },
+      new Error('Invalid FIRMS API response structure - expected CSV format')
+    );
   }
+
+  // 6. Transform CSV to GeoJSON
+  const geoJSON = transformFirmsToGeoJSON(result.csvText);
+  const stats = getFirmsStats(geoJSON);
+
+  // 7. Cache successful response
+  await setCachedFirmsDetections(bboxString, FIRMS_CONFIG.source, FIRMS_CONFIG.dayRange, geoJSON);
+
+  logger.info({
+    event: 'firms_fetch_success',
+    meta: {
+      detections: geoJSON.features.length,
+      highConfidence: stats.highConfidence,
+      avgFRP: stats.avgFRP,
+      duration: Math.round(result.durationMs),
+      endpointUsed: result.endpointUsed,
+      attemptsMade: result.attemptsMade,
+    },
+  });
+
+  // 8. Return successful response with metadata headers
+  const apiResponse = NextResponse.json(geoJSON);
+  apiResponse.headers.set('X-Cache', 'MISS');
+  apiResponse.headers.set('Cache-Control', 'public, s-maxage=900, stale-while-revalidate=300');
+  apiResponse.headers.set('X-Detection-Count', String(geoJSON.features.length));
+  apiResponse.headers.set('X-High-Confidence-Count', String(stats.highConfidence));
+  apiResponse.headers.set('X-Recent-Count', String(stats.recentCount));
+  apiResponse.headers.set('X-API-Duration-Ms', String(Math.round(result.durationMs)));
+  apiResponse.headers.set('X-Endpoint-Used', result.endpointUsed);
+  apiResponse.headers.set('X-Fetch-Attempts', String(result.attemptsMade));
+  // Add rate limit headers
+  headers.forEach((value, key) => apiResponse.headers.set(key, value));
+  apiResponse.headers.set('X-Avg-FRP', String(stats.avgFRP));
+
+  return apiResponse;
 });
 
 // Cache management endpoints (for admin/debugging)

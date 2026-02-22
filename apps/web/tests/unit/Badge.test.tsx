@@ -35,25 +35,26 @@ describe('Badge', () => {
   it('applies the primary tone class when tone="primary"', () => {
     const { container } = render(<Badge tone="primary">Primary</Badge>);
     const span = container.firstElementChild as HTMLElement;
+    expect(span.className).toContain('bg-primary-muted');
     expect(span.className).toContain('text-primary');
   });
 
   it('applies the success tone class when tone="success"', () => {
     const { container } = render(<Badge tone="success">Success</Badge>);
     const span = container.firstElementChild as HTMLElement;
-    expect(span.className).toContain('text-success');
+    expect(span.className).toContain('text-success-foreground');
   });
 
   it('applies the warning tone class when tone="warning"', () => {
     const { container } = render(<Badge tone="warning">Warning</Badge>);
     const span = container.firstElementChild as HTMLElement;
-    expect(span.className).toContain('text-warning');
+    expect(span.className).toContain('text-warning-foreground');
   });
 
   it('applies the danger tone class when tone="danger"', () => {
     const { container } = render(<Badge tone="danger">Danger</Badge>);
     const span = container.firstElementChild as HTMLElement;
-    expect(span.className).toContain('text-danger');
+    expect(span.className).toContain('text-danger-foreground');
   });
 
   it('forwards additional className onto the span', () => {

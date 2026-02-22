@@ -80,7 +80,7 @@ export function captureExternalApiError(
     },
   });
 
-  return new AppError(5003, {
+  return new AppError(4000, {
     message: `External API request to ${context.provider} failed`,
     meta,
     cause: error,

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
-import type { WeatherData, GeoFeatureCollection, GeoIncidentProps, IncidentStatus } from '@/types';
+import type { WeatherData, IncidentStatus } from '@/types';
 import { useTranslation } from '@/hooks/useTranslation';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -14,22 +14,43 @@ import type { TranslationKey } from '@/i18n/translations';
 import { getApiErrorUserMessage } from '@/lib/errors/sdk';
 import { useMapStore } from '@/store/useMapStore';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useDispatchStore } from '@/store/useDispatchStore';
+import { DispatchPanel } from '@/components/dispatch/DispatchPanel';
+import { IncidentFireRecordPanel } from '@/components/fire-records/IncidentFireRecordPanel';
 
 function MapDataErrorBanner() {
   const { t } = useTranslation();
   const dataErrors = useMapStore((s) => s.dataErrors);
+  const clearAllErrors = useMapStore((s) => s.clearAllErrors);
   const hasErrors = Object.values(dataErrors).some(err => err !== null);
 
   if (!hasErrors) return null;
 
+  const handleRetry = () => {
+    clearAllErrors();
+    window.location.reload();
+  };
+
   return (
     <div role="alert" className="rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
-      <div className="font-semibold">{t('mapDataWarning')}</div>
-      <div className="mt-1 text-xs space-y-1">
-        {dataErrors.incidents && <div>• Incidents: {dataErrors.incidents}</div>}
-        {dataErrors.resources && <div>• Resources: {dataErrors.resources}</div>}
-        {dataErrors.infrastructure && <div>• Infrastructure: {dataErrors.infrastructure}</div>}
-        {dataErrors.riskBasins && <div>• Risk basins: {dataErrors.riskBasins}</div>}
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1">
+          <div className="font-semibold">{t('mapDataWarning')}</div>
+          <div className="mt-1 text-xs space-y-1">
+            {dataErrors.incidents && <div>• Incidents: {dataErrors.incidents}</div>}
+            {dataErrors.resources && <div>• Resources: {dataErrors.resources}</div>}
+            {dataErrors.infrastructure && <div>• Infrastructure: {dataErrors.infrastructure}</div>}
+            {dataErrors.riskBasins && <div>• Risk basins: {dataErrors.riskBasins}</div>}
+            {dataErrors.firmsDetections && <div>• FIRMS Detections: {dataErrors.firmsDetections}</div>}
+          </div>
+        </div>
+        <button
+          onClick={handleRetry}
+          className="text-xs font-medium hover:underline whitespace-nowrap"
+          aria-label={t('retry')}
+        >
+          {t('retry')}
+        </button>
       </div>
     </div>
   );
@@ -51,12 +72,26 @@ const RicerMap = dynamic(() => import('@/components/map/RicerMap'), {
 
 type RiskLevel = 'low' | 'moderate' | 'high' | 'extreme';
 
+/**
+ * Normalized FWI proxy score in [0, 1].
+ * Weights: temperature 35%, dryness (1-humidity) 35%, wind 30%.
+ * Assumptions: temp ceiling 40°C, wind ceiling 50 km/h, humidity 0-100%.
+ * Falls back gracefully when humidity is absent.
+ */
+function getRiskScore(weather: WeatherData): number {
+  const tempNorm = Math.min(weather.temperature, 40) / 40;
+  const humidity = weather.humidity ?? 50; // default 50% if not available
+  const dryNorm = 1 - Math.min(humidity, 100) / 100;
+  const windNorm = Math.min(weather.windSpeed, 50) / 50;
+  return tempNorm * 0.35 + dryNorm * 0.35 + windNorm * 0.30;
+}
+
 function getRiskLevel(weather: WeatherData | null): RiskLevel | null {
   if (!weather) return null;
-  const score = weather.temperature * 0.9 + weather.windSpeed * 1.2;
-  if (score >= 60) return 'extreme';
-  if (score >= 45) return 'high';
-  if (score >= 30) return 'moderate';
+  const score = getRiskScore(weather);
+  if (score >= 0.75) return 'extreme';
+  if (score >= 0.55) return 'high';
+  if (score >= 0.35) return 'moderate';
   return 'low';
 }
 
@@ -82,8 +117,6 @@ export default function MapPage() {
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [weatherLoading, setWeatherLoading] = useState(true);
   const [weatherError, setWeatherError] = useState<string | null>(null);
-  const [incidents, setIncidents] = useState<GeoFeatureCollection<GeoIncidentProps>>({ type: 'FeatureCollection', features: [] });
-  const [incidentsError, setIncidentsError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [shareStatus, setShareStatus] = useState<string | null>(null);
@@ -91,6 +124,8 @@ export default function MapPage() {
 
   const selectedIncidentId = useMapStore((s) => s.selectedIncidentId);
   const setSelectedIncidentId = useMapStore((s) => s.setSelectedIncidentId);
+  // Read incidents from shared store (RicerMap is the single poller)
+  const incidents = useMapStore((s) => s.incidents);
   const user = useAuthStore((s) => s.user);
 
   // Open drawer whenever an incident is selected
@@ -117,23 +152,12 @@ export default function MapPage() {
     }
   }, []); // Remove [t] dependency
 
-  const fetchIncidents = useCallback(async () => {
-    setIncidentsError(null);
-    try {
-      const response = await fetch('/api/geo/incidents');
-      const data = (await response.json().catch(() => null)) as unknown;
-      if (!response.ok) {
-        setIncidents({ type: 'FeatureCollection', features: [] });
-        setIncidentsError(getApiErrorUserMessage(data, 'errorServer')); // Store key, not translated message
-        return;
-      }
-      setIncidents(data as GeoFeatureCollection<GeoIncidentProps>);
+  // Update lastUpdated whenever incidents change (set by RicerMap poller)
+  useEffect(() => {
+    if (incidents.features.length > 0) {
       setLastUpdated(Date.now());
-    } catch {
-      setIncidents({ type: 'FeatureCollection', features: [] });
-      setIncidentsError('connectionError'); // Store key, not translated message
     }
-  }, []); // Remove [t] dependency
+  }, [incidents]);
 
   const handleUpdateIncident = async (field: 'status' | 'severity' | 'description', value: IncidentStatus | number | string) => {
     if (!selectedIncidentId) return;
@@ -152,8 +176,17 @@ export default function MapPage() {
         return;
       }
 
-      // Refresh incidents list
-      fetchIncidents();
+      // Refresh incidents list via a direct fetch; RicerMap will sync on next poll
+      try {
+        const refreshRes = await fetch('/api/geo/incidents');
+        if (refreshRes.ok) {
+          const refreshed = await refreshRes.json();
+          useMapStore.getState().setIncidents(refreshed);
+          useMapStore.getState().setLastSuccessfulSync(new Date());
+        }
+      } catch {
+        // Non-critical; map will sync on next poll interval
+      }
     } catch {
       setUpdateError(t('connectionError'));
     }
@@ -161,8 +194,8 @@ export default function MapPage() {
 
   useEffect(() => {
     fetchWeather();
-    fetchIncidents(); // Fetch for KPI cards and incident drawer
-  }, [fetchWeather, fetchIncidents]);
+    // incidents are fetched and polled by RicerMap; no second loop needed here
+  }, [fetchWeather]);
 
   const selectedIncident = useMemo(
     () => (selectedIncidentId ? incidents.features.find((f) => f.properties.id === selectedIncidentId) : undefined),
@@ -174,10 +207,17 @@ export default function MapPage() {
     [incidents]
   );
 
+  const {
+    setIsPanelOpen,
+    setSelectedIncidentId: setDispatchIncidentId,
+    selectedIncidentId: dispatchIncidentId
+  } = useDispatchStore();
+
   const handleDispatchReinforcements = useCallback(() => {
     if (!selectedIncident) return;
-    router.push(`/equipment?dispatch=true&incidentId=${selectedIncident.properties.id}`);
-  }, [selectedIncident, router]);
+    setDispatchIncidentId(selectedIncident.properties.id);
+    setIsPanelOpen(true);
+  }, [selectedIncident, setDispatchIncidentId, setIsPanelOpen]);
 
   const handleShare = useCallback(async () => {
     if (!selectedIncident) return;
@@ -243,9 +283,9 @@ export default function MapPage() {
   return (
     <div className="flex h-[calc(100vh-4rem)] w-full overflow-hidden">
       <section className="flex flex-1 flex-col gap-4 overflow-auto p-4 md:p-6">
-        {weatherError || incidentsError ? (
+        {weatherError ? (
           <div role="alert" className="rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
-            {weatherError ?? incidentsError}
+            {weatherError}
           </div>
         ) : null}
 
@@ -274,14 +314,23 @@ export default function MapPage() {
                 })}
               </Badge>
             ) : null}
-            <Button variant="secondary" onClick={fetchIncidents} aria-label="Refresh">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                fetch('/api/geo/incidents')
+                  .then((r) => r.ok ? r.json() : null)
+                  .then((d) => { if (d) { useMapStore.getState().setIncidents(d); useMapStore.getState().setLastSuccessfulSync(new Date()); } })
+                  .catch(() => {});
+              }}
+              aria-label="Refresh"
+            >
               <Icon name="refresh" aria-hidden={true} size={20} />
               <span className="sr-only sm:not-sr-only">Refresh</span>
             </Button>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <KpiCard
             label={t('riskIndex')}
             value={<span className={riskTone === 'danger' ? 'text-danger' : riskTone === 'warning' ? 'text-warning' : 'text-success'}>{riskLabel}</span>}
@@ -369,7 +418,7 @@ export default function MapPage() {
                 </Badge>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="rounded-lg border border-border bg-surface-2 p-3">
                   <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                     {t('cause')}
@@ -460,10 +509,24 @@ export default function MapPage() {
                   )}
                 </div>
               )}
+
+              {/* Fire Event Record Panel */}
+              {selectedIncident && (
+                <IncidentFireRecordPanel incidentId={selectedIncident.properties.id} />
+              )}
             </>
           )}
         </div>
       </RightDrawer>
+
+      {/* Dispatch Panel */}
+      <DispatchPanel
+        incidentId={dispatchIncidentId}
+        onClose={() => {
+          setIsPanelOpen(false);
+          setDispatchIncidentId(null);
+        }}
+      />
     </div>
   );
 }

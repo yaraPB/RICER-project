@@ -1,8 +1,11 @@
 import { create } from 'zustand';
 import type { ViewState } from 'react-map-gl';
 import type { Basemap } from '@/lib/map/styles';
+import type { GeoFeatureCollection, GeoIncidentProps } from '@/types';
 
-type ActiveLayer = 'incidents' | 'infrastructure' | 'resources' | 'riskBasins' | 'firmsDetections' | 'routes' | 'activeTeams' | 'isochrones';
+type ActiveLayer = 'incidents' | 'infrastructure' | 'resources' | 'riskBasins' | 'firmsDetections' | 'routes' | 'activeTeams' | 'isochrones' | 'vehicles';
+
+const EMPTY_INCIDENTS: GeoFeatureCollection<GeoIncidentProps> = { type: 'FeatureCollection', features: [] };
 
 interface MapState {
   viewState: ViewState;
@@ -17,6 +20,7 @@ interface MapState {
     routes: boolean; // Dispatch routes (MVP)
     activeTeams: boolean; // Active dispatch teams (MVP)
     isochrones: boolean; // Isochrones (reachability polygons)
+    vehicles: boolean; // Dispatch vehicles
   };
   toggleLayer: (layer: ActiveLayer) => void;
   selectedIncidentId: string | null;
@@ -36,6 +40,12 @@ interface MapState {
   };
   setDataError: (layer: keyof MapState['dataErrors'], error: string | null) => void;
   clearAllErrors: () => void;
+  /** Shared incidents data — updated by RicerMap polling, read by map/page.tsx */
+  incidents: GeoFeatureCollection<GeoIncidentProps>;
+  setIncidents: (incidents: GeoFeatureCollection<GeoIncidentProps>) => void;
+  /** Timestamp of the last successful fetch of ANY layer — used for offline detection */
+  lastSuccessfulSync: Date | null;
+  setLastSuccessfulSync: (date: Date) => void;
 }
 
 const DEFAULT_VIEW: ViewState = {
@@ -48,6 +58,10 @@ const DEFAULT_VIEW: ViewState = {
 };
 
 export const useMapStore = create<MapState>()((set) => ({
+  incidents: EMPTY_INCIDENTS,
+  setIncidents: (incidents) => set({ incidents }),
+  lastSuccessfulSync: null,
+  setLastSuccessfulSync: (lastSuccessfulSync) => set({ lastSuccessfulSync }),
   viewState: DEFAULT_VIEW,
   setViewState: (viewState) => set({ viewState }),
   layers: {
@@ -59,6 +73,7 @@ export const useMapStore = create<MapState>()((set) => ({
     routes: true, // Dispatch routes enabled by default
     activeTeams: true, // Active teams enabled by default
     isochrones: true, // Isochrones enabled by default
+    vehicles: true, // Vehicles enabled by default
   },
   toggleLayer: (layer) =>
     set((state) => ({

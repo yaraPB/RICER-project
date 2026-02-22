@@ -62,12 +62,11 @@ test('layer toggles render for all geo layers', async ({ page }) => {
   const mapCanvas = page.locator('canvas.maplibregl-canvas');
   await expect(mapCanvas).toBeVisible({ timeout: 10000 });
 
-  // Layer toggles are in MapControls component (not the Legend)
-  // Check for the toggle checkboxes/buttons
-  await expect(page.locator('label:has-text("Incidents")')).toBeVisible();
-  await expect(page.locator('label:has-text("Infrastructure")')).toBeVisible();
-  await expect(page.locator('label:has-text("Resources")')).toBeVisible();
-  await expect(page.locator('label:has-text("Risk zones")')).toBeVisible();
+  // Layer toggles render as <button role="switch" aria-label={label}> in MapControls
+  await expect(page.getByRole('switch', { name: 'Incidents' })).toBeVisible();
+  await expect(page.getByRole('switch', { name: 'Infrastructure' })).toBeVisible();
+  await expect(page.getByRole('switch', { name: 'Resources' })).toBeVisible();
+  await expect(page.getByRole('switch', { name: 'Risk zones' })).toBeVisible();
 });
 
 test('map legend is collapsible and shows all layer types', async ({ page }) => {

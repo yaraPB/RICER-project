@@ -59,37 +59,58 @@ export function CreateIncidentModal({ report, open, onClose, onSuccess }: Create
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="w-full max-w-lg rounded-lg bg-surface p-6 shadow-xl">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="create-incident-title"
+    >
+      <div className="w-full max-w-lg rounded-lg bg-surface p-4 sm:p-6 shadow-xl mx-4">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xl font-semibold">{t('createIncident')}</h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+          <h2 id="create-incident-title" className="text-xl font-semibold">{t('createIncident')}</h2>
+          <button
+            onClick={onClose}
+            className="text-muted-foreground hover:text-foreground"
+            aria-label={t('closePanel')}
+          >
             <Icon name="close" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="mb-2 block text-sm font-medium">{t('severity')}</label>
+            <label htmlFor="incident-severity" className="mb-2 block text-sm font-medium">
+              {t('severity')}
+            </label>
             <input
+              id="incident-severity"
               type="range"
               min="1"
               max="5"
               value={severity}
               onChange={(e) => setSeverity(parseInt(e.target.value))}
               className="w-full"
+              aria-label={t('severity')}
+              aria-valuemin={1}
+              aria-valuemax={5}
+              aria-valuenow={severity}
+              aria-valuetext={`${severity} ${t('outOf')} 5`}
             />
-            <div className="mt-1 text-sm text-muted-foreground">
+            <div className="mt-1 text-sm text-muted-foreground" aria-live="polite">
               {t('severityLevel')}: {severity}/5
             </div>
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-medium">{t('initialStatus')}</label>
+            <label htmlFor="incident-status" className="mb-2 block text-sm font-medium">
+              {t('initialStatus')}
+            </label>
             <select
+              id="incident-status"
               value={status}
               onChange={(e) => setStatus(e.target.value as IncidentStatus)}
               className="w-full rounded-lg border border-border bg-surface px-3 py-2"
+              aria-label={t('initialStatus')}
             >
               <option value="VIGILANCE">{t('statusVigilance')}</option>
               <option value="ALERTE">{t('statusAlerte')}</option>
@@ -98,17 +119,21 @@ export function CreateIncidentModal({ report, open, onClose, onSuccess }: Create
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-medium">{t('description')}</label>
+            <label htmlFor="incident-description" className="mb-2 block text-sm font-medium">
+              {t('description')}
+            </label>
             <textarea
+              id="incident-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={4}
               className="w-full rounded-lg border border-border bg-surface px-3 py-2"
+              aria-label={t('description')}
             />
           </div>
 
           {error && (
-            <div className="rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">
+            <div role="alert" className="rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">
               {error}
             </div>
           )}

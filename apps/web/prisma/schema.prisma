@@ -20,6 +20,8 @@ model User {
   refreshTokens RefreshToken[]
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+
+  @@index([role])
 }
 
 enum Role {
@@ -113,6 +115,7 @@ model Equipment {
 
   @@index([category])
   @@index([condition])
+  @@index([category, condition])
   @@index([lastMaintenance])
 }
 
@@ -182,4 +185,196 @@ model TruckDeployment {
   assignedTo String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+}
+
+// ============================================
+// Dispatch System Models
+// ============================================
+
+enum TeamType {
+  GROUND_CREW
+  AERIAL_SUPPORT
+  COMMAND_UNIT
+  MEDICAL
+}
+
+enum TeamStatus {
+  AVAILABLE
+  EN_ROUTE
+  ON_SCENE
+  RETURNING
+  UNAVAILABLE
+}
+
+model Team {
+  id          String      @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  type        TeamType
+  status      TeamStatus  @default(AVAILABLE)
+  location    Json?       // GeoJSON Point
+  assignedTo  String?     @db.ObjectId  // Incident ID
+  capacity    Int         @default(5)   // Personnel count
+  equipment   String[]    // Equipment IDs or types
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([status])
+  @@index([type])
+  @@index([status, type])
+  @@index([assignedTo])
+}
+
+enum DispatchStatus {
+  ASSIGNED
+  EN_ROUTE
+  ARRIVED
+  COMPLETED
+  CANCELLED
+}
+
+model Dispatch {
+  id          String         @id @default(auto()) @map("_id") @db.ObjectId
+  incidentId  String         @db.ObjectId
+  teamId      String?        @db.ObjectId    // Optional — team dispatch
+  vehicleId   String?        @db.ObjectId    // Optional — vehicle dispatch
+  status      DispatchStatus @default(ASSIGNED)
+  route       Json?          // GeoJSON LineString
+  distance    Float?         // km
+  duration    Float?         // minutes
+  eta         DateTime?      // Estimated time of arrival
+  assignedBy  String?        @db.ObjectId  // User ID
+  assignedAt  DateTime       @default(now())
+  arrivedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([incidentId])
+  @@index([teamId])
+  @@index([vehicleId])
+  @@index([status])
+  @@index([assignedAt])
+}
+
+// ============================================
+// Vehicle Dispatch Models
+// ============================================
+
+enum VehicleType {
+  FIRE_TRUCK
+  WATER_TANKER
+  COMMAND
+  AMBULANCE
+  HELICOPTER
+}
+
+enum VehicleStatus {
+  AVAILABLE
+  EN_ROUTE
+  ON_SCENE
+  RETURNING
+  OUT_OF_SERVICE
+}
+
+model Vehicle {
+  id            String        @id @default(auto()) @map("_id") @db.ObjectId
+  callSign      String        @unique    // e.g., "FT-001"
+  type          VehicleType
+  status        VehicleStatus @default(AVAILABLE)
+  capabilities  String[]                 // e.g., ["water_pump", "ladder", "foam"]
+  baseLocation  Json?                    // GeoJSON Point — home station
+  location      Json?                    // GeoJSON Point — current position
+  assignedTo    String?       @db.ObjectId  // Incident ID
+  capacity      Int           @default(0)   // Liters / seats depending on type
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([status])
+  @@index([type])
+  @@index([status, type])
+  @@index([assignedTo])
+}
+
+model VehicleTelemetry {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  vehicleId  String   @db.ObjectId
+  position   Json     // GeoJSON Point [lon, lat]
+  speed      Float?   // km/h
+  heading    Float?   // degrees 0-360
+  engineOn   Boolean?
+  fuelLevel  Float?   // 0-100%
+  timestamp  DateTime @default(now())
+
+  @@index([vehicleId, timestamp])
+  @@index([timestamp])
+}
+
+// ============================================
+// Fire Event Record Models
+// ============================================
+
+enum AlertSource {
+  FIRMS_SATELLITE
+  CITIZEN_REPORT
+  PATROL
+  PHONE_CALL
+  RADIO
+  OTHER
+}
+
+enum RecordStatus {
+  DRAFT
+  VALIDATED
+  APPROVED
+}
+
+model FireEventRecord {
+  id                String       @id @default(auto()) @map("_id") @db.ObjectId
+  incidentId        String       @unique @db.ObjectId
+
+  // Timeline
+  alertSource       AlertSource  @default(OTHER)
+  alertReceivedAt   DateTime?
+  verifiedAt        DateTime?
+  firstResponseAt   DateTime?
+  onSceneAt         DateTime?
+  containedAt       DateTime?
+  extinguishedAt    DateTime?
+
+  // Embedded complex data (Json for MongoDB)
+  agencyArrivals    Json?        // AgencyArrival[]
+  meansEngaged      Json?        // MeansEngaged
+  economicLoss      Json?        // EconomicLoss
+
+  // Burn perimeter + computed stats
+  burnPerimeter     Json?        // GeoJSON Polygon
+  burnAreaHa        Float?
+  burnCentroid      Json?        // [lng, lat]
+  burnBoundingBox   Json?        // [minLng, minLat, maxLng, maxLat]
+
+  // Workflow
+  recordStatus      RecordStatus @default(DRAFT)
+  lockedSections    String[]     // e.g., ["timeline", "agencyArrivals"]
+  auditTrail        Json[]       // AuditEntry[]
+
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@index([recordStatus])
+  @@index([alertSource])
+  @@index([createdAt])
+}
+
+model RouteCache {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  cacheKey    String   @unique  // format: "route:{origin}:{dest}:{profile}"
+  origin      Json     // [lon, lat]
+  destination Json     // [lon, lat]
+  profile     String   // "fire_truck", "car", etc.
+  response    Json     // Full routing response
+  provider    String   // "graphhopper", "mapbox"
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  @@index([expiresAt])
 }

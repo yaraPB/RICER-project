@@ -1,7 +1,6 @@
-import { NextResponse } from 'next/server';
 import bcrypt from 'bcrypt';
 import { prisma } from '@/lib/prisma';
-import { deriveScopes, hashRefreshToken, setAuthCookies, signAccessToken, signRefreshToken } from '@/lib/auth';
+import { buildAuthResponse, deriveScopes, hashRefreshToken, signAccessToken, signRefreshToken } from '@/lib/auth';
 import { withApiHandler } from '@/lib/errors/withApiHandler';
 import { AppError } from '@/lib/errors/AppError';
 
@@ -58,8 +57,6 @@ export const POST = withApiHandler(async (request: Request) => {
     },
   });
 
-  await setAuthCookies(accessToken, refreshToken);
-
   const userWithoutPassword = {
     id: user.id,
     cin: user.cin,
@@ -71,5 +68,5 @@ export const POST = withApiHandler(async (request: Request) => {
     updatedAt: user.updatedAt,
   };
 
-  return NextResponse.json({ user: userWithoutPassword });
+  return buildAuthResponse({ user: userWithoutPassword }, accessToken, refreshToken);
 });

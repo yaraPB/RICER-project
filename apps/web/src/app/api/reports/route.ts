@@ -11,6 +11,14 @@ import type { CursorPaginationResponse } from '@/types/pagination';
 import { formatValueForError } from '@/lib/errors/context';
 import { logger } from '@/lib/observability/logger';
 
+// In-memory cache for officials list (5-minute TTL)
+interface OfficialsCache {
+  data: Array<{ phone: string }>;
+  timestamp: number;
+}
+let officialsCache: OfficialsCache | null = null;
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
 export const GET = withApiHandler(async (request: Request) => {
   const currentUser = await getCurrentUser(request);
   if (!currentUser) throw new AppError(2000);
@@ -49,7 +57,7 @@ export const GET = withApiHandler(async (request: Request) => {
   });
 
   // Get total count (cached for 1 minute in production)
-  const total = await prisma.report.count();
+  const total = await prisma.report.count({ where });
 
   // Determine if there are more results
   const hasMore = reports.length > limit;
@@ -181,27 +189,55 @@ type ReportWithUser = Prisma.ReportGetPayload<{
   };
 }>;
 
-async function enqueueWhatsAppNotification(report: ReportWithUser): Promise<void> {
-  const testPhone = process.env.TEST_PHONE_NUMBER;
+async function getOfficials(): Promise<Array<{ phone: string }>> {
+  const now = Date.now();
 
-  // Get officials
+  // Return cached data if still valid
+  if (officialsCache && (now - officialsCache.timestamp) < CACHE_TTL_MS) {
+    return officialsCache.data;
+  }
+
+  // Fetch fresh data
   const officials = await prisma.user.findMany({
     where: { role: 'OFFICIAL' },
     select: { phone: true },
   });
 
+  // Update cache
+  officialsCache = {
+    data: officials,
+    timestamp: now,
+  };
+
+  return officials;
+}
+
+const E164_REGEX = /^\+[1-9]\d{6,14}$/;
+
+async function enqueueWhatsAppNotification(report: ReportWithUser): Promise<void> {
+  const testPhone = process.env.TEST_PHONE_NUMBER;
+
+  // Get officials from cache
+  const officials = await getOfficials();
+
   let recipients = officials
-    .map((o) => `whatsapp:${o.phone}`)
-    .filter((p) => p.includes('+'));
+    .filter((o) => E164_REGEX.test(o.phone))
+    .map((o) => `whatsapp:${o.phone}`);
 
   // If no officials, use test phone
   if (recipients.length === 0 && testPhone && testPhone !== '+212XXXXXXXXX') {
     recipients = [`whatsapp:${testPhone}`];
-    console.log('No officials, using test number:', testPhone);
+    logger.info({
+      event: 'notification_using_test_number',
+      meta: { testPhone },
+    });
   }
 
   if (recipients.length === 0) {
-    console.log('No recipients to send to');
+    logger.warn({
+      event: 'notification_no_recipients',
+      meta: { reportId: report.id },
+    });
     return;
   }
 
@@ -225,5 +261,11 @@ ID: ${report.id}
 
   // Enqueue the notification job
   await enqueueNotification(report.id, recipients, message);
-  console.log(`Notification enqueued for ${recipients.length} recipient(s)`);
+  logger.info({
+    event: 'notification_enqueued',
+    meta: {
+      reportId: report.id,
+      recipientCount: recipients.length,
+    },
+  });
 }

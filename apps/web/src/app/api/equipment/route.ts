@@ -20,23 +20,16 @@ export const GET = withApiHandler(async (request: Request) => {
   );
   const offset = parseInt(url.searchParams.get('offset') || '0');
 
-  // If no specific type requested, return summary counts only
+  // If no specific type requested, return all data arrays
   if (!type) {
-    const [equipmentCount, retardantCount, infrastructureCount, trucksCount] = await Promise.all([
-      labelOperation(prisma.equipment.count(), 'equipment:count'),
-      labelOperation(prisma.retardantProduct.count(), 'equipment:retardant_count'),
-      labelOperation(prisma.infrastructure.count(), 'equipment:infrastructure_count'),
-      labelOperation(prisma.truckDeployment.count(), 'equipment:trucks_count'),
+    const [equipment, retardantProducts, infrastructure, truckDeployments] = await Promise.all([
+      labelOperation(prisma.equipment.findMany({ orderBy: { category: 'asc' } }), 'equipment:find_all_equipment'),
+      labelOperation(prisma.retardantProduct.findMany({ orderBy: { productName: 'asc' } }), 'equipment:find_all_retardant'),
+      labelOperation(prisma.infrastructure.findMany({ orderBy: { type: 'asc' } }), 'equipment:find_all_infrastructure'),
+      labelOperation(prisma.truckDeployment.findMany({ orderBy: { truckName: 'asc' } }), 'equipment:find_all_trucks'),
     ]);
 
-    return NextResponse.json({
-      summary: {
-        equipment: equipmentCount,
-        retardantProducts: retardantCount,
-        infrastructure: infrastructureCount,
-        truckDeployments: trucksCount,
-      },
-    });
+    return NextResponse.json({ equipment, retardantProducts, infrastructure, truckDeployments });
   }
 
   // Fetch specific type with pagination

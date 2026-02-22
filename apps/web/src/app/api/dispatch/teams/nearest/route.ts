@@ -88,20 +88,20 @@ export const POST = withApiHandler(async (request: Request) => {
       limit,
       status,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({
       event: 'nearest_teams_error',
       meta: {
-        userId: user.id,
+        userId: user.userId,
         location: locationCoords,
         maxDistance,
         limit,
         status,
       },
       error: {
-        name: error?.name,
-        message: error?.message,
-        stack: error?.stack,
+        name: error instanceof Error ? error.name : undefined,
+        message: error instanceof Error ? error.message : undefined,
+        stack: error instanceof Error ? error.stack : undefined,
       },
     });
 
@@ -113,7 +113,7 @@ export const POST = withApiHandler(async (request: Request) => {
   logger.info({
     event: 'nearest_teams_found',
     meta: {
-      userId: user.id,
+      userId: user.userId,
       location: locationCoords,
       maxDistance,
       limit,

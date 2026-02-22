@@ -8,7 +8,7 @@
  * confirms that implementation matches GraphHopper specification.
  */
 
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { GraphHopperClient } from '@/lib/routing/graphhopper';
 
 // Spy on fetch to intercept GraphHopper API calls

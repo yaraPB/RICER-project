@@ -43,6 +43,7 @@ export async function getNearestTeams(
   try {
     // Try MongoDB $geoNear (requires 2dsphere index)
     // NOTE: MongoDB will auto-create 2dsphere index on first use if not exists
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- MongoDB raw command returns untyped result
     const result: any = await prisma.$runCommandRaw({
       aggregate: 'teams',
       pipeline: [
@@ -117,7 +118,7 @@ async function getNearestTeamsHaversine(
         return null;
       }
 
-      const teamLoc = team.location as any;
+      const teamLoc = team.location as unknown as { type: 'Point'; coordinates: [number, number] };
       if (
         !teamLoc.coordinates ||
         !Array.isArray(teamLoc.coordinates) ||
@@ -156,7 +157,7 @@ async function getNearestTeamsHaversine(
  * Calculate distance between two points using Haversine formula
  * Returns distance in meters
  */
-function haversineDistance(
+export function haversineDistance(
   lat1: number,
   lon1: number,
   lat2: number,

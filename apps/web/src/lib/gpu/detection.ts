@@ -109,7 +109,7 @@ async function _detectGPUCapabilitiesInternal(): Promise<GPUCapabilities> {
       const capabilities = extractWebGL2Capabilities(gl2);
 
       // Quality gates for Tier A
-      if (meetsWebGL2TierARequirements(capabilities)) {
+      if (meetsWebGL2TierARequirements(capabilities, gl2)) {
         const result = {
           tier: 'tier-a' as GPUTier,
           renderer: 'webgl2' as const,
@@ -241,7 +241,7 @@ function extractWebGL2Capabilities(gl: WebGL2RenderingContext): WebGL2Capabiliti
  * - Estimated VRAM (256MB minimum)
  * - Known problematic GPUs (Intel HD <= 5500)
  */
-function meetsWebGL2TierARequirements(capabilities: WebGL2Capabilities): boolean {
+function meetsWebGL2TierARequirements(capabilities: WebGL2Capabilities, gl: WebGL2RenderingContext): boolean {
   // Minimum texture size
   if (capabilities.maxTextureSize < 4096) {
     console.debug('[GPU] Tier A rejected: maxTextureSize too small', capabilities.maxTextureSize);
@@ -261,8 +261,8 @@ function meetsWebGL2TierARequirements(capabilities: WebGL2Capabilities): boolean
     return false;
   }
 
-  // Check for known problematic GPUs
-  if (isProblematicGPU()) {
+  // Check for known problematic GPUs (reuses existing GL context)
+  if (isProblematicGPU(gl)) {
     console.debug('[GPU] Tier A rejected: known problematic GPU');
     return false;
   }
@@ -280,7 +280,7 @@ function estimateAvailableVRAM(): number {
   );
 
   const hasHighPerformance = navigator.hardwareConcurrency >= 4;
-  const deviceMemory = (navigator as any).deviceMemory || 4; // GB (Chrome/Edge only)
+  const deviceMemory = (navigator as unknown as { deviceMemory?: number }).deviceMemory || 4; // GB (Chrome/Edge only)
 
   if (isMobile) {
     // Mobile devices: conservative estimates
@@ -299,13 +299,7 @@ function estimateAvailableVRAM(): number {
  * Checks for known problematic GPUs (force Tier B)
  * Examples: Intel HD 4000-5500, old Mali GPUs
  */
-function isProblematicGPU(): boolean {
-  // Create temporary canvas to check GPU info
-  const canvas = document.createElement('canvas');
-  const gl = canvas.getContext('webgl') || canvas.getContext('webgl2');
-
-  if (!gl) return false;
-
+function isProblematicGPU(gl: WebGLRenderingContext | WebGL2RenderingContext): boolean {
   const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
   if (!debugInfo) return false;
 

@@ -4,12 +4,16 @@ import {
   BarChart3,
   Bell,
   CalendarDays,
+  CheckCircle2,
   ClipboardList,
   Compass,
+  Database,
   ExternalLink,
   Flame,
   IdCard,
+  Info,
   KeyRound,
+  Loader2,
   LogOut,
   Map,
   Megaphone,
@@ -17,7 +21,9 @@ import {
   Pin,
   Phone,
   RefreshCw,
+  Route,
   Search,
+  Send,
   Share2,
   Siren,
   Sun,
@@ -54,7 +60,14 @@ export type IconName =
   | 'phone'
   | 'key'
   | 'moon'
-  | 'sun';
+  | 'sun'
+  | 'loading'
+  | 'route'
+  | 'send'
+  | 'cached'
+  | 'check'
+  | 'info'
+  | 'database';
 
 export type IconProps = {
   name: IconName;
@@ -116,7 +129,21 @@ export function Icon({ name, className, size = 20, title, ...props }: IconProps)
                                                     ? Moon
                                                     : name === 'sun'
                                                       ? Sun
-                                                      : Compass;
+                                                      : name === 'loading'
+                                                        ? Loader2
+                                                        : name === 'route'
+                                                          ? Route
+                                                          : name === 'send'
+                                                            ? Send
+                                                            : name === 'cached'
+                                                              ? Database
+                                                              : name === 'check'
+                                                                ? CheckCircle2
+                                                                : name === 'info'
+                                                                  ? Info
+                                                                  : name === 'database'
+                                                                    ? Database
+                                                                    : Compass;
 
   return (
     <IconComponent

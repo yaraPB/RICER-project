@@ -105,8 +105,9 @@ async function processNotificationJob(
     const failures = results.filter((r) => r.status === 'rejected');
 
     if (failures.length === job.recipients.length) {
-      // All messages failed, requeue
+      // All messages failed, requeue with backoff
       logger.error({ event: 'all_messages_failed', meta: { jobId: job.id } });
+      await sleep(getRetryDelay(job.attempts));
       await requeueNotification(job);
     } else if (failures.length > 0) {
       // Partial failure, log but consider successful
@@ -116,6 +117,7 @@ async function processNotificationJob(
     }
   } catch (error) {
     logger.error({ event: 'job_processing_error', meta: { jobId: job.id }, error: error instanceof Error ? { name: error.name, message: error.message, stack: error.stack } : { message: String(error) } });
+    await sleep(getRetryDelay(job.attempts));
     await requeueNotification(job);
   }
 }

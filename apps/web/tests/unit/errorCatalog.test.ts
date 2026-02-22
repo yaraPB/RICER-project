@@ -10,20 +10,10 @@ describe('ERROR_CATALOG', () => {
   });
 
   it('keeps codes within declared taxonomy ranges', () => {
+    const ranges = Object.entries(ERROR_CODE_RANGES) as [string, { min: number; max: number }][];
     for (const e of Object.values(ERROR_CATALOG)) {
-      const range =
-        e.code >= ERROR_CODE_RANGES.CLIENT.min && e.code <= ERROR_CODE_RANGES.CLIENT.max
-          ? 'CLIENT'
-          : e.code >= ERROR_CODE_RANGES.AUTH.min && e.code <= ERROR_CODE_RANGES.AUTH.max
-            ? 'AUTH'
-            : e.code >= ERROR_CODE_RANGES.BUSINESS.min && e.code <= ERROR_CODE_RANGES.BUSINESS.max
-              ? 'BUSINESS'
-              : e.code >= ERROR_CODE_RANGES.EXTERNAL.min && e.code <= ERROR_CODE_RANGES.EXTERNAL.max
-                ? 'EXTERNAL'
-                : e.code >= ERROR_CODE_RANGES.SYSTEM.min && e.code <= ERROR_CODE_RANGES.SYSTEM.max
-                  ? 'SYSTEM'
-                  : null;
-      expect(range).not.toBeNull();
+      const range = ranges.find(([, r]) => e.code >= r.min && e.code <= r.max)?.[0] ?? null;
+      expect(range, `code ${e.code} (${e.name}) is outside all declared taxonomy ranges`).not.toBeNull();
     }
   });
 

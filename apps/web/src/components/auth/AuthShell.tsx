@@ -26,8 +26,8 @@ export function AuthShell({ title, subtitle, children, footer, isRTL }: AuthShel
       <div className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center p-4 sm:p-6">
         <Card tone="elevated" className="p-6 sm:p-8" dir={isRTL ? 'rtl' : 'ltr'}>
           <div className="mb-6 text-center">
-            <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-xl bg-surface shadow-elev-1 p-2">
-              <Logo variant="badge" size="lg" priority />
+            <div className="mx-auto mb-6 h-24 w-24 bg-surface shadow-elev-2 rounded-lg p-3 transition-all duration-200">
+              <Logo variant="badge" size="xl" priority />
             </div>
             <h1 className="text-2xl font-extrabold tracking-tight text-foreground">{title}</h1>
             {subtitle ? <p className="mt-2 text-sm text-muted-foreground">{subtitle}</p> : null}

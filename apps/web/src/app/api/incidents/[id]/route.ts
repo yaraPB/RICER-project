@@ -16,7 +16,7 @@ export const GET = withApiHandler(async (request: Request, context?: ApiHandlerC
     where: { id }
   });
 
-  if (!incident) throw new AppError(1002, { message: 'Incident not found' });
+  if (!incident) throw new AppError(1003, { message: 'Incident not found' });
 
   const response = NextResponse.json({ incident });
   response.headers.set('Cache-Control', 'private, max-age=10, stale-while-revalidate=5');

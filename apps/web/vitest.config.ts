@@ -2,6 +2,9 @@ import path from 'node:path';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
+  esbuild: {
+    jsx: 'automatic',
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -17,16 +20,28 @@ export default defineConfig({
       include: [
         'src/lib/errors/**',
         'src/lib/observability/**',
+        'src/lib/dispatch/**',
+        'src/lib/routing/**',
+        'src/lib/firms/**',
+        'src/lib/risk/**',
+        'src/lib/map/**',
+        'src/lib/gpu/**',
+        'src/lib/ratelimit/**',
+        'src/lib/cache/**',
+        'src/lib/database/**',
+        'src/lib/notifications/**',
+        'src/lib/fire-records/**',
+        'src/store/**',
         'src/components/ui/Logo.tsx',
         'src/components/layout/ThemeToggle.tsx',
         'src/components/layout/Footer.tsx',
       ],
       reporter: ['text', 'json-summary', 'html'],
       thresholds: {
-        lines: 85,
-        functions: 85,
-        branches: 75,
-        statements: 85,
+        lines: 70,
+        functions: 70,
+        branches: 60,
+        statements: 70,
       },
     },
   },

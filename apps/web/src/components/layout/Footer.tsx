@@ -17,27 +17,29 @@ export function Footer() {
           {/* Branding */}
           <div className="col-span-1">
             <div className="flex items-center gap-3 mb-4">
-              <Logo variant="badge" size="md" />
+              <div className="h-12 w-12 bg-surface shadow-elev-1 rounded-md p-2 transition-all duration-200">
+                <Logo variant="badge" size="md" />
+              </div>
               <div>
                 <div className="text-sm font-extrabold">{t('brandTitle')}</div>
                 <div className="text-xs text-muted-foreground">{t('brandSubtitle')}</div>
               </div>
             </div>
             <p className="text-xs text-muted-foreground">
-              Système de gestion et de signalement des incendies pour Ifrane, Maroc
+              {t('footerDescription')}
             </p>
           </div>
 
           {/* Quick Links */}
           <div>
-            <h3 className="text-sm font-bold mb-3">Navigation</h3>
+            <h3 className="text-sm font-bold mb-3">{t('footerNavigation')}</h3>
             <ul className="space-y-2 text-sm">
               <li>
                 <Link
                   href="/map"
                   className="text-muted-foreground hover:text-foreground transition"
                 >
-                  Carte des incendies
+                  {t('footerFireMap')}
                 </Link>
               </li>
               <li>
@@ -45,7 +47,7 @@ export function Footer() {
                   href="/analytics"
                   className="text-muted-foreground hover:text-foreground transition"
                 >
-                  Analytique
+                  {t('footerAnalytics')}
                 </Link>
               </li>
               <li>
@@ -53,7 +55,7 @@ export function Footer() {
                   href="/report"
                   className="text-muted-foreground hover:text-foreground transition"
                 >
-                  Signaler un incendie
+                  {t('footerReportFire')}
                 </Link>
               </li>
             </ul>
@@ -61,29 +63,29 @@ export function Footer() {
 
           {/* Emergency */}
           <div>
-            <h3 className="text-sm font-bold mb-3">Urgences</h3>
+            <h3 className="text-sm font-bold mb-3">{t('footerEmergency')}</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li className="flex items-center gap-2">
                 <Icon name="phone" size={14} />
-                <span>15 - Protection Civile</span>
+                <span>{t('footerCivilProtection')}</span>
               </li>
               <li className="flex items-center gap-2">
                 <Icon name="phone" size={14} />
-                <span>190 - Eaux et Forêts</span>
+                <span>{t('footerWaterForests')}</span>
               </li>
             </ul>
           </div>
 
           {/* Info */}
           <div>
-            <h3 className="text-sm font-bold mb-3">Informations</h3>
+            <h3 className="text-sm font-bold mb-3">{t('footerInformation')}</h3>
             <ul className="space-y-2 text-sm">
               <li>
                 <Link
                   href="/error-codes"
                   className="text-muted-foreground hover:text-foreground transition"
                 >
-                  Codes d&apos;erreur
+                  {t('footerErrorCodes')}
                 </Link>
               </li>
             </ul>
@@ -91,7 +93,7 @@ export function Footer() {
         </div>
 
         <div className="mt-8 border-t border-border pt-6 text-center text-xs text-muted-foreground">
-          © {currentYear} RICER Ifrane. Tous droits réservés.
+          © {currentYear} RICER Ifrane. {t('footerAllRightsReserved')}.
         </div>
       </div>
     </footer>

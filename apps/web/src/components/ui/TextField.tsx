@@ -56,7 +56,7 @@ export function TextField({
         <input
           id={id}
           className={cn(
-            'h-6 w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground',
+            'h-8 sm:h-6 w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground',
             inputClassName
           )}
           aria-invalid={!!errorText || undefined}

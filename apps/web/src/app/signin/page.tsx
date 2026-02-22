@@ -14,6 +14,9 @@ export default function SignInPage() {
   const router = useRouter();
   const setUser = useAuthStore((state) => state.setUser);
   const { t, language } = useTranslation();
+
+  // Prefetch the map page so navigation after signin is instant
+  React.useEffect(() => { router.prefetch('/map'); }, [router]);
   const [formData, setFormData] = React.useState({
     cin: '',
     password: '',
@@ -67,14 +70,14 @@ export default function SignInPage() {
           }
           setFieldErrors(next);
         }
+        setLoading(false);
         return;
       }
 
       setUser(data.user);
-      router.push('/map');
+      router.replace('/map');
     } catch {
       setError(t('connectionError'));
-    } finally {
       setLoading(false);
     }
   };

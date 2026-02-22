@@ -1,21 +1,34 @@
 import type { Metadata, Viewport } from 'next';
 import { Public_Sans, Roboto_Mono } from 'next/font/google';
-import { cookies } from 'next/headers';
+import dynamic from 'next/dynamic';
 import './globals.css';
 import LocaleSync from '@/components/layout/LocaleSync';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ErrorProvider } from '@/contexts/ErrorContext';
+
+const OfflineBanner = dynamic(
+  () => import('@/components/ui/OfflineBanner').then((m) => m.OfflineBanner),
+  { ssr: false }
+);
+const ToastContainer = dynamic(
+  () => import('@/components/ui/Toast').then((m) => m.ToastContainer),
+  { ssr: false }
+);
 
 export const metadata: Metadata = {
   title: 'RICER Ifrane - نظام الإبلاغ عن الحرائق',
   description: 'نظام إدارة الحرائق والإبلاغ عنها في إفران، المغرب',
   icons: {
     icon: [
-      { url: '/favicon.ico', sizes: 'any' },
-      { url: '/logos/icon-192.png', sizes: '192x192', type: 'image/png' },
-      { url: '/logos/icon-512.png', sizes: '512x512', type: 'image/png' },
+      { url: '/icon-16x16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/icon-32x32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/favicon.ico', sizes: '16x16 32x32' },
+      { url: '/android-chrome-192x192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/android-chrome-512x512.png', sizes: '512x512', type: 'image/png' },
     ],
-    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180' }],
+    apple: [
+      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
   },
   manifest: '/manifest.json',
 };
@@ -44,18 +57,22 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const cookieStore = cookies();
-  const storedLanguage = cookieStore.get('ricer-language')?.value;
-  const language = storedLanguage === 'fr' ? 'fr' : storedLanguage === 'en' ? 'en' : 'ar';
-  const dir = language === 'ar' ? 'rtl' : 'ltr';
-
   return (
-    <html lang={language} dir={dir} suppressHydrationWarning>
+    <html lang="fr" dir="ltr" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('theme');if(t==='dark')document.documentElement.classList.add('dark');else document.documentElement.classList.remove('dark')}catch(e){}})()`,
+          }}
+        />
+      </head>
       <body className={`${fontSans.variable} ${fontMono.variable}`}>
         <ErrorBoundary>
           <ErrorProvider>
             <LocaleSync />
+            <OfflineBanner />
             {children}
+            <ToastContainer />
           </ErrorProvider>
         </ErrorBoundary>
       </body>

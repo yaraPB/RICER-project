@@ -38,5 +38,8 @@ export const ERROR_CODE_RANGES = {
   BUSINESS: { min: 3000, max: 3999 },
   EXTERNAL: { min: 4000, max: 4999 },
   SYSTEM: { min: 5000, max: 5999 },
+  DISPATCH: { min: 6000, max: 6999 },
+  VEHICLE: { min: 7000, max: 7999 },
+  FIRE_RECORD: { min: 8000, max: 8999 },
 } as const;
 

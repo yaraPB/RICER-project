@@ -4,87 +4,73 @@ import { prisma } from '@/lib/prisma';
 import { withApiHandler } from '@/lib/errors/withApiHandler';
 import { AppError } from '@/lib/errors/AppError';
 import { labelOperation } from '@/lib/errors/context';
+import { getCachedJSON, cacheJSON } from '@/lib/cache/redis';
 
-// Simple in-memory cache
-let analyticsCache: {
-  data: unknown;
-  timestamp: number;
-} | null = null;
-
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL_SECONDS = 5 * 60; // 5 minutes
+const CACHE_KEY = 'analytics:reports:14d';
 
 export const GET = withApiHandler(async (request: Request) => {
   const currentUser = await getCurrentUser(request);
   if (!currentUser) throw new AppError(2000);
 
-  // Check cache
-  const now = Date.now();
-  if (analyticsCache && now - analyticsCache.timestamp < CACHE_TTL_MS) {
-    return NextResponse.json(analyticsCache.data);
+  // Check cache (Redis or in-memory fallback)
+  const cachedData = await getCachedJSON<Record<string, unknown>>(CACHE_KEY);
+  if (cachedData) {
+    return NextResponse.json(cachedData);
   }
 
   const fourteenDaysAgo = new Date();
   fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
 
-  // Use MongoDB aggregation for better performance
-  const [byDateResult, byCauseResult, totalCount] = await Promise.all([
-    // Group by date using aggregation
-    labelOperation(
-      prisma.report.aggregateRaw({
-        pipeline: [
-          {
-            $match: {
-              createdAt: { $gte: { $date: fourteenDaysAgo.toISOString() } },
-            },
-          },
-          {
-            $group: {
-              _id: {
-                $dateToString: { format: '%Y-%m-%d', date: '$createdAt' },
-              },
-              count: { $sum: 1 },
-            },
-          },
-          {
-            $sort: { _id: 1 },
-          },
-        ],
-      }),
-      'analytics:by_date_aggregation'
-    ),
-
-    // Group by cause using aggregation
-    labelOperation(
-      prisma.report.aggregateRaw({
-        pipeline: [
-          {
-            $match: {
-              createdAt: { $gte: { $date: fourteenDaysAgo.toISOString() } },
-            },
-          },
-          {
-            $group: {
-              _id: { $ifNull: ['$cause', 'UNKNOWN'] },
-              count: { $sum: 1 },
-            },
-          },
-        ],
-      }),
-      'analytics:by_cause_aggregation'
-    ),
-
-    // Get total count
-    labelOperation(
-      prisma.report.count({
-        where: {
-          createdAt: {
-            gte: fourteenDaysAgo,
+  // Use single MongoDB aggregation with $facet for optimal performance
+  const result = await labelOperation(
+    prisma.report.aggregateRaw({
+      pipeline: [
+        {
+          $match: {
+            createdAt: { $gte: { $date: fourteenDaysAgo.toISOString() } },
           },
         },
-      }),
-      'analytics:total_count'
-    ),
-  ]);
+        {
+          $facet: {
+            byDate: [
+              {
+                $group: {
+                  _id: {
+                    $dateToString: { format: '%Y-%m-%d', date: '$createdAt' },
+                  },
+                  count: { $sum: 1 },
+                },
+              },
+              {
+                $sort: { _id: 1 },
+              },
+            ],
+            byCause: [
+              {
+                $group: {
+                  _id: { $ifNull: ['$cause', 'UNKNOWN'] },
+                  count: { $sum: 1 },
+                },
+              },
+            ],
+            totalCount: [
+              {
+                $count: 'total',
+              },
+            ],
+          },
+        },
+      ],
+    }),
+    'analytics:combined_aggregation'
+  );
+
+  // Extract results from $facet
+  const facetResult = Array.isArray(result) && result.length > 0 ? result[0] : null;
+  const byDateResult = facetResult?.byDate || [];
+  const byCauseResult = facetResult?.byCause || [];
+  const totalCount = facetResult?.totalCount?.[0]?.total || 0;
 
   // Process date aggregation results
   const reportsByDate: Record<string, number> = {};
@@ -124,11 +110,8 @@ export const GET = withApiHandler(async (request: Request) => {
     },
   };
 
-  // Update cache
-  analyticsCache = {
-    data: responseData,
-    timestamp: now,
-  };
+  // Update cache (Redis or in-memory fallback)
+  await cacheJSON(CACHE_KEY, responseData, CACHE_TTL_SECONDS);
 
   return NextResponse.json(responseData);
 });

@@ -11,7 +11,7 @@ interface LanguageState {
 export const useLanguageStore = create<LanguageState>()(
   persist(
     (set) => ({
-      language: 'ar',
+      language: 'fr',
       setLanguage: (language) => {
         set({ language });
         if (typeof document !== 'undefined') {
@@ -24,6 +24,7 @@ export const useLanguageStore = create<LanguageState>()(
     }),
     {
       name: 'ricer-language',
+      skipHydration: true,
     }
   )
 );

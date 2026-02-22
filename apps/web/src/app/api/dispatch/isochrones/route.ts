@@ -72,7 +72,7 @@ export const POST = withApiHandler(async (request: Request) => {
     logger.info({
       event: 'isochrone_served_from_cache',
       meta: {
-        userId: user.id,
+        userId: user.userId,
         origin: originCoords,
         profile: routingProfile,
         times,
@@ -96,29 +96,29 @@ export const POST = withApiHandler(async (request: Request) => {
       profile: routingProfile,
       times,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as { name?: string; message?: string; stack?: string; code?: string };
     logger.error({
       event: 'isochrone_error',
       meta: {
-        userId: user.id,
+        userId: user.userId,
         origin: originCoords,
         profile: routingProfile,
         times,
       },
       error: {
-        name: error?.name,
-        message: error?.message,
-        code: error?.code,
-        stack: error?.stack,
+        name: err.name,
+        message: err.message,
+        stack: err.stack,
       },
     });
 
     // Map routing errors to AppError codes
-    if (error?.code === 'ROUTING_TIMEOUT') {
+    if (err.code === 'ROUTING_TIMEOUT') {
       throw new AppError(6000); // DISPATCH_ROUTING_TIMEOUT
-    } else if (error?.code === 'INVALID_COORDINATES') {
+    } else if (err.code === 'INVALID_COORDINATES') {
       throw new AppError(6002); // DISPATCH_INVALID_COORDINATES
-    } else if (error?.code === 'SERVICE_UNAVAILABLE') {
+    } else if (err.code === 'SERVICE_UNAVAILABLE') {
       throw new AppError(6006); // DISPATCH_ROUTING_SERVICE_UNAVAILABLE
     } else {
       throw new AppError(6006); // DISPATCH_ROUTING_SERVICE_UNAVAILABLE (generic)
@@ -133,7 +133,7 @@ export const POST = withApiHandler(async (request: Request) => {
   logger.info({
     event: 'isochrone_generated',
     meta: {
-      userId: user.id,
+      userId: user.userId,
       origin: originCoords,
       profile: routingProfile,
       times,

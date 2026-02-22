@@ -2,10 +2,10 @@
  * Deck.gl layer factory functions for map visualization
  */
 
-import { IconLayer, PathLayer } from '@deck.gl/layers';
-import { RESOURCE_TYPE_COLORS } from './colors';
-import { circleIcon } from './helpers';
-import type { GeoFeatureCollection, GeoResourceProps, GeoInfrastructureProps } from '@/types';
+import { IconLayer, PathLayer, ScatterplotLayer } from '@deck.gl/layers';
+import { RESOURCE_TYPE_COLORS, INCIDENT_STATUS_COLORS } from './colors';
+import { circleIcon, hexToRgba } from './helpers';
+import type { GeoFeatureCollection, GeoResourceProps, GeoInfrastructureProps, GeoIncidentProps } from '@/types';
 
 /**
  * Creates icon layer for resource markers (trucks, aircraft, personnel, equipment)
@@ -31,6 +31,55 @@ export function createResourceLayer(
       height: 24,
     }),
     getSize: () => 32,
+    updateTriggers: {
+      getPosition: [data.length],
+      getIcon: [data.length],
+    },
+  });
+}
+
+/**
+ * Creates an animated ScatterplotLayer that pulses for active incidents.
+ * Only rendered on Tier A/B (caller guards with tierConfig.enableAnimations).
+ *
+ * @param incidents - All incident features
+ * @param pulsePhase - Animation phase 0→1 driven by a rAF loop in the map component
+ * @param isActive - Whether the incidents layer is toggled on
+ */
+export function createIncidentPulseLayer(
+  incidents: GeoFeatureCollection<GeoIncidentProps>,
+  pulsePhase: number,
+  isActive: boolean
+): ScatterplotLayer | null {
+  if (!isActive) return null;
+
+  const activeFeatures = incidents.features.filter(
+    (f) => f.properties.status !== 'ETEINT',
+  );
+  if (activeFeatures.length === 0) return null;
+
+  const data = activeFeatures.map((f) => ({
+    coordinates: f.geometry.coordinates as [number, number],
+    severity: f.properties.severity ?? 1,
+    color: INCIDENT_STATUS_COLORS[f.properties.status] ?? '#6b7280',
+  }));
+
+  const sinVal = Math.sin(pulsePhase * Math.PI * 2);
+
+  return new ScatterplotLayer({
+    id: 'incident-pulse',
+    data,
+    getPosition: (d: (typeof data)[0]) => d.coordinates,
+    getRadius: (d: (typeof data)[0]) =>
+      (d.severity / 5) * (30 + sinVal * 14),
+    getFillColor: (d: (typeof data)[0]) =>
+      hexToRgba(d.color, Math.floor(60 + sinVal * 40)),
+    radiusUnits: 'pixels',
+    stroked: false,
+    updateTriggers: {
+      getRadius: [pulsePhase],
+      getFillColor: [pulsePhase],
+    },
   });
 }
 
@@ -76,6 +125,10 @@ export function createInfrastructureLayers(
           height: 24,
         }),
         getSize: () => 28,
+        updateTriggers: {
+          getPosition: [data.length],
+          getIcon: [data.length],
+        },
       })
     );
   }

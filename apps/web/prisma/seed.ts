@@ -617,6 +617,90 @@ async function main() {
 
   console.log('✅ Truck deployments created');
 
+  // Create dispatch teams around Ifrane
+  await prisma.team.createMany({
+    data: [
+      {
+        name: 'Station 1 Alpha',
+        type: 'GROUND_CREW',
+        status: 'AVAILABLE',
+        location: { type: 'Point', coordinates: [-5.1056, 33.5275] },
+        capacity: 5,
+        equipment: ['truck', 'hoses', 'axes'],
+      },
+      {
+        name: 'Station 2 Bravo',
+        type: 'GROUND_CREW',
+        status: 'AVAILABLE',
+        location: { type: 'Point', coordinates: [-5.1189, 33.5356] },
+        capacity: 4,
+        equipment: ['truck', 'hoses'],
+      },
+      {
+        name: 'Aerial Unit Charlie',
+        type: 'AERIAL_SUPPORT',
+        status: 'AVAILABLE',
+        location: { type: 'Point', coordinates: [-5.0923, 33.5389] },
+        capacity: 3,
+        equipment: ['helicopter', 'bambi_bucket'],
+      },
+      {
+        name: 'Command Post Delta',
+        type: 'COMMAND_UNIT',
+        status: 'AVAILABLE',
+        location: { type: 'Point', coordinates: [-5.1100, 33.5300] },
+        capacity: 6,
+        equipment: ['command_vehicle', 'comms'],
+      },
+    ],
+  });
+
+  console.log('✅ Dispatch teams created');
+
+  // Create dispatch vehicles around Ifrane
+  await prisma.vehicle.createMany({
+    data: [
+      {
+        callSign: 'FT-001',
+        type: 'FIRE_TRUCK',
+        status: 'AVAILABLE',
+        capabilities: ['water_pump', 'ladder', 'foam'],
+        baseLocation: { type: 'Point', coordinates: [-5.1056, 33.5275] },
+        location: { type: 'Point', coordinates: [-5.1056, 33.5275] },
+        capacity: 5000,
+      },
+      {
+        callSign: 'FT-002',
+        type: 'FIRE_TRUCK',
+        status: 'AVAILABLE',
+        capabilities: ['water_pump', 'hose_reel'],
+        baseLocation: { type: 'Point', coordinates: [-5.1189, 33.5356] },
+        location: { type: 'Point', coordinates: [-5.1189, 33.5356] },
+        capacity: 3000,
+      },
+      {
+        callSign: 'WT-001',
+        type: 'WATER_TANKER',
+        status: 'AVAILABLE',
+        capabilities: ['water_tank', 'pump'],
+        baseLocation: { type: 'Point', coordinates: [-5.0923, 33.5389] },
+        location: { type: 'Point', coordinates: [-5.0923, 33.5389] },
+        capacity: 10000,
+      },
+      {
+        callSign: 'CMD-001',
+        type: 'COMMAND',
+        status: 'AVAILABLE',
+        capabilities: ['comms', 'gps', 'mapping'],
+        baseLocation: { type: 'Point', coordinates: [-5.1100, 33.5300] },
+        location: { type: 'Point', coordinates: [-5.1100, 33.5300] },
+        capacity: 0,
+      },
+    ],
+  });
+
+  console.log('✅ Dispatch vehicles created');
+
   console.log('Seed completed successfully.');
 }
 

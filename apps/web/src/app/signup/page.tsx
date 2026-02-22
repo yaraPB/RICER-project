@@ -10,12 +10,15 @@ import { AuthShell } from '@/components/auth/AuthShell';
 import { Button } from '@/components/ui/Button';
 import { SelectField } from '@/components/ui/SelectField';
 import { TextField } from '@/components/ui/TextField';
-import { getApiErrorUserMessage, getApiFieldErrors } from '@/lib/errors/sdk';
+import { getApiErrorCode, getApiErrorUserMessage, getApiFieldErrors } from '@/lib/errors/sdk';
 
 export default function SignUpPage() {
   const router = useRouter();
   const setUser = useAuthStore((state) => state.setUser);
   const { t, language } = useTranslation();
+
+  // Prefetch the map page so navigation after signup is instant
+  React.useEffect(() => { router.prefetch('/map'); }, [router]);
   const [formData, setFormData] = React.useState({
     cin: '',
     phone: '',
@@ -87,6 +90,13 @@ export default function SignUpPage() {
       const data = await response.json();
 
       if (!response.ok) {
+        const errorCode = getApiErrorCode(data);
+        if (errorCode === 3001) {
+          setError(t('errorUserExists'));
+          setFieldErrors({ cin: t('errorUserExists') });
+          setLoading(false);
+          return;
+        }
         setError(getApiErrorUserMessage(data, t('signupError')));
         const apiFields = getApiFieldErrors(data);
         if (apiFields.length) {
@@ -107,14 +117,14 @@ export default function SignUpPage() {
           }
           setFieldErrors(next);
         }
+        setLoading(false);
         return;
       }
 
       setUser(data.user);
-      router.push('/map');
+      router.replace('/map');
     } catch {
       setError(t('connectionError'));
-    } finally {
       setLoading(false);
     }
   };

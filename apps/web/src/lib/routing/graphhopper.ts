@@ -10,7 +10,6 @@ import type {
   RouteResponse,
   RouteSegment,
   RoutingClientConfig,
-  RoutingError,
   RoutingErrorCode,
   GraphHopperRouteRequest,
   GraphHopperRouteResponse,
@@ -59,7 +58,7 @@ export class GraphHopperClient {
     // Add alternatives if requested (V1 feature, not MVP)
     if (alternatives > 0) {
       ghRequest.alternative_route = {
-        max_paths: Math.min(alternatives + 1, 3), // Primary + alternatives, max 3 total
+        max_paths: alternatives > 3 ? 3 : alternatives + 1, // Primary + alternatives; capped at 3 when request exceeds limit
         max_weight_factor: 1.5, // Alternative can be max 50% longer
         max_share_factor: 0.7, // Alternative must differ by at least 30%
       };
@@ -91,7 +90,7 @@ export class GraphHopperClient {
         },
       });
 
-      return this.transformRouteResponse(response, duration);
+      return this.transformRouteResponse(response);
     } catch (error) {
       const duration = Date.now() - startTime;
       logger.error({
@@ -260,8 +259,8 @@ export class GraphHopperClient {
         );
       }
 
-      // Handle network errors
-      if (error instanceof TypeError && error.message.includes('fetch')) {
+      // Handle network errors (TypeError covers 'Failed to fetch', 'Network error', etc.)
+      if (error instanceof TypeError) {
         if (attempt < this.config.retries!) {
           logger.warn({
             event: 'graphhopper_retry',
@@ -289,8 +288,7 @@ export class GraphHopperClient {
    * Transform GraphHopper response to our RouteResponse format
    */
   private transformRouteResponse(
-    ghResponse: GraphHopperRouteResponse,
-    durationMs: number
+    ghResponse: GraphHopperRouteResponse
   ): RouteResponse {
     const primaryPath = ghResponse.paths[0];
     const alternativePaths = ghResponse.paths.slice(1);

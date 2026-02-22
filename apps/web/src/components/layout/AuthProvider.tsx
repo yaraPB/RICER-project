@@ -16,6 +16,12 @@ export default function AuthProvider({
   const { user, isLoading, setUser, setLoading } = useAuthStore();
 
   useEffect(() => {
+    // If user is already in the store (e.g. just signed up/in), skip the API call
+    if (user) {
+      setLoading(false);
+      return;
+    }
+
     const checkAuth = async () => {
       try {
         const response = await fetch('/api/auth/me');
@@ -33,7 +39,7 @@ export default function AuthProvider({
     };
 
     checkAuth();
-  }, [router, setUser, setLoading]);
+  }, [router, user, setUser, setLoading]);
 
   if (isLoading) {
     return (

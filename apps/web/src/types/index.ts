@@ -165,6 +165,8 @@ export interface WeatherData {
   windSpeed: number;
   windDirection: number;
   timestamp: string;
+  /** Relative humidity 0–100%. Optional — not all weather providers return this field. */
+  humidity?: number;
 }
 
 /**
@@ -217,4 +219,116 @@ export interface FirmsClusterProps {
   cluster: true;
   point_count: number;
   point_count_abbreviated: string;
+}
+
+// ============================================
+// Vehicle Types
+// ============================================
+
+export type VehicleType = 'FIRE_TRUCK' | 'WATER_TANKER' | 'COMMAND' | 'AMBULANCE' | 'HELICOPTER';
+export type VehicleStatus = 'AVAILABLE' | 'EN_ROUTE' | 'ON_SCENE' | 'RETURNING' | 'OUT_OF_SERVICE';
+
+export interface Vehicle {
+  id: string;
+  callSign: string;
+  type: VehicleType;
+  status: VehicleStatus;
+  capabilities: string[];
+  baseLocation?: { type: 'Point'; coordinates: [number, number] };
+  location?: { type: 'Point'; coordinates: [number, number] };
+  assignedTo?: string;
+  capacity: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface GeoVehicleProps {
+  id: string;
+  callSign: string;
+  type: VehicleType;
+  status: VehicleStatus;
+  assignedTo?: string;
+}
+
+export type GeoVehicle = GeoFeature<GeoVehicleProps>;
+
+// ============================================
+// Fire Event Record Types
+// ============================================
+
+export type AlertSource = 'FIRMS_SATELLITE' | 'CITIZEN_REPORT' | 'PATROL' | 'PHONE_CALL' | 'RADIO' | 'OTHER';
+export type RecordStatus = 'DRAFT' | 'VALIDATED' | 'APPROVED';
+export type LockableSection = 'timeline' | 'agencyArrivals' | 'meansEngaged' | 'economicLoss' | 'perimeter';
+
+export interface AgencyArrival {
+  agencyName: string;
+  arrivedAt: string;
+  personnelCount: number;
+}
+
+export interface MeansEngaged {
+  vehicleCount: number;
+  aircraftCount: number;
+  personnelCount: number;
+  waterVolumeLiters: number;
+  retardantVolumeLiters: number;
+}
+
+export interface EconomicLoss {
+  forestAreaHa: number;
+  infrastructureDamage: number;
+  agricultureDamage: number;
+  otherDamage: number;
+  totalEstimate: number;
+}
+
+export interface AuditEntry {
+  userId: string;
+  cin: string;
+  action: string;
+  section?: string;
+  changes?: Record<string, unknown>;
+  timestamp: string;
+}
+
+export interface FireEventRecord {
+  id: string;
+  incidentId: string;
+  alertSource: AlertSource;
+  alertReceivedAt?: string | null;
+  verifiedAt?: string | null;
+  firstResponseAt?: string | null;
+  onSceneAt?: string | null;
+  containedAt?: string | null;
+  extinguishedAt?: string | null;
+  agencyArrivals?: AgencyArrival[] | null;
+  meansEngaged?: MeansEngaged | null;
+  economicLoss?: EconomicLoss | null;
+  burnPerimeter?: { type: 'Polygon'; coordinates: [number, number][][] } | null;
+  burnAreaHa?: number | null;
+  burnCentroid?: [number, number] | null;
+  burnBoundingBox?: [number, number, number, number] | null;
+  recordStatus: RecordStatus;
+  lockedSections: string[];
+  auditTrail: AuditEntry[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateFireRecordInput {
+  incidentId: string;
+  alertSource?: AlertSource;
+}
+
+export interface UpdateFireRecordInput {
+  alertSource?: AlertSource;
+  alertReceivedAt?: string;
+  verifiedAt?: string;
+  firstResponseAt?: string;
+  onSceneAt?: string;
+  containedAt?: string;
+  extinguishedAt?: string;
+  agencyArrivals?: AgencyArrival[];
+  meansEngaged?: MeansEngaged;
+  economicLoss?: EconomicLoss;
 }

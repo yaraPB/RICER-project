@@ -14,6 +14,10 @@ export default function LocaleSync() {
   const language = useLanguageStore((s) => s.language);
 
   React.useEffect(() => {
+    useLanguageStore.persist.rehydrate();
+  }, []);
+
+  React.useEffect(() => {
     setLocaleDocument(language);
   }, [language]);
 

@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
+import { NextResponse } from 'next/server';
 
 function getJwtSecret(): string {
   const secret = process.env.JWT_SECRET;
@@ -104,17 +105,21 @@ export function hashRefreshToken(token: string): string {
   return crypto.createHmac('sha256', pepper).update(token).digest('hex');
 }
 
-export async function setAuthCookies(accessToken: string, refreshToken: string) {
-  const cookieStore = await cookies();
+export function buildAuthResponse(
+  body: Record<string, unknown>,
+  accessToken: string,
+  refreshToken: string
+): NextResponse {
+  const response = NextResponse.json(body);
   const base = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax' as const,
     path: '/',
   };
-
-  cookieStore.set('auth-token', accessToken, { ...base, maxAge: 60 * 15 });
-  cookieStore.set('refresh-token', refreshToken, { ...base, maxAge: 60 * 60 * 24 * 30 });
+  response.cookies.set('auth-token', accessToken, { ...base, maxAge: 60 * 15 });
+  response.cookies.set('refresh-token', refreshToken, { ...base, maxAge: 60 * 60 * 24 * 30 });
+  return response;
 }
 
 export async function setAuthCookie(token: string) {

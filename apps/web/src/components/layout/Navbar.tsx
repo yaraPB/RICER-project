@@ -62,6 +62,11 @@ export default function Navbar({ children }: { children: React.ReactNode }) {
       label: t('equipment'),
       icon: <Icon name="truck" aria-hidden={true} size={20} />,
     });
+    navItems.push({
+      href: '/fire-database',
+      label: t('fireDatabase'),
+      icon: <Icon name="database" aria-hidden={true} size={20} />,
+    });
   }
 
   return (
@@ -72,9 +77,9 @@ export default function Navbar({ children }: { children: React.ReactNode }) {
           <Topbar
             left={
               <div className="flex items-center gap-3">
-                <Link href="/map" className="flex items-center gap-3" aria-label={t('brandTitle')}>
-                  <div className="grid h-9 w-9 place-items-center rounded-md bg-surface shadow-elev-1 p-1">
-                    <Logo variant="badge" size="sm" priority />
+                <Link href="/map" className="flex items-center gap-3 group" aria-label={t('brandTitle')}>
+                  <div className="h-12 w-12 sm:h-14 sm:w-14 lg:h-16 lg:w-16 bg-surface shadow-elev-1 rounded-md p-2 sm:p-2.5 lg:p-3 transition-all duration-200 group-hover:shadow-elev-2">
+                    <Logo variant="badge" size="responsive" priority />
                   </div>
                   <span className="sr-only">{t('brandTitle')}</span>
                   <div className="hidden sm:block leading-tight">

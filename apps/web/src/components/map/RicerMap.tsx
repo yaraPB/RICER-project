@@ -21,18 +21,22 @@ import { useDispatchStore } from '@/store/useDispatchStore';
 import MapControls from '@/components/map/MapControls';
 import MapLegend from './MapLegend';
 import { useTranslation } from '@/hooks/useTranslation';
-import { getMapStyle } from '@/lib/map/styles';
+import { getMapStyle, HAS_PREMIUM_TILES } from '@/lib/map/styles';
 import { INCIDENT_STATUS_COLORS, FIRMS_CONFIDENCE_COLORS } from '@/lib/map/colors';
 import { asGeoJSON } from '@/lib/map/helpers';
 import { logger } from '@/lib/observability/logger';
-import { createResourceLayer, createInfrastructureLayers } from '@/lib/map/layers';
+import { createResourceLayer, createInfrastructureLayers, createIncidentPulseLayer } from '@/lib/map/layers';
 import {
   createRouteLayer,
   createActiveTeamsLayer,
+  createDispatchArcLayer,
+  createVehicleLayer,
   transformRouteToLayerData,
   transformTeamToLayerData,
+  transformVehicleToLayerData,
 } from '@/lib/map/dispatchLayers';
 import { detectGPUCapabilities, type GPUTier } from '@/lib/gpu/detection';
+import { getLayerConfigForTier } from '@/lib/map/performanceLayers';
 import type {
   GeoFeatureCollection,
   GeoIncidentProps,
@@ -40,6 +44,7 @@ import type {
   GeoInfrastructureProps,
   RiskBasinProps,
   GeoFirmsDetectionProps,
+  GeoVehicleProps,
 } from '@/types';
 
 /* ────────── helpers ────────── */
@@ -61,6 +66,14 @@ function formatTimeAgo(date: Date): string {
   const days = Math.floor(hours / 24);
   return `${days}d ago`;
 }
+
+/* ────────── stable empty refs ────────── */
+
+const EMPTY_RESOURCES: GeoFeatureCollection<GeoResourceProps> = { type: 'FeatureCollection', features: [] };
+const EMPTY_INFRASTRUCTURE: GeoFeatureCollection<GeoInfrastructureProps> = { type: 'FeatureCollection', features: [] };
+const EMPTY_RISK_BASINS: GeoFeatureCollection<RiskBasinProps> = { type: 'FeatureCollection', features: [] };
+const EMPTY_FIRMS: GeoFeatureCollection<GeoFirmsDetectionProps> = { type: 'FeatureCollection', features: [] };
+const EMPTY_VEHICLES: GeoFeatureCollection<GeoVehicleProps> = { type: 'FeatureCollection', features: [] };
 
 /* ────────── component ────────── */
 
@@ -85,32 +98,21 @@ export default function RicerMap() {
   const basemap = useMapStore((s) => s.basemap);
   const isHeatmapEnabled = useMapStore((s) => s.isHeatmapEnabled);
   const setDataError = useMapStore((s) => s.setDataError);
+  const storeIncidents = useMapStore((s) => s.incidents);
+  const setStoreIncidents = useMapStore((s) => s.setIncidents);
+  const setLastSuccessfulSync = useMapStore((s) => s.setLastSuccessfulSync);
 
   /* dispatch store */
   const activeRoutes = useDispatchStore((s) => s.activeRoutes);
   const selectedTeams = useDispatchStore((s) => s.selectedTeams);
 
-  /* local state */
-  const [incidents, setIncidents] = useState<GeoFeatureCollection<GeoIncidentProps>>({
-    type: 'FeatureCollection',
-    features: [],
-  });
-  const [resources, setResources] = useState<GeoFeatureCollection<GeoResourceProps>>({
-    type: 'FeatureCollection',
-    features: [],
-  });
-  const [infrastructure, setInfrastructure] = useState<GeoFeatureCollection<GeoInfrastructureProps>>({
-    type: 'FeatureCollection',
-    features: [],
-  });
-  const [riskBasins, setRiskBasins] = useState<GeoFeatureCollection<RiskBasinProps>>({
-    type: 'FeatureCollection',
-    features: [],
-  });
-  const [firmsDetections, setFirmsDetections] = useState<GeoFeatureCollection<GeoFirmsDetectionProps>>({
-    type: 'FeatureCollection',
-    features: [],
-  });
+  /* local state — incidents live in the store (shared with map/page.tsx) */
+  const incidents = storeIncidents;
+  const setIncidents = setStoreIncidents;
+  const [resources, setResources] = useState(EMPTY_RESOURCES);
+  const [infrastructure, setInfrastructure] = useState(EMPTY_INFRASTRUCTURE);
+  const [riskBasins, setRiskBasins] = useState(EMPTY_RISK_BASINS);
+  const [firmsDetections, setFirmsDetections] = useState(EMPTY_FIRMS);
   const [firmsLastUpdate, setFirmsLastUpdate] = useState<Date | null>(null);
   const [hoveredIncident, setHoveredIncident] = useState<{
     id: string;
@@ -125,8 +127,18 @@ export default function RicerMap() {
   } | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [gpuTier, setGpuTier] = useState<GPUTier>('tier-c'); // Start with safest tier
+  const [isochroneData, setIsochroneData] = useState<any | null>(null);
+  const [vehiclesData, setVehiclesData] = useState(EMPTY_VEHICLES);
 
   const prevIs3D = useRef(is3DEnabled);
+
+  // Memoize the GPU tier config so it doesn't recompute on every render
+  const tierConfig = useMemo(() => getLayerConfigForTier(gpuTier), [gpuTier]);
+
+  // Animation state for pulsing effects (Tier A/B only)
+  const [pulsePhase, setPulsePhase] = useState(0);
+  const phaseRef = useRef(0);
+  const animFrameRef = useRef<number | null>(null);
 
   /* ═══════════ GPU Detection (non-blocking) ═══════════ */
 
@@ -141,12 +153,73 @@ export default function RicerMap() {
     });
   }, []);
 
-  /* ═══════════ Data fetching ═══════════ */
+  /* ═══════════ Animation loop (Tier A/B only) ═══════════ */
+
+  useEffect(() => {
+    if (!tierConfig.enableAnimations) return;
+    const CYCLE = 2500; // ms for one full pulse cycle
+    const tick = () => {
+      phaseRef.current = (Date.now() % CYCLE) / CYCLE;
+      animFrameRef.current = requestAnimationFrame(tick);
+    };
+    animFrameRef.current = requestAnimationFrame(tick);
+    // Flush ref → state at ~10fps (visually identical for slow sinusoidal pulse)
+    const flushInterval = setInterval(() => setPulsePhase(phaseRef.current), 100);
+    return () => {
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      clearInterval(flushInterval);
+    };
+  }, [tierConfig.enableAnimations]);
+
+  /* ═══════════ Isochrone fetch ═══════════ */
+
+  useEffect(() => {
+    // Clear isochrones when layer is toggled off or incident is deselected
+    if (!layers.isochrones || !selectedIncidentId) {
+      setIsochroneData(null);
+      return;
+    }
+
+    const feature = incidents.features.find(
+      (f) => f.properties.id === selectedIncidentId,
+    );
+    if (!feature) {
+      setIsochroneData(null);
+      return;
+    }
+
+    const coords = feature.geometry.coordinates as [number, number];
+    let cancelled = false;
+
+    fetch('/api/dispatch/isochrones', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        origin: coords,
+        profile: 'fire_truck',
+        times: [10, 20, 30],
+      }),
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled) setIsochroneData(data);
+      })
+      .catch(() => {
+        if (!cancelled) setIsochroneData(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  // Only refetch when incident selection or layer visibility changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedIncidentId, layers.isochrones]);
+
+  /* ═══════════ Data fetching — per-source intervals, tier-aware ═══════════ */
 
   useEffect(() => {
     let cancelled = false;
-    let tickCount = 0;
-    let resourcesDisabled = false; // Track if resources should be skipped
+    let resourcesDisabled = false;
     const abortController = new AbortController();
 
     async function fetchIncidents() {
@@ -159,6 +232,7 @@ export default function RicerMap() {
         }
         const data = await res.json();
         setIncidents(data);
+        setLastSuccessfulSync(new Date());
         setDataError('incidents', null);
       } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') return;
@@ -172,9 +246,8 @@ export default function RicerMap() {
         const res = await fetch('/api/geo/resources', { signal: abortController.signal });
         if (!res.ok) {
           if (res.status === 403) {
-            // Permission denied - stop polling this endpoint
             setDataError('resources', null);
-            resourcesDisabled = true; // Stop future polling
+            resourcesDisabled = true;
             return;
           }
           setDataError('resources', `HTTP ${res.status}`);
@@ -182,6 +255,7 @@ export default function RicerMap() {
         }
         const data = await res.json();
         setResources(data);
+        setLastSuccessfulSync(new Date());
         setDataError('resources', null);
       } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') return;
@@ -205,18 +279,14 @@ export default function RicerMap() {
           setDataError('infrastructure', null);
         } else {
           const reason = String(infraRes.reason);
-          if (!reason.includes('AbortError')) {
-            setDataError('infrastructure', reason);
-          }
+          if (!reason.includes('AbortError')) setDataError('infrastructure', reason);
         }
         if (riskRes.status === 'fulfilled') {
           setRiskBasins(riskRes.value);
           setDataError('riskBasins', null);
         } else {
           const reason = String(riskRes.reason);
-          if (!reason.includes('AbortError')) {
-            setDataError('riskBasins', reason);
-          }
+          if (!reason.includes('AbortError')) setDataError('riskBasins', reason);
         }
       } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') return;
@@ -227,56 +297,70 @@ export default function RicerMap() {
     async function fetchFirms() {
       if (cancelled) return;
       try {
-        const res = await fetch('/api/firms/detections', { signal: abortController.signal });
+        // If there was a previous FIRMS error, ask the server to reset the circuit breaker
+        const hadError = useMapStore.getState().dataErrors.firmsDetections !== null;
+        const firmsUrl = hadError ? '/api/firms/detections?reset=true' : '/api/firms/detections';
+        const res = await fetch(firmsUrl, { signal: abortController.signal });
         if (!res.ok) {
           const errorText = await res.text().catch(() => '');
           setDataError('firmsDetections', `HTTP ${res.status}: ${errorText.slice(0, 50)}`);
-          logger.warn({
-            event: 'firms_fetch_error',
-            meta: { status: res.status, error: errorText.slice(0, 100) }
-          });
+          logger.warn({ event: 'firms_fetch_error', meta: { status: res.status, error: errorText.slice(0, 100) } });
           return;
         }
         const data = await res.json();
         setFirmsDetections(data);
         setFirmsLastUpdate(new Date());
+        setLastSuccessfulSync(new Date());
         setDataError('firmsDetections', null);
-
-        // Log fetch success with detection count
-        const detectionCount = data.features?.length || 0;
-        logger.info({
-          event: 'firms_fetch_success_frontend',
-          meta: { detections: detectionCount }
-        });
+        logger.info({ event: 'firms_fetch_success_frontend', meta: { detections: data.features?.length || 0 } });
       } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') return;
         const errorMsg = error instanceof Error ? error.message : 'Network error';
         setDataError('firmsDetections', errorMsg);
-        logger.error({
-          event: 'firms_fetch_exception',
-          meta: { error: errorMsg }
-        });
+        logger.error({ event: 'firms_fetch_exception', meta: { error: errorMsg } });
       }
     }
 
+    let vehiclesDisabled = false;
+    async function fetchVehicles() {
+      if (cancelled || vehiclesDisabled) return;
+      try {
+        const res = await fetch('/api/geo/vehicles', { signal: abortController.signal });
+        if (!res.ok) {
+          if (res.status === 403) { vehiclesDisabled = true; return; }
+          return;
+        }
+        const data = await res.json();
+        setVehiclesData(data);
+        setLastSuccessfulSync(new Date());
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') return;
+      }
+    }
+
+    // Initial fetch
     fetchIncidents();
     fetchResources();
+    fetchVehicles();
     fetchStatic();
     fetchFirms();
 
-    const interval = setInterval(() => {
-      tickCount++;
-      if (tickCount % 2 === 0 && !resourcesDisabled) fetchResources(); // Every 10s
-      if (tickCount % 3 === 0) fetchIncidents(); // Every 15s
-      if (tickCount % 180 === 0) fetchFirms(); // Every 15 minutes (900 seconds)
-    }, 5000);
+    // Per-source intervals using tier-aware durations
+    const incidentInterval = setInterval(fetchIncidents, tierConfig.pollingInterval.incidents);
+    const resourceInterval = setInterval(fetchResources, tierConfig.pollingInterval.resources);
+    const vehicleInterval = setInterval(fetchVehicles, tierConfig.pollingInterval.resources);
+    const firmsInterval = setInterval(fetchFirms, tierConfig.pollingInterval.firms);
 
     return () => {
       cancelled = true;
       abortController.abort();
-      clearInterval(interval);
+      clearInterval(incidentInterval);
+      clearInterval(resourceInterval);
+      clearInterval(vehicleInterval);
+      clearInterval(firmsInterval);
     };
-  }, [setDataError]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [setDataError, setLastSuccessfulSync, tierConfig.pollingInterval.incidents, tierConfig.pollingInterval.resources, tierConfig.pollingInterval.firms]);
 
   /* ═══════════ Fly-to on incident selection ═══════════ */
 
@@ -305,6 +389,33 @@ export default function RicerMap() {
       setViewState({ ...viewState, pitch: is3DEnabled ? 50 : 0 });
     }
   }, [is3DEnabled, setViewState, viewState]);
+
+  /* ═══════════ Terrain + Fog (3D mode) ═══════════ */
+
+  useEffect(() => {
+    const map = mapRef.current?.getMap() as any;
+    if (!map) return;
+    const apply = () => {
+      if (is3DEnabled) {
+        map.setTerrain({ source: 'terrain-dem', exaggeration: 1.5 });
+        map.setFog({
+          color: 'rgb(220, 230, 240)',
+          'high-color': 'rgb(80, 130, 200)',
+          'horizon-blend': 0.04,
+          'space-color': 'rgb(8, 8, 20)',
+          'star-intensity': 0.5,
+        });
+      } else {
+        map.setTerrain(null);
+        map.setFog({});
+      }
+    };
+    if (map.isStyleLoaded()) {
+      apply();
+    } else {
+      map.once('style.load', apply);
+    }
+  }, [is3DEnabled]);
 
   /* ═══════════ Fullscreen ═══════════ */
 
@@ -347,42 +458,75 @@ export default function RicerMap() {
     })),
   }), [incidents.features]);
 
-  /* ═══════════ Deck.gl layers ═══════════ */
+  /* ═══════════ Deck.gl layers — split into static + dispatch ═══════════ */
 
-  const deckLayers = useMemo(() => {
-    const deckLayersList: any[] = [];
+  // Shared route transform — used by both dispatchDeckLayers and animatedDeckLayers
+  const routeLayerData = useMemo(
+    () => activeRoutes.map((r) => transformRouteToLayerData(r.route, r.routeId, true)),
+    [activeRoutes]
+  );
 
+  // Static layers: resources + infrastructure — only recomputes when data or tier changes
+  const staticDeckLayers = useMemo(() => {
+    // Tier C: use MapLibre native layers only; skip deck.gl
+    if (!tierConfig.useDeckGL) return [];
+
+    const list: any[] = [];
     const resourceLayer = createResourceLayer(resources, layers.resources);
-    if (resourceLayer) deckLayersList.push(resourceLayer);
-
+    if (resourceLayer) list.push(resourceLayer);
     const infraLayers = createInfrastructureLayers(infrastructure, layers.infrastructure);
-    deckLayersList.push(...infraLayers);
+    list.push(...infraLayers);
+    return list;
+  }, [tierConfig.useDeckGL, resources, infrastructure, layers.resources, layers.infrastructure]);
 
-    // Dispatch routes layer (MVP)
-    const routeLayerData = activeRoutes.map((route) =>
-      transformRouteToLayerData(route.route, route.routeId, true)
-    );
-    const routeLayer = createRouteLayer(routeLayerData, layers.routes);
-    if (routeLayer) deckLayersList.push(routeLayer);
+  // Dispatch layers: routes + teams — recomputes only when dispatch state changes
+  const dispatchDeckLayers = useMemo(() => {
+    const list: any[] = [];
 
-    // Active teams layer (MVP)
+    const routeLayer = createRouteLayer(routeLayerData, layers.routes, pulsePhase);
+    if (routeLayer) list.push(routeLayer);
+
     const activeTeamsData = selectedTeams
       .filter((team) => team.location && team.location.coordinates)
       .map((team) => transformTeamToLayerData(team));
     const activeTeamsLayer = createActiveTeamsLayer(activeTeamsData, layers.activeTeams);
-    if (activeTeamsLayer) deckLayersList.push(activeTeamsLayer);
+    if (activeTeamsLayer) list.push(activeTeamsLayer);
 
-    return deckLayersList;
-  }, [
-    layers.resources,
-    layers.infrastructure,
-    layers.routes,
-    layers.activeTeams,
-    resources,
-    infrastructure,
-    activeRoutes,
-    selectedTeams,
-  ]);
+    // Vehicle layer
+    const vehicleLayerData = vehiclesData.features
+      .filter((f) => f.geometry && f.geometry.coordinates)
+      .map((f) => transformVehicleToLayerData({
+        id: f.properties.id,
+        callSign: f.properties.callSign,
+        type: f.properties.type,
+        status: f.properties.status,
+        location: f.geometry as { type: 'Point'; coordinates: [number, number] },
+      }));
+    const vehicleLayer = createVehicleLayer(vehicleLayerData, layers.vehicles);
+    if (vehicleLayer) list.push(vehicleLayer);
+
+    return list;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layers.routes, layers.activeTeams, layers.vehicles, routeLayerData, selectedTeams, vehiclesData, pulsePhase]);
+
+  // Animated layers: pulse + arcs — only on Tier A/B
+  const animatedDeckLayers = useMemo(() => {
+    if (!tierConfig.enableAnimations || !tierConfig.useDeckGL) return [];
+    const list: any[] = [];
+
+    const pulseLayer = createIncidentPulseLayer(incidents, pulsePhase, layers.incidents);
+    if (pulseLayer) list.push(pulseLayer);
+
+    const arcLayer = createDispatchArcLayer(routeLayerData, layers.routes);
+    if (arcLayer) list.push(arcLayer);
+
+    return list;
+  }, [incidents, pulsePhase, layers.incidents, layers.routes, routeLayerData, tierConfig.enableAnimations, tierConfig.useDeckGL]);
+
+  const deckLayers = useMemo(
+    () => [...staticDeckLayers, ...dispatchDeckLayers, ...animatedDeckLayers],
+    [staticDeckLayers, dispatchDeckLayers, animatedDeckLayers]
+  );
 
   /* ═══════════ Click handler ═══════════ */
 
@@ -498,7 +642,7 @@ export default function RicerMap() {
 
   /* ═══════════ Map style ═══════════ */
 
-  const mapStyle = getMapStyle(basemap);
+  const mapStyle = useMemo(() => getMapStyle(basemap), [basemap]);
 
   /* ═══════════ Render ═══════════ */
 
@@ -526,6 +670,32 @@ export default function RicerMap() {
         maxPitch={85}
         attributionControl={true}
       >
+        {/* ═══ Terrain DEM source ═══ */}
+        <Source
+          id="terrain-dem"
+          type="raster-dem"
+          tiles={[
+            HAS_PREMIUM_TILES
+              ? `https://api.maptiler.com/tiles/terrain-rgb/{z}/{x}/{y}.png?key=${process.env.NEXT_PUBLIC_MAPTILER_API_KEY}`
+              : 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'
+          ]}
+          tileSize={256}
+          encoding={HAS_PREMIUM_TILES ? 'mapbox' : 'terrarium'}
+        />
+
+        {/* ═══ Sky atmosphere (3D mode only) ═══ */}
+        {is3DEnabled && (
+          <Layer
+            id="sky"
+            type="sky"
+            paint={{
+              'sky-type': 'atmosphere',
+              'sky-atmosphere-sun': [0.0, 90.0],
+              'sky-atmosphere-sun-intensity': 15,
+            }}
+          />
+        )}
+
         {/* ═══ Heatmap layer ═══ */}
         {isHeatmapEnabled &&
           layers.incidents &&
@@ -688,6 +858,47 @@ export default function RicerMap() {
           </Source>
         )}
 
+        {/* ═══ Isochrone reachability polygons ═══ */}
+        {layers.isochrones && isochroneData && isochroneData.features?.length > 0 && (
+          <Source id="isochrones" type="geojson" data={isochroneData}>
+            <Layer
+              id="isochrone-fill"
+              type="fill"
+              paint={{
+                'fill-color': [
+                  'step',
+                  ['get', 'time'],
+                  '#22c55e', // 0–10 min: green
+                  11, '#f59e0b', // 11–20 min: amber
+                  21, '#ef4444', // 21+ min: red
+                ],
+                'fill-opacity': [
+                  'step',
+                  ['get', 'time'],
+                  0.25,
+                  11, 0.18,
+                  21, 0.12,
+                ],
+              }}
+            />
+            <Layer
+              id="isochrone-border"
+              type="line"
+              paint={{
+                'line-color': [
+                  'step',
+                  ['get', 'time'],
+                  '#22c55e',
+                  11, '#f59e0b',
+                  21, '#ef4444',
+                ],
+                'line-width': 1.5,
+                'line-opacity': 0.7,
+              }}
+            />
+          </Source>
+        )}
+
         {/* ════════════════════════════════════════════════════════════
             FIRMS SATELLITE FIRE DETECTIONS
             ════════════════════════════════════════════════════════════ */}
@@ -810,14 +1021,7 @@ export default function RicerMap() {
                   50, 18,
                   100, 24,
                 ],
-                'circle-opacity': [
-                  'interpolate',
-                  ['linear'],
-                  ['%', ['/', ['to-number', ['+', ['*', ['time'], 0.001]]], 2000], 1],
-                  0, 0.1,
-                  0.5, 0.4,
-                  1, 0.1,
-                ],
+                'circle-opacity': 0.25,
                 'circle-blur': 0.5,
               }}
             />
@@ -1015,7 +1219,7 @@ export default function RicerMap() {
             offset={[0, -12]}
             className="incident-popup"
           >
-            <div className="min-w-[220px] overflow-hidden">
+            <div className="min-w-[220px] overflow-hidden rounded-lg bg-surface/90 backdrop-blur-md">
               {/* Gradient header bar */}
               <div
                 className="px-3 py-2"
@@ -1024,8 +1228,8 @@ export default function RicerMap() {
                 }}
               >
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-xs font-bold uppercase text-white/90">
-                    #{hoveredIncident.id.slice(0, 8)}
+                  <span className="flex items-center gap-1.5 text-xs font-bold uppercase text-white/90">
+                    🔥 #{hoveredIncident.id.slice(0, 8)}
                   </span>
                   <span className="rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-bold text-white">
                     {hoveredIncident.properties.status}
@@ -1036,20 +1240,11 @@ export default function RicerMap() {
               <div className="p-3">
                 <div className="flex items-center gap-2 text-sm font-semibold">
                   <span className="text-muted-foreground">{t('severity')}:</span>
-                  <div className="flex gap-0.5">
+                  <span className="text-base leading-none">
                     {Array.from({ length: 5 }).map((_, i) => (
-                      <div
-                        key={i}
-                        className="h-2 w-4 rounded-sm"
-                        style={{
-                          backgroundColor:
-                            i < (hoveredIncident.properties.severity ?? 0)
-                              ? (INCIDENT_STATUS_COLORS[hoveredIncident.properties.status] ?? '#6b7280')
-                              : '#e5e7eb',
-                        }}
-                      />
+                      <span key={i} style={{ color: i < (hoveredIncident.properties.severity ?? 0) ? (INCIDENT_STATUS_COLORS[hoveredIncident.properties.status] ?? '#f59e0b') : '#d1d5db' }}>★</span>
                     ))}
-                  </div>
+                  </span>
                   <span className="text-xs text-muted-foreground">
                     {hoveredIncident.properties.severity}/5
                   </span>
@@ -1061,6 +1256,9 @@ export default function RicerMap() {
                 )}
                 <div className="mt-2 border-t border-border pt-2 text-[11px] text-muted-foreground italic">
                   {t('clickForDetails')}
+                </div>
+                <div className="mt-1 text-[10px] text-muted-foreground/60">
+                  {hoveredIncident.coordinates[1].toFixed(4)}°, {hoveredIncident.coordinates[0].toFixed(4)}°
                 </div>
               </div>
             </div>
@@ -1077,11 +1275,9 @@ export default function RicerMap() {
             offset={[0, -12]}
             className="firms-popup"
           >
-            <div className="p-2 min-w-[200px]">
+            <div className="p-2 min-w-[200px] rounded-lg bg-surface/90 backdrop-blur-md">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-orange-500">
-                  🛰️
-                </span>
+                <span className="text-orange-500">🛰️</span>
                 <span className="font-bold text-sm">{t('firmsSatelliteDetection')}</span>
               </div>
               <div className="space-y-1 text-xs">
@@ -1089,13 +1285,21 @@ export default function RicerMap() {
                   <span className="text-muted-foreground">{t('firmsFirePower')}:</span>
                   <span className="font-semibold">{hoverInfo.feature.properties.frp} MW</span>
                 </div>
+                {/* FRP intensity bar */}
+                <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${Math.min(100, (hoverInfo.feature.properties.frp / 200) * 100)}%`,
+                      background: 'linear-gradient(to right, #fef3c7, #f59e0b, #dc2626)',
+                    }}
+                  />
+                </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">{t('firmsConfidence')}:</span>
                   <span
                     className="font-semibold capitalize"
-                    style={{
-                      color: FIRMS_CONFIDENCE_COLORS[hoverInfo.feature.properties.confidence] || FIRMS_CONFIDENCE_COLORS.nominal
-                    }}
+                    style={{ color: FIRMS_CONFIDENCE_COLORS[hoverInfo.feature.properties.confidence] || FIRMS_CONFIDENCE_COLORS.nominal }}
                   >
                     {hoverInfo.feature.properties.confidence}
                   </span>
@@ -1114,7 +1318,10 @@ export default function RicerMap() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">{t('firmsDayNight')}:</span>
-                  <span className="font-semibold">{hoverInfo.feature.properties.daynight === 'D' ? t('firmsDay') : t('firmsNight')}</span>
+                  <span className="font-semibold">
+                    {hoverInfo.feature.properties.daynight === 'D' ? '☀️ ' : '🌙 '}
+                    {hoverInfo.feature.properties.daynight === 'D' ? t('firmsDay') : t('firmsNight')}
+                  </span>
                 </div>
               </div>
               <div className="mt-2 pt-2 border-t border-border text-[10px] text-muted-foreground">
@@ -1164,7 +1371,7 @@ export default function RicerMap() {
       </ReactMapGL>
 
       {/* ═══ Overlay controls ═══ */}
-      <MapControls />
+      <MapControls gpuTier={gpuTier} />
       <MapLegend />
 
       {/* FIRMS data timestamp */}

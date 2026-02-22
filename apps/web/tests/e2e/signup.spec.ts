@@ -168,6 +168,55 @@ test.describe('Signup', () => {
     await expect(signinLink).toHaveAttribute('href', '/signin');
   });
 
+  test('button stays disabled after successful signup until navigation completes', async ({ page }) => {
+    await setLanguage(page, 'en');
+    await mockAuthMe(page, 'CIVILIAN');
+    await mockGeoRoutes(page);
+
+    // Mock signup API — respond successfully but don't resolve navigation instantly
+    await page.route('**/api/auth/signup', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          user: {
+            id: 'new-user-1',
+            cin: 'AB123456',
+            phone: '+212612345678',
+            role: 'CIVILIAN',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+        }),
+      });
+    });
+
+    await page.goto('/signup');
+
+    await expect(page.getByRole('heading', { name: /create.*account|sign.*up/i })).toBeVisible({ timeout: 10000 });
+
+    await page.locator('#signup-cin').fill('AB123456');
+    await page.locator('#signup-phone').fill('+212612345678');
+    await page.locator('#signup-password').fill('password123');
+    await page.locator('#signup-confirm-password').fill('password123');
+
+    const submitButton = page.getByRole('button', { name: /create account|creating account/i });
+
+    await Promise.all([
+      page.waitForResponse('**/api/auth/signup'),
+      submitButton.click(),
+    ]);
+
+    // After API success, button must stay disabled (loading) while navigating
+    await expect(submitButton).toBeDisabled();
+
+    // No error alert should be visible
+    await expect(page.getByRole('alert')).not.toBeVisible();
+
+    // Eventually navigates to /map
+    await expect(page).toHaveURL(/\/map$/, { timeout: 30_000 });
+  });
+
   test('handles server error gracefully', async ({ page }) => {
     await setLanguage(page, 'en');
 

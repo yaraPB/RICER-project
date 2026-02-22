@@ -56,11 +56,19 @@ _env.*
 # Test artifacts
 test-results/
 
+# Temp test/build output
+tsc_*.txt
+vitest-*.txt
+vitest-results.json
+t[0-9]*.json
+tfull.json
+
 # Temporary documentation
 *_SUMMARY.md
 *_REPORT.md
 nul
 
-# Claude IDE
+# IDE / tooling
 .claude/
+CLAUDE.md
 ricer-backup.bundle

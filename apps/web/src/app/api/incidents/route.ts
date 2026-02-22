@@ -4,13 +4,48 @@ import { prisma } from '@/lib/prisma';
 import { withApiHandler } from '@/lib/errors/withApiHandler';
 import { AppError } from '@/lib/errors/AppError';
 import { formatValueForError } from '@/lib/errors/context';
+import { DEFAULT_LIMITS } from '@/types/pagination';
+import type { CursorPaginationResponse } from '@/types/pagination';
 
 export const GET = withApiHandler(async (request: Request) => {
   const currentUser = await getCurrentUser(request);
   if (!currentUser) throw new AppError(2000);
 
-  const incidents = await prisma.incident.findMany({ orderBy: { createdAt: 'desc' } });
-  return NextResponse.json({ incidents });
+  const url = new URL(request.url);
+  const limit = Math.min(
+    parseInt(url.searchParams.get('limit') || String(DEFAULT_LIMITS.INCIDENTS || 100)),
+    100
+  );
+  const cursor = url.searchParams.get('cursor') || undefined;
+
+  // Fetch one extra to determine if there are more results
+  const incidents = await prisma.incident.findMany({
+    ...(cursor && {
+      cursor: { id: cursor },
+      skip: 1, // Skip the cursor itself
+    }),
+    take: limit + 1,
+    orderBy: { createdAt: 'desc' },
+  });
+
+  // Get total count
+  const total = await prisma.incident.count();
+
+  // Determine if there are more results
+  const hasMore = incidents.length > limit;
+  const data = hasMore ? incidents.slice(0, limit) : incidents;
+  const nextCursor = hasMore ? data[data.length - 1].id : null;
+
+  const response: CursorPaginationResponse<typeof data[number]> = {
+    data,
+    pagination: {
+      cursor: nextCursor,
+      hasMore,
+      total,
+    },
+  };
+
+  return NextResponse.json(response);
 });
 
 export const POST = withApiHandler(async (request: Request) => {
@@ -61,11 +96,11 @@ export const POST = withApiHandler(async (request: Request) => {
     });
 
     if (!existingReport) {
-      throw new AppError(1002, { message: 'Report not found' });
+      throw new AppError(1003, { message: 'Report not found' });
     }
 
     if (existingReport.incidentId) {
-      throw new AppError(1003, { message: 'Report already has an incident' });
+      throw new AppError(1001, { message: 'Report already has an incident', fields: [{ field: 'reportId', code: 'conflict' }] });
     }
   }
 

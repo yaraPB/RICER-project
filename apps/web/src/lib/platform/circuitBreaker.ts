@@ -78,6 +78,13 @@ export class CircuitBreaker {
     this.halfOpenInFlight += 1;
   }
 
+  reset() {
+    this.state = 'closed';
+    this.failures = 0;
+    this.openedAtMs = undefined;
+    this.halfOpenInFlight = 0;
+  }
+
   private advance(nowMs: number) {
     if (this.state !== 'open') return;
     if (this.openedAtMs === undefined) return;

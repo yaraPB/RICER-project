@@ -27,4 +27,5 @@ export const DEFAULT_LIMITS = {
   REPORTS: 50,
   EQUIPMENT: 100,
   INCIDENTS: 50,
+  FIRE_RECORDS: 50,
 } as const;

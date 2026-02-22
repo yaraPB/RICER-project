@@ -21,6 +21,7 @@ const config: Config = {
         "muted-foreground": "hsl(var(--muted-foreground))",
         primary: "hsl(var(--primary))",
         "primary-foreground": "hsl(var(--primary-foreground))",
+        "primary-muted": "hsl(var(--primary-muted))",
         success: "hsl(var(--success))",
         warning: "hsl(var(--warning))",
         danger: "hsl(var(--danger))",

@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <!-- Simplified icon version - just the 'R' grid and signal -->
+  <rect width="512" height="512" rx="64" fill="white"/>
+
+  <!-- Green grid pattern for 'R' (centered and larger) -->
+  <g fill="#3D6E4E">
+    <rect x="140" y="140" width="48" height="48" rx="4"/>
+    <rect x="196" y="140" width="48" height="48" rx="4"/>
+    <rect x="252" y="140" width="48" height="48" rx="4"/>
+    <rect x="308" y="140" width="56" height="48" rx="4"/>
+
+    <rect x="140" y="196" width="48" height="48" rx="4"/>
+    <rect x="252" y="196" width="48" height="48" rx="4"/>
+    <rect x="308" y="196" width="56" height="48" rx="4"/>
+
+    <rect x="140" y="252" width="48" height="48" rx="4"/>
+    <rect x="196" y="252" width="48" height="48" rx="4"/>
+    <rect x="252" y="252" width="48" height="48" rx="4"/>
+    <rect x="308" y="252" width="56" height="48" rx="4"/>
+  </g>
+
+  <!-- Orange signal waves -->
+  <g stroke="#E67E30" fill="none">
+    <path d="M380 180C380 172 384 164 392 160C400 156 408 160 412 168" stroke-width="16" stroke-linecap="round"/>
+    <path d="M395 195C395 190 398 186 403 184C408 182 413 185 416 190" stroke-width="14" stroke-linecap="round"/>
+    <path d="M365 165C365 155 370 147 380 142C390 137 400 142 406 152" stroke-width="18" stroke-linecap="round"/>
+  </g>
+
+  <!-- Orange accent bar at bottom -->
+  <rect x="0" y="448" width="512" height="64" rx="0" fill="#D85A2C"/>
+</svg>

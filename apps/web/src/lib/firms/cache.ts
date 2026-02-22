@@ -9,9 +9,28 @@ type CacheEntry = {
 
 const firmsCache = new Map<string, CacheEntry>();
 const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
+const MAX_CACHE_ENTRIES = 100; // Limit cache size to prevent memory leak
 
 function getCacheKey(bbox: string, source: string, dayRange: number): string {
   return `firms:${source}:${bbox}:${dayRange}d`;
+}
+
+/**
+ * Evict the oldest cache entry if max size is reached (LRU policy)
+ * Maps maintain insertion order, so first key is oldest
+ */
+function evictOldestIfNeeded(): void {
+  if (firmsCache.size >= MAX_CACHE_ENTRIES) {
+    // Get oldest entry (first in Map)
+    const firstKey = firmsCache.keys().next().value;
+    if (firstKey) {
+      firmsCache.delete(firstKey);
+      logger.info({
+        event: 'firms_cache_eviction',
+        meta: { evictedKey: firstKey, reason: 'max_size_reached', maxSize: MAX_CACHE_ENTRIES }
+      });
+    }
+  }
 }
 
 export async function getCachedFirmsDetections(
@@ -44,6 +63,7 @@ export async function setCachedFirmsDetections(
   dayRange: number,
   data: GeoFeatureCollection<GeoFirmsDetectionProps>
 ): Promise<void> {
+  evictOldestIfNeeded(); // Prevent unbounded cache growth
   const key = getCacheKey(bbox, source, dayRange);
   const now = Date.now();
   firmsCache.set(key, {
@@ -58,7 +78,8 @@ export async function setCachedFirmsDetections(
       source,
       dayRange,
       ttlMs: CACHE_TTL_MS,
-      detectionCount: data.features.length
+      detectionCount: data.features.length,
+      cacheSize: firmsCache.size
     }
   });
 }

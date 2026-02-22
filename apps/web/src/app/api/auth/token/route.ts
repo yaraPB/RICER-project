@@ -1,12 +1,11 @@
-import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withApiHandler } from '@/lib/errors/withApiHandler';
 import { AppError } from '@/lib/errors/AppError';
 import {
+  buildAuthResponse,
   deriveScopes,
   getRefreshToken,
   hashRefreshToken,
-  setAuthCookies,
   signAccessToken,
   signRefreshToken,
   verifyRefreshToken,
@@ -76,14 +75,16 @@ export const POST = withApiHandler(async (request: Request) => {
     }),
   ]);
 
-  await setAuthCookies(accessToken, newRefreshToken);
-
   const includeRefreshToken = Boolean(refreshTokenFromBody);
-  return NextResponse.json({
-    ok: true,
-    tokenType: 'Bearer',
+  return buildAuthResponse(
+    {
+      ok: true,
+      tokenType: 'Bearer',
+      accessToken,
+      expiresIn: 60 * 15,
+      ...(includeRefreshToken ? { refreshToken: newRefreshToken } : {}),
+    },
     accessToken,
-    expiresIn: 60 * 15,
-    ...(includeRefreshToken ? { refreshToken: newRefreshToken } : {}),
-  });
+    newRefreshToken
+  );
 });

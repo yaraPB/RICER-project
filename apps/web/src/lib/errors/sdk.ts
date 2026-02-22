@@ -17,6 +17,10 @@ export function getApiFieldErrors(value: unknown): FieldError[] {
   return isApiErrorResponse(value) && Array.isArray(value.error.fields) ? value.error.fields : [];
 }
 
+export function getApiErrorCode(value: unknown): number | undefined {
+  return isApiErrorResponse(value) ? value.error.code : undefined;
+}
+
 export function getApiRequestId(value: unknown): string | undefined {
   return isApiErrorResponse(value) ? value.error.requestId : undefined;
 }

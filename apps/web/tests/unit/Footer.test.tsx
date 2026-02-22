@@ -10,6 +10,18 @@ vi.mock('@/hooks/useTranslation', () => ({
       const translations: Record<string, string> = {
         brandTitle: 'RICER Ifrane',
         brandSubtitle: 'نظام الإبلاغ عن الحرائق',
+        footerDescription:
+          'Système de gestion et de signalement des incendies pour Ifrane, Maroc',
+        footerNavigation: 'Navigation',
+        footerFireMap: 'Carte des incendies',
+        footerAnalytics: 'Analytique',
+        footerReportFire: 'Signaler un incendie',
+        footerEmergency: 'Urgences',
+        footerCivilProtection: '15 - Protection Civile',
+        footerWaterForests: '190 - Eaux et Forêts',
+        footerInformation: 'Informations',
+        footerErrorCodes: "Codes d'erreur",
+        footerAllRightsReserved: 'Tous droits réservés',
       };
       return translations[key] || key;
     },
