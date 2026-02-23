@@ -10,8 +10,8 @@ export type FirmsEndpoint = {
 };
 
 export const FIRMS_ENDPOINTS: FirmsEndpoint[] = [
-  { id: 'nasa-firms-primary', baseUrl: 'https://firms2.modaps.eosdis.nasa.gov/api/area/csv', label: 'FIRMS2 (mirror)' },
-  { id: 'nasa-firms-fallback', baseUrl: 'https://firms.modaps.eosdis.nasa.gov/api/area/csv', label: 'FIRMS (original)' },
+  { id: 'nasa-firms-primary', baseUrl: 'https://firms.modaps.eosdis.nasa.gov/api/area/csv', label: 'FIRMS (original)' },
+  { id: 'nasa-firms-fallback', baseUrl: 'https://firms2.modaps.eosdis.nasa.gov/api/area/csv', label: 'FIRMS2 (mirror)' },
 ];
 
 export type FetchFirmsOptions = {

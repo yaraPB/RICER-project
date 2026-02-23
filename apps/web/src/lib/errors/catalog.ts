@@ -156,6 +156,17 @@ export const ERROR_CATALOG = {
     rootCauses: ['Weather API timeout', 'Provider outage'],
     resolutionSteps: ['Check provider status', 'Retry later'],
   },
+  4003: {
+    code: 4003,
+    name: 'EXTERNAL_EFFIS_FAILED',
+    severity: 'MEDIUM',
+    httpStatus: 502,
+    developerMessage: 'EFFIS Copernicus service failed',
+    userMessageKey: 'errorEffisFailed',
+    remediationHints: [{ title: 'EFFIS data temporarily unavailable. FIRMS data is still available.' }],
+    rootCauses: ['EFFIS WFS timeout', 'Copernicus service outage'],
+    resolutionSteps: ['Check EFFIS service status', 'Retry later', 'Fall back to FIRMS-only data'],
+  },
   5000: {
     code: 5000,
     name: 'SYSTEM_UNEXPECTED',

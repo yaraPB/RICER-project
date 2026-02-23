@@ -101,6 +101,7 @@ export const translations = {
     errorExternalService: 'فشل في خدمة خارجية. حاول مرة أخرى لاحقاً',
     errorNotificationFailed: 'فشل إرسال الإشعار. حاول مرة أخرى لاحقاً',
     errorWeatherFailed: 'خدمة الطقس غير متاحة. حاول مرة أخرى لاحقاً',
+    errorEffisFailed: 'خدمة EFFIS غير متاحة. بيانات FIRMS لا تزال متاحة',
     errorConfigMissing:
       'إعدادات الخادم ناقصة. أنشئ ملف .env.local اعتماداً على .env.example ثم أعد تشغيل الخادم',
     errorExternalTimeout: 'انتهت مهلة الطلب. حاول مرة أخرى لاحقاً',
@@ -170,6 +171,11 @@ export const translations = {
     layerResources: 'الموارد',
     layerRiskZones: 'مناطق المخاطر',
     layerFirmsDetections: 'الكشف عن الحرائق عبر الأقمار الصناعية',
+    layerEffisFWI: 'مؤشر حرائق EFFIS',
+    layerEffisBurnedAreas: 'المناطق المحترقة EFFIS',
+    effisLayers: 'EFFIS / كوبرنيكوس',
+    effisFWI: 'مؤشر خطر الحرائق',
+    effisBurnedAreas: 'المناطق المحترقة',
     layerHeatmap: 'خريطة حرارية',
     layerRoutes: 'المسارات',
     layerActiveTeams: 'الفرق النشطة',
@@ -260,6 +266,7 @@ export const translations = {
     location: 'الموقع',
     description: 'الوصف',
     loadingReports: 'جاري تحميل التقارير...',
+    loadingReportsTimeout: 'تعذّر تحميل التقارير. حاول مرة أخرى.',
     analyticsLoadFailed: 'فشل في تحميل الإحصائيات',
 
     // Weather
@@ -550,6 +557,7 @@ export const translations = {
     errorExternalService: 'Un service externe a échoué. Réessayez plus tard.',
     errorNotificationFailed: 'Échec de notification. Réessayez plus tard.',
     errorWeatherFailed: 'Service météo indisponible. Réessayez plus tard.',
+    errorEffisFailed: 'Service EFFIS indisponible. Les données FIRMS restent disponibles',
     errorConfigMissing:
       'Configuration serveur manquante. Créez un fichier .env.local à partir de .env.example puis redémarrez le serveur',
     errorExternalTimeout: 'Délai d\'attente dépassé. Réessayez plus tard',
@@ -619,6 +627,11 @@ export const translations = {
     layerResources: 'Ressources',
     layerRiskZones: 'Zones de risque',
     layerFirmsDetections: 'Détections Satellitaires de Feux',
+    layerEffisFWI: 'Indice de Danger Incendie EFFIS',
+    layerEffisBurnedAreas: 'Zones Brûlées EFFIS',
+    effisLayers: 'EFFIS / Copernicus',
+    effisFWI: 'Indice de Danger Incendie',
+    effisBurnedAreas: 'Zones Brûlées',
     layerHeatmap: 'Carte thermique',
     layerRoutes: 'Routes',
     layerActiveTeams: 'Équipes Actives',
@@ -731,6 +744,7 @@ export const translations = {
     location: 'Emplacement',
     description: 'Description',
     loadingReports: 'Chargement des rapports...',
+    loadingReportsTimeout: 'Impossible de charger les rapports. Réessayez.',
 
     // Equipment
     equipmentTitle: 'Gestion des Équipements et Ressources',
@@ -999,6 +1013,7 @@ export const translations = {
     errorExternalService: 'A downstream service failed. Please try again later.',
     errorNotificationFailed: 'Notification delivery failed. Please try again later.',
     errorWeatherFailed: 'Weather provider unavailable. Please try again later.',
+    errorEffisFailed: 'EFFIS service unavailable. FIRMS data is still available',
     errorConfigMissing: 'Server configuration is missing. Create .env.local and restart the server.',
     errorExternalTimeout: 'Request timeout. Please try again later',
     errorExternalApiAuth: 'External API authentication failed. Check credentials',
@@ -1067,6 +1082,11 @@ export const translations = {
     layerResources: 'Resources',
     layerRiskZones: 'Risk zones',
     layerFirmsDetections: 'Satellite Fire Detections',
+    layerEffisFWI: 'EFFIS Fire Weather Index',
+    layerEffisBurnedAreas: 'EFFIS Burned Areas',
+    effisLayers: 'EFFIS / Copernicus',
+    effisFWI: 'Fire Weather Index',
+    effisBurnedAreas: 'Burned Areas',
     layerHeatmap: 'Heatmap',
     layerRoutes: 'Routes',
     layerActiveTeams: 'Active Teams',
@@ -1158,6 +1178,7 @@ export const translations = {
     location: 'Location',
     description: 'Description',
     loadingReports: 'Loading reports…',
+    loadingReportsTimeout: 'Unable to load reports. Retry.',
 
     // Weather
     weatherTitle: 'Weather in Ifrane',

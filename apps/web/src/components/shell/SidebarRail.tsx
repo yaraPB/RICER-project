@@ -42,11 +42,14 @@ export function SidebarRail({ items, footerItems, className }: SidebarRailProps)
                 'flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-semibold transition',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                 isActive
-                  ? 'bg-primary/10 text-primary'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                  ? 'bg-primary-muted text-primary border-l-2 border-primary'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground border-l-2 border-transparent'
               )}
             >
-              <span className="grid h-9 w-9 place-items-center rounded-md bg-surface-2 text-foreground group-hover:bg-surface">
+              <span className={cn(
+                'grid h-9 w-9 place-items-center rounded-md',
+                isActive ? 'bg-primary/20 text-primary' : 'bg-surface-2 text-foreground group-hover:bg-surface'
+              )}>
                 {item.icon}
               </span>
               <span className="whitespace-nowrap opacity-0 transition-opacity duration-300 group-hover:opacity-100">
@@ -69,11 +72,14 @@ export function SidebarRail({ items, footerItems, className }: SidebarRailProps)
                   'flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-semibold transition',
                   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                   isActive
-                    ? 'bg-primary/10 text-primary'
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    ? 'bg-primary-muted text-primary border-l-2 border-primary'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground border-l-2 border-transparent'
                 )}
               >
-                <span className="grid h-9 w-9 place-items-center rounded-md bg-surface-2 text-foreground group-hover:bg-surface">
+                <span className={cn(
+                  'grid h-9 w-9 place-items-center rounded-md',
+                  isActive ? 'bg-primary/20 text-primary' : 'bg-surface-2 text-foreground group-hover:bg-surface'
+                )}>
                   {item.icon}
                 </span>
                 <span className="whitespace-nowrap opacity-0 transition-opacity duration-300 group-hover:opacity-100">

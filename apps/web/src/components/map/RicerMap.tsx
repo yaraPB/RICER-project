@@ -299,7 +299,7 @@ export default function RicerMap() {
       try {
         // If there was a previous FIRMS error, ask the server to reset the circuit breaker
         const hadError = useMapStore.getState().dataErrors.firmsDetections !== null;
-        const firmsUrl = hadError ? '/api/firms/detections?reset=true' : '/api/firms/detections';
+        const firmsUrl = hadError ? '/api/detections/combined?reset=true' : '/api/detections/combined';
         const res = await fetch(firmsUrl, { signal: abortController.signal });
         if (!res.ok) {
           const errorText = await res.text().catch(() => '');
@@ -900,6 +900,35 @@ export default function RicerMap() {
         )}
 
         {/* ════════════════════════════════════════════════════════════
+            EFFIS WMS RASTER OVERLAYS (Fire Weather Index + Burned Areas)
+            Placed before point layers for correct z-order (raster underneath)
+            ════════════════════════════════════════════════════════════ */}
+        {tierConfig.dataLimits.enableWMSOverlays && layers.effisFWI && (
+          <Source
+            id="effis-fwi"
+            type="raster"
+            tiles={[
+              'https://maps.effis.emergency.copernicus.eu/effis?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=fwi.fwi&STYLES=&FORMAT=image/png&TRANSPARENT=true&SRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}',
+            ]}
+            tileSize={256}
+          >
+            <Layer id="effis-fwi-layer" type="raster" paint={{ 'raster-opacity': 0.6 }} />
+          </Source>
+        )}
+        {tierConfig.dataLimits.enableWMSOverlays && layers.effisBurnedAreas && (
+          <Source
+            id="effis-burned-areas"
+            type="raster"
+            tiles={[
+              'https://maps.effis.emergency.copernicus.eu/effis?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=burnt.ba&STYLES=&FORMAT=image/png&TRANSPARENT=true&SRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}',
+            ]}
+            tileSize={256}
+          >
+            <Layer id="effis-burned-areas-layer" type="raster" paint={{ 'raster-opacity': 0.5 }} />
+          </Source>
+        )}
+
+        {/* ════════════════════════════════════════════════════════════
             FIRMS SATELLITE FIRE DETECTIONS
             ════════════════════════════════════════════════════════════ */}
         {layers.firmsDetections && firmsDetections.features.length > 0 && (
@@ -1325,7 +1354,12 @@ export default function RicerMap() {
                 </div>
               </div>
               <div className="mt-2 pt-2 border-t border-border text-[10px] text-muted-foreground">
-                NASA FIRMS • {hoverInfo.feature.properties.satellite}
+                {hoverInfo.feature.properties.source === 'EFFIS'
+                  ? 'Copernicus EFFIS'
+                  : hoverInfo.feature.properties.source === 'FIRMS+EFFIS'
+                    ? 'NASA FIRMS + Copernicus EFFIS'
+                    : 'NASA FIRMS'}{' '}
+                • {hoverInfo.feature.properties.satellite}
               </div>
             </div>
           </Popup>

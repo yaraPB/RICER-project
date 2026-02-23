@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import type { Report } from '@/types';
@@ -11,19 +11,37 @@ import { Button } from '@/components/ui/Button';
 import { getApiErrorUserMessage } from '@/lib/errors/sdk';
 import { CreateIncidentModal } from '@/components/reports/CreateIncidentModal';
 
+const FETCH_TIMEOUT_MS = 5000;
+
 export default function ReportsListPage() {
   const user = useAuthStore((state) => state.user);
   const { t, language } = useTranslation();
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
+  const [timedOut, setTimedOut] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reportToConvert, setReportToConvert] = useState<Report | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const fetchReports = useCallback(async () => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setError(null);
+    setTimedOut(false);
+    setLoading(true);
+
+    const timer = setTimeout(() => {
+      controller.abort();
+      setTimedOut(true);
+      setLoading(false);
+    }, FETCH_TIMEOUT_MS);
+
     try {
-      const response = await fetch('/api/reports');
+      const response = await fetch('/api/reports', { signal: controller.signal });
+      clearTimeout(timer);
       const data = (await response.json().catch(() => null)) as unknown;
       if (!response.ok) {
         setReports([]);
@@ -31,20 +49,28 @@ export default function ReportsListPage() {
         return;
       }
 
-      const nextReports = Array.isArray((data as { reports?: unknown })?.reports)
-        ? ((data as { reports: Report[] }).reports ?? [])
+      const nextReports = Array.isArray((data as { data?: unknown })?.data)
+        ? ((data as { data: Report[] }).data ?? [])
         : [];
       setReports(nextReports);
-    } catch {
+    } catch (err) {
+      clearTimeout(timer);
+      if ((err as Error)?.name === 'AbortError') return;
       setReports([]);
       setError(t('connectionError'));
     } finally {
-      setLoading(false);
+      clearTimeout(timer);
+      if (!controller.signal.aborted) {
+        setLoading(false);
+      }
     }
   }, [t]);
 
   useEffect(() => {
     fetchReports();
+    return () => {
+      abortRef.current?.abort();
+    };
   }, [fetchReports]);
 
   const handleStatusUpdate = async (reportId: string, newStatus: Report['status']) => {
@@ -99,7 +125,7 @@ export default function ReportsListPage() {
 
   const getCauseLabel = (causeKey: string | undefined) => {
     if (!causeKey) return t('unknown');
-    
+
     const causeMap: Record<string, TranslationKey> = {
       'CAMPFIRE_UNATTENDED': 'campfireUnattended',
       'CIGARETTE': 'cigarette',
@@ -142,8 +168,38 @@ export default function ReportsListPage() {
 
   if (loading) {
     return (
+      <div className="max-w-7xl mx-auto p-6" aria-busy="true" aria-label={t('loadingReports')}>
+        <div className="mb-8">
+          <div className="h-9 w-48 animate-pulse bg-muted rounded-xl mb-2" />
+          <div className="h-5 w-72 animate-pulse bg-muted rounded-xl" />
+        </div>
+        <div className="grid grid-cols-1 gap-6">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="animate-pulse bg-muted rounded-xl p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="h-6 w-20 bg-muted-foreground/10 rounded-full" />
+                <div className="h-4 w-32 bg-muted-foreground/10 rounded-xl" />
+              </div>
+              <div className="h-4 w-56 bg-muted-foreground/10 rounded-xl mb-2" />
+              <div className="h-4 w-40 bg-muted-foreground/10 rounded-xl mb-2" />
+              <div className="h-4 w-48 bg-muted-foreground/10 rounded-xl mb-4" />
+              <div className="h-20 w-full bg-muted-foreground/10 rounded-lg" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (timedOut) {
+    return (
       <div className="max-w-7xl mx-auto p-6">
-        <div className="text-center py-12">{t('loadingReports')}</div>
+        <div role="alert" className="text-center py-12">
+          <p className="text-muted-foreground mb-4">{t('loadingReportsTimeout')}</p>
+          <Button onClick={() => fetchReports()} variant="primary">
+            {t('retry')}
+          </Button>
+        </div>
       </div>
     );
   }

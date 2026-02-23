@@ -2,26 +2,29 @@ import { describe, it, expect } from 'vitest';
 import { getLayerConfigForTier } from '@/lib/map/performanceLayers';
 
 describe('getLayerConfigForTier', () => {
-  it('tier-a: useDeckGL=true, enableAnimations=true, fastest polling', () => {
+  it('tier-a: useDeckGL=true, enableAnimations=true, fastest polling, WMS enabled', () => {
     const cfg = getLayerConfigForTier('tier-a');
     expect(cfg.useDeckGL).toBe(true);
     expect(cfg.enableAnimations).toBe(true);
     expect(cfg.enable3D).toBe(true);
     expect(cfg.pollingInterval.incidents).toBeLessThan(20_000);
+    expect(cfg.dataLimits.enableWMSOverlays).toBe(true);
   });
 
-  it('tier-b: useDeckGL=true, enableAnimations=false', () => {
+  it('tier-b: useDeckGL=true, enableAnimations=false, WMS enabled', () => {
     const cfg = getLayerConfigForTier('tier-b');
     expect(cfg.useDeckGL).toBe(true);
     expect(cfg.enableAnimations).toBe(false);
     expect(cfg.dataLimits.firmsMaxAge).toBe(24);
+    expect(cfg.dataLimits.enableWMSOverlays).toBe(true);
   });
 
-  it('tier-c: useDeckGL=false (MapLibre native), no animations', () => {
+  it('tier-c: useDeckGL=false (MapLibre native), no animations, WMS disabled', () => {
     const cfg = getLayerConfigForTier('tier-c');
     expect(cfg.useDeckGL).toBe(false);
     expect(cfg.enableAnimations).toBe(false);
     expect(cfg.dataLimits.maxResourceMarkers).toBeLessThan(5_000);
+    expect(cfg.dataLimits.enableWMSOverlays).toBe(false);
   });
 
   it('tier-a data limits are more permissive than tier-c', () => {

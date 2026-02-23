@@ -10,6 +10,8 @@ const LAYERS = ['incidents', 'infrastructure', 'resources', 'riskBasins', 'firms
 
 const DISPATCH_LAYERS = ['routes', 'activeTeams', 'isochrones', 'vehicles'] as const;
 
+const EFFIS_LAYERS = ['effisFWI', 'effisBurnedAreas'] as const;
+
 const LAYER_KEY_MAP: Record<string, string> = {
   incidents: 'layerIncidents',
   infrastructure: 'layerInfrastructure',
@@ -20,6 +22,8 @@ const LAYER_KEY_MAP: Record<string, string> = {
   activeTeams: 'layerActiveTeams',
   isochrones: 'layerIsochrones',
   vehicles: 'layerVehicles',
+  effisFWI: 'layerEffisFWI',
+  effisBurnedAreas: 'layerEffisBurnedAreas',
 };
 
 const LAYER_ICONS: Record<string, string> = {
@@ -32,6 +36,8 @@ const LAYER_ICONS: Record<string, string> = {
   activeTeams: '👥',
   isochrones: '⏱️',
   vehicles: '🚒',
+  effisFWI: '🌡️',
+  effisBurnedAreas: '🗺️',
 };
 
 const BASEMAPS: { value: Basemap; labelKey: string; dot: string }[] = [
@@ -210,6 +216,26 @@ export default function MapControls({ gpuTier }: MapControlsProps) {
               <SectionHeader label="Dispatch" />
               <div className="space-y-2">
                 {DISPATCH_LAYERS.map((layer) => (
+                  <div key={layer} className="flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 text-xs text-foreground">
+                      <span>{LAYER_ICONS[layer]}</span>
+                      {t(LAYER_KEY_MAP[layer] as Parameters<typeof t>[0])}
+                    </span>
+                    <ToggleSwitch
+                      checked={layers[layer]}
+                      onChange={() => toggleLayer(layer)}
+                      label={t(LAYER_KEY_MAP[layer] as Parameters<typeof t>[0])}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* ── EFFIS / Copernicus ── */}
+            <div>
+              <SectionHeader label={t('effisLayers' as Parameters<typeof t>[0])} />
+              <div className="space-y-2">
+                {EFFIS_LAYERS.map((layer) => (
                   <div key={layer} className="flex items-center justify-between">
                     <span className="flex items-center gap-1.5 text-xs text-foreground">
                       <span>{LAYER_ICONS[layer]}</span>

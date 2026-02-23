@@ -18,6 +18,8 @@ describe('useMapStore', () => {
         resources: true,
         riskBasins: true,
         firmsDetections: true,
+        effisFWI: false,
+        effisBurnedAreas: false,
         routes: true,
         activeTeams: true,
         isochrones: true,
@@ -33,6 +35,7 @@ describe('useMapStore', () => {
         infrastructure: null,
         riskBasins: null,
         firmsDetections: null,
+        effisDetections: null,
       },
       incidents: { type: 'FeatureCollection', features: [] },
       lastSuccessfulSync: null,
@@ -47,11 +50,14 @@ describe('useMapStore', () => {
       expect(viewState.zoom).toBe(13);
     });
 
-    it('has all 9 layers enabled by default', () => {
+    it('has all 11 layers with expected defaults', () => {
       const { layers } = useMapStore.getState();
       const values = Object.values(layers);
-      expect(values).toHaveLength(9);
-      expect(values.every(Boolean)).toBe(true);
+      expect(values).toHaveLength(11);
+      // 9 original layers enabled, 2 EFFIS layers disabled by default
+      expect(layers.incidents).toBe(true);
+      expect(layers.effisFWI).toBe(false);
+      expect(layers.effisBurnedAreas).toBe(false);
     });
 
     it('has selectedIncidentId as null', () => {
@@ -93,6 +99,26 @@ describe('useMapStore', () => {
       useMapStore.getState().toggleLayer('incidents');
       expect(useMapStore.getState().layers.infrastructure).toBe(true);
       expect(useMapStore.getState().layers.resources).toBe(true);
+    });
+  });
+
+  describe('EFFIS layer toggles', () => {
+    it('toggles effisFWI on', () => {
+      expect(useMapStore.getState().layers.effisFWI).toBe(false);
+      useMapStore.getState().toggleLayer('effisFWI');
+      expect(useMapStore.getState().layers.effisFWI).toBe(true);
+    });
+
+    it('toggles effisBurnedAreas on', () => {
+      expect(useMapStore.getState().layers.effisBurnedAreas).toBe(false);
+      useMapStore.getState().toggleLayer('effisBurnedAreas');
+      expect(useMapStore.getState().layers.effisBurnedAreas).toBe(true);
+    });
+
+    it('toggling effisFWI does not affect effisBurnedAreas', () => {
+      useMapStore.getState().toggleLayer('effisFWI');
+      expect(useMapStore.getState().layers.effisFWI).toBe(true);
+      expect(useMapStore.getState().layers.effisBurnedAreas).toBe(false);
     });
   });
 
@@ -140,6 +166,11 @@ describe('useMapStore', () => {
       useMapStore.getState().setDataError('incidents', 'fetch failed');
       useMapStore.getState().setDataError('incidents', null);
       expect(useMapStore.getState().dataErrors.incidents).toBeNull();
+    });
+
+    it('sets an error on effisDetections', () => {
+      useMapStore.getState().setDataError('effisDetections', 'EFFIS unavailable');
+      expect(useMapStore.getState().dataErrors.effisDetections).toBe('EFFIS unavailable');
     });
 
     it('clearAllErrors resets all to null', () => {

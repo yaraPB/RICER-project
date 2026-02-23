@@ -152,7 +152,7 @@ export async function mockReports(page: Page, initialReports: MockReport[]) {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ reports }),
+      body: JSON.stringify({ data: reports, pagination: { cursor: null, hasMore: false, total: reports.length } }),
     });
   });
 

@@ -304,6 +304,11 @@ GARBAGE_DATA
         expect(isFirmsCSVResponse(missingLongitude)).toBe(false);
         expect(isFirmsCSVResponse(missingBrightness)).toBe(false);
       });
+
+      it('should accept VIIRS format with bright_ti4 instead of brightness', () => {
+        const viirsHeader = `latitude,longitude,bright_ti4,scan,track,acq_date,acq_time,satellite,instrument,confidence,version,bright_ti5,frp,daynight`;
+        expect(isFirmsCSVResponse(viirsHeader)).toBe(true);
+      });
     });
 
     describe('Empty and Valid CSV Handling', () => {

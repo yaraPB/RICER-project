@@ -6,6 +6,8 @@ import {
   TRUCK_STATUS_COLORS,
   FIRMS_CONFIDENCE_COLORS,
   FIRMS_FRP_GRADIENT,
+  EFFIS_FWI_COLORS,
+  EFFIS_BURNED_AREA_COLOR,
 } from '@/lib/map/colors';
 
 const HEX_REGEX = /^#[0-9a-fA-F]{6}$/;
@@ -126,6 +128,27 @@ describe('Map Colors', () => {
       for (const entry of Object.values(FIRMS_FRP_GRADIENT)) {
         expect(entry.color).toMatch(HEX_REGEX);
       }
+    });
+  });
+
+  describe('EFFIS_FWI_COLORS', () => {
+    const expectedKeys = ['low', 'moderate', 'high', 'extreme'];
+
+    it('has all 4 FWI keys', () => {
+      expect(Object.keys(EFFIS_FWI_COLORS)).toEqual(expect.arrayContaining(expectedKeys));
+      expect(Object.keys(EFFIS_FWI_COLORS)).toHaveLength(4);
+    });
+
+    it('all values are valid hex colors', () => {
+      for (const color of Object.values(EFFIS_FWI_COLORS)) {
+        expect(color).toMatch(HEX_REGEX);
+      }
+    });
+  });
+
+  describe('EFFIS_BURNED_AREA_COLOR', () => {
+    it('is a valid hex color', () => {
+      expect(EFFIS_BURNED_AREA_COLOR).toMatch(HEX_REGEX);
     });
   });
 });

@@ -25,7 +25,7 @@ function makeBreaker(overrides: Partial<{
 
 const DEFAULT_OPTIONS = {
   apiKey: 'a'.repeat(32),
-  source: 'VIIRS_SNPP_NRT',
+  source: 'VIIRS_NOAA20_NRT',
   bbox: '33.3,-5.3,33.7,-4.9',
   dayRange: 1,
   timeoutMs: 10000,
@@ -91,7 +91,8 @@ describe('fetchFirmsWithFallback', () => {
     // Should only have been called once (primary), not for fallback
     expect(global.fetch).toHaveBeenCalledTimes(1);
     const calledUrl = (global.fetch as Mock).mock.calls[0][0] as string;
-    expect(calledUrl).toContain('firms2.modaps.eosdis.nasa.gov');
+    expect(calledUrl).toContain('firms.modaps.eosdis.nasa.gov');
+    expect(calledUrl).not.toContain('firms2.modaps.eosdis.nasa.gov');
   });
 
   it('primary 502, retry succeeds — no fallback needed', async () => {
@@ -132,8 +133,7 @@ describe('fetchFirmsWithFallback', () => {
 
     // Primary fetch was never called
     const calledUrl = (global.fetch as Mock).mock.calls[0][0] as string;
-    expect(calledUrl).toContain('firms.modaps.eosdis.nasa.gov');
-    expect(calledUrl).not.toContain('firms2.modaps.eosdis.nasa.gov');
+    expect(calledUrl).toContain('firms2.modaps.eosdis.nasa.gov');
   });
 
   it('both endpoints 502 — throws AppError(4000)', async () => {

@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useTranslation } from '@/hooks/useTranslation';
 import type { TranslationKey } from '@/i18n/translations';
-import { INCIDENT_STATUS_COLORS, RESOURCE_TYPE_COLORS, FIRMS_CONFIDENCE_COLORS } from '@/lib/map/colors';
+import { INCIDENT_STATUS_COLORS, RESOURCE_TYPE_COLORS, FIRMS_CONFIDENCE_COLORS, EFFIS_FWI_COLORS, EFFIS_BURNED_AREA_COLOR } from '@/lib/map/colors';
 
 const INCIDENT_COLORS = [
   { key: 'VIGILANCE', color: INCIDENT_STATUS_COLORS.VIGILANCE, label: 'statusVigilance' },
@@ -152,7 +152,7 @@ export default function MapLegend() {
           <div>
             <div className="mb-1.5 flex items-center gap-2">
               <SectionLabel>{t('firmsDetections')}</SectionLabel>
-              <span className="text-[9px] text-muted-foreground italic -mt-1.5">(NASA)</span>
+              <span className="text-[9px] text-muted-foreground italic -mt-1.5">(NASA + EFFIS)</span>
             </div>
 
             {/* FRP gradient bar */}
@@ -198,6 +198,37 @@ export default function MapLegend() {
             </div>
             <div className="mt-2 pt-2 border-t border-white/10 text-[10px] text-muted-foreground italic leading-relaxed">
               💡 {t('firmsClusterHelp')}
+            </div>
+          </div>
+
+          {/* ── EFFIS / Copernicus ── */}
+          <div>
+            <SectionLabel>{t('effisLayers' as TranslationKey)}</SectionLabel>
+
+            {/* FWI color ramp */}
+            <div className="mb-2">
+              <div className="text-[9px] text-muted-foreground/70 mb-1">{t('effisFWI' as TranslationKey)}</div>
+              <div
+                className="h-2 w-full rounded-full"
+                style={{
+                  background: `linear-gradient(to right, ${EFFIS_FWI_COLORS.low}, ${EFFIS_FWI_COLORS.moderate}, ${EFFIS_FWI_COLORS.high}, ${EFFIS_FWI_COLORS.extreme})`,
+                }}
+              />
+              <div className="flex justify-between text-[9px] text-muted-foreground mt-0.5">
+                <span>Low</span>
+                <span>Moderate</span>
+                <span>High</span>
+                <span>Extreme</span>
+              </div>
+            </div>
+
+            {/* Burned area swatch */}
+            <div className="flex items-center gap-2 text-xs">
+              <div
+                className="h-3 w-8 border border-white/30 rounded-sm flex-shrink-0"
+                style={{ backgroundColor: EFFIS_BURNED_AREA_COLOR, opacity: 0.7 }}
+              />
+              <span>{t('effisBurnedAreas' as TranslationKey)}</span>
             </div>
           </div>
         </div>

@@ -1,15 +1,15 @@
 import { describe, expect, it, beforeEach } from 'vitest';
 import {
-  getCachedFirmsDetections,
-  setCachedFirmsDetections,
-  clearFirmsCache,
-  getFirmsCacheStats,
-} from '@/lib/firms/cache';
+  getCachedEffisDetections,
+  setCachedEffisDetections,
+  clearEffisCache,
+  getEffisCacheStats,
+} from '@/lib/effis/cache';
 import type { GeoFeatureCollection, GeoFirmsDetectionProps } from '@/types';
 
-describe('FIRMS Cache', () => {
+describe('EFFIS Cache', () => {
   beforeEach(() => {
-    clearFirmsCache();
+    clearEffisCache();
   });
 
   it('should store and retrieve cached data', async () => {
@@ -20,22 +20,23 @@ describe('FIRMS Cache', () => {
           type: 'Feature',
           geometry: { type: 'Point', coordinates: [33.5, -5.1] },
           properties: {
-            id: '1',
+            id: 'effis:33.5,-5.1,2024-02-09 13:45',
             brightness: 350,
             frp: 45,
             confidence: 'high',
-            satellite: 'N',
+            satellite: 'EFFIS',
             instrument: 'VIIRS',
             acqDateTime: '2024-02-09 13:45',
             daynight: 'D',
             isRecent: true,
+            source: 'EFFIS',
           },
         },
       ],
     };
 
-    await setCachedFirmsDetections('33.3,-5.3,33.7,-4.9', 'VIIRS_NOAA20_NRT', 1, testData);
-    const cached = await getCachedFirmsDetections('33.3,-5.3,33.7,-4.9', 'VIIRS_NOAA20_NRT', 1);
+    await setCachedEffisDetections('32.5,-6.0,34.0,-4.5,EPSG:4326', testData);
+    const cached = await getCachedEffisDetections('32.5,-6.0,34.0,-4.5,EPSG:4326');
 
     expect(cached).not.toBeNull();
     expect(cached?.data.features.length).toBe(1);
@@ -43,45 +44,8 @@ describe('FIRMS Cache', () => {
   });
 
   it('should return null for cache miss', async () => {
-    const cached = await getCachedFirmsDetections('0,0,1,1', 'VIIRS_NOAA20_NRT', 1);
+    const cached = await getCachedEffisDetections('0,0,1,1');
     expect(cached).toBeNull();
-  });
-
-  it('should handle different cache keys for different parameters', async () => {
-    const testData1: GeoFeatureCollection<GeoFirmsDetectionProps> = {
-      type: 'FeatureCollection',
-      features: [],
-    };
-    const testData2: GeoFeatureCollection<GeoFirmsDetectionProps> = {
-      type: 'FeatureCollection',
-      features: [
-        {
-          type: 'Feature',
-          geometry: { type: 'Point', coordinates: [33.5, -5.1] },
-          properties: {
-            id: '2',
-            brightness: 400,
-            frp: 50,
-            confidence: 'nominal',
-            satellite: 'T',
-            instrument: 'MODIS',
-            acqDateTime: '2024-02-09 14:00',
-            daynight: 'D',
-            isRecent: false,
-          },
-        },
-      ],
-    };
-
-    // Different bbox
-    await setCachedFirmsDetections('33.3,-5.3,33.7,-4.9', 'VIIRS_NOAA20_NRT', 1, testData1);
-    await setCachedFirmsDetections('34.0,-6.0,34.5,-5.5', 'VIIRS_NOAA20_NRT', 1, testData2);
-
-    const cached1 = await getCachedFirmsDetections('33.3,-5.3,33.7,-4.9', 'VIIRS_NOAA20_NRT', 1);
-    const cached2 = await getCachedFirmsDetections('34.0,-6.0,34.5,-5.5', 'VIIRS_NOAA20_NRT', 1);
-
-    expect(cached1?.data.features.length).toBe(0);
-    expect(cached2?.data.features.length).toBe(1);
   });
 
   it('should track cache statistics', async () => {
@@ -96,11 +60,12 @@ describe('FIRMS Cache', () => {
             brightness: 350,
             frp: 45,
             confidence: 'high',
-            satellite: 'N',
+            satellite: 'EFFIS',
             instrument: 'VIIRS',
             acqDateTime: '2024-02-09 13:45',
             daynight: 'D',
             isRecent: true,
+            source: 'EFFIS',
           },
         },
         {
@@ -111,18 +76,19 @@ describe('FIRMS Cache', () => {
             brightness: 360,
             frp: 48,
             confidence: 'high',
-            satellite: 'N',
+            satellite: 'EFFIS',
             instrument: 'VIIRS',
             acqDateTime: '2024-02-09 13:50',
             daynight: 'D',
             isRecent: true,
+            source: 'EFFIS',
           },
         },
       ],
     };
 
-    await setCachedFirmsDetections('33.3,-5.3,33.7,-4.9', 'VIIRS_NOAA20_NRT', 1, testData);
-    const stats = getFirmsCacheStats();
+    await setCachedEffisDetections('32.5,-6.0,34.0,-4.5,EPSG:4326', testData);
+    const stats = getEffisCacheStats();
 
     expect(stats.entries).toBe(1);
     expect(stats.totalDetections).toBe(2);
@@ -134,18 +100,15 @@ describe('FIRMS Cache', () => {
       features: [],
     };
 
-    await setCachedFirmsDetections('33.3,-5.3,33.7,-4.9', 'VIIRS_NOAA20_NRT', 1, testData);
-    await setCachedFirmsDetections('34.0,-6.0,34.5,-5.5', 'MODIS_NRT', 2, testData);
+    await setCachedEffisDetections('bbox1', testData);
+    await setCachedEffisDetections('bbox2', testData);
 
-    let stats = getFirmsCacheStats();
+    let stats = getEffisCacheStats();
     expect(stats.entries).toBe(2);
 
-    clearFirmsCache();
-    stats = getFirmsCacheStats();
+    clearEffisCache();
+    stats = getEffisCacheStats();
     expect(stats.entries).toBe(0);
-
-    const cached = await getCachedFirmsDetections('33.3,-5.3,33.7,-4.9', 'VIIRS_NOAA20_NRT', 1);
-    expect(cached).toBeNull();
   });
 
   it('should evict oldest entry when max size reached', async () => {
@@ -154,20 +117,17 @@ describe('FIRMS Cache', () => {
       features: [],
     };
 
-    // Create 101 cache entries to trigger eviction
     for (let i = 0; i < 101; i++) {
-      await setCachedFirmsDetections(`${i},${i},${i + 1},${i + 1}`, 'VIIRS_NOAA20_NRT', 1, testData);
+      await setCachedEffisDetections(`bbox-${i}`, testData);
     }
 
-    const stats = getFirmsCacheStats();
+    const stats = getEffisCacheStats();
     expect(stats.entries).toBeLessThanOrEqual(100);
 
-    // First entry should have been evicted
-    const firstEntry = await getCachedFirmsDetections('0,0,1,1', 'VIIRS_NOAA20_NRT', 1);
+    const firstEntry = await getCachedEffisDetections('bbox-0');
     expect(firstEntry).toBeNull();
 
-    // Last entry should still exist
-    const lastEntry = await getCachedFirmsDetections('100,100,101,101', 'VIIRS_NOAA20_NRT', 1);
+    const lastEntry = await getCachedEffisDetections('bbox-100');
     expect(lastEntry).not.toBeNull();
   });
 
@@ -178,8 +138,8 @@ describe('FIRMS Cache', () => {
     };
 
     const beforeCache = Date.now();
-    await setCachedFirmsDetections('33.3,-5.3,33.7,-4.9', 'VIIRS_NOAA20_NRT', 1, testData);
-    const cached = await getCachedFirmsDetections('33.3,-5.3,33.7,-4.9', 'VIIRS_NOAA20_NRT', 1);
+    await setCachedEffisDetections('bbox', testData);
+    const cached = await getCachedEffisDetections('bbox');
     const afterCache = Date.now();
 
     expect(cached).not.toBeNull();

@@ -51,6 +51,21 @@ export const FIRMS_FRP_GRADIENT = {
 };
 
 /**
+ * EFFIS Fire Weather Index color ramp
+ */
+export const EFFIS_FWI_COLORS = {
+  low: '#22c55e',      // green-500
+  moderate: '#f59e0b',  // amber-500
+  high: '#ef4444',      // red-500
+  extreme: '#7f1d1d',   // red-900
+};
+
+/**
+ * EFFIS Burned Area color
+ */
+export const EFFIS_BURNED_AREA_COLOR = '#7f1d1d'; // red-900
+
+/**
  * Get color based on FRP value (for glow effects)
  */
 export function getFRPColor(frp: number): string {

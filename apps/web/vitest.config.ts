@@ -23,6 +23,8 @@ export default defineConfig({
         'src/lib/dispatch/**',
         'src/lib/routing/**',
         'src/lib/firms/**',
+        'src/lib/effis/**',
+        'src/lib/detections/**',
         'src/lib/risk/**',
         'src/lib/map/**',
         'src/lib/gpu/**',

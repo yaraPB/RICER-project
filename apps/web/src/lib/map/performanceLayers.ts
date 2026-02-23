@@ -56,6 +56,8 @@ export interface LayerConfig {
     maxResourceMarkers: number;
     /** Maximum number of infrastructure markers to render */
     maxInfrastructureMarkers: number;
+    /** Whether to enable WMS raster overlays (EFFIS FWI, Burned Areas) */
+    enableWMSOverlays: boolean;
   };
 }
 
@@ -96,6 +98,7 @@ export function getLayerConfigForTier(tier: GPUTier): LayerConfig {
           incidentsMaxAge: Infinity, // All incidents
           maxResourceMarkers: 10_000,
           maxInfrastructureMarkers: 5_000,
+          enableWMSOverlays: true,
         },
       };
 
@@ -116,6 +119,7 @@ export function getLayerConfigForTier(tier: GPUTier): LayerConfig {
           incidentsMaxAge: 7, // Last 7 days
           maxResourceMarkers: 5_000,
           maxInfrastructureMarkers: 2_000,
+          enableWMSOverlays: true,
         },
       };
 
@@ -136,6 +140,7 @@ export function getLayerConfigForTier(tier: GPUTier): LayerConfig {
           incidentsMaxAge: 3, // Last 3 days
           maxResourceMarkers: 1_000,
           maxInfrastructureMarkers: 500,
+          enableWMSOverlays: false, // Skip WMS on low-end GPUs
         },
       };
   }

@@ -191,6 +191,8 @@ export interface FirmsDetection {
   daynight: 'D' | 'N'; // Day or night detection
 }
 
+export type DetectionSource = 'FIRMS' | 'EFFIS' | 'FIRMS+EFFIS';
+
 /**
  * GeoJSON properties for FIRMS detection visualization
  * Simplified from raw detection for frontend rendering
@@ -205,6 +207,7 @@ export interface GeoFirmsDetectionProps {
   acqDateTime: string; // Combined date + time for display (e.g., "2024-02-09 13:45")
   daynight: 'D' | 'N';
   isRecent: boolean; // True if detected within last 12 hours (for pulsing animation)
+  source?: DetectionSource;
 }
 
 /**

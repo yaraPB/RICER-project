@@ -99,10 +99,10 @@ describe('FIRMS Functionality Tests', () => {
       };
 
       // Cache the data
-      await setCachedFirmsDetections('33.3,-5.3,33.7,-4.9', 'VIIRS_SNPP_NRT', 1, testData);
+      await setCachedFirmsDetections('33.3,-5.3,33.7,-4.9', 'VIIRS_NOAA20_NRT', 1, testData);
 
       // Retrieve from cache
-      const cached = await getCachedFirmsDetections('33.3,-5.3,33.7,-4.9', 'VIIRS_SNPP_NRT', 1);
+      const cached = await getCachedFirmsDetections('33.3,-5.3,33.7,-4.9', 'VIIRS_NOAA20_NRT', 1);
 
       expect(cached).not.toBeNull();
       expect(cached?.data.features).toHaveLength(1);
@@ -112,7 +112,7 @@ describe('FIRMS Functionality Tests', () => {
     });
 
     it('should handle cache miss correctly', async () => {
-      const cached = await getCachedFirmsDetections('0,0,1,1', 'VIIRS_SNPP_NRT', 1);
+      const cached = await getCachedFirmsDetections('0,0,1,1', 'VIIRS_NOAA20_NRT', 1);
       expect(cached).toBeNull();
     });
 
@@ -143,11 +143,11 @@ describe('FIRMS Functionality Tests', () => {
       };
 
       // Cache two different regions
-      await setCachedFirmsDetections('33.3,-5.3,33.7,-4.9', 'VIIRS_SNPP_NRT', 1, data1);
+      await setCachedFirmsDetections('33.3,-5.3,33.7,-4.9', 'VIIRS_NOAA20_NRT', 1, data1);
       await setCachedFirmsDetections('34.0,-6.0,34.5,-5.5', 'MODIS_NRT', 1, data2);
 
       // Verify both are cached independently
-      const cached1 = await getCachedFirmsDetections('33.3,-5.3,33.7,-4.9', 'VIIRS_SNPP_NRT', 1);
+      const cached1 = await getCachedFirmsDetections('33.3,-5.3,33.7,-4.9', 'VIIRS_NOAA20_NRT', 1);
       const cached2 = await getCachedFirmsDetections('34.0,-6.0,34.5,-5.5', 'MODIS_NRT', 1);
 
       expect(cached1?.data.features).toHaveLength(0);

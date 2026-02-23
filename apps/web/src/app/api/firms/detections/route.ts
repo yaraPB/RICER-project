@@ -9,6 +9,7 @@ import { captureExternalApiError } from '@/lib/errors/context';
 import { getCurrentUser } from '@/lib/auth';
 import { logger } from '@/lib/observability/logger';
 import { createFirmsRateLimiter } from '@/lib/ratelimit/slidingWindow';
+import { fetchEffisDetections, MIDDLE_ATLAS_BBOX } from '@/lib/effis/client';
 
 /**
  * Ifrane region bounding box with 10km buffer (±0.1° ≈ 11km)
@@ -30,7 +31,7 @@ import { createFirmsRateLimiter } from '@/lib/ratelimit/slidingWindow';
  *    - Large region (>1° span): May exceed API limits, consider splitting
  *
  * Note: FIRMS API supports multiple bbox formats:
- * - CSV format (current): "minLat,minLon,maxLat,maxLon" (e.g., "33.3,-5.3,33.7,-4.9")
+ * - CSV format (current): "west,south,east,north" (e.g., "-5.3,33.3,-4.9,33.7")
  * - WKT format: "POLYGON((lon1 lat1, lon2 lat2, ...))"
  * - GeoJSON format: {"type":"Polygon","coordinates":[[[lon,lat],...]]}
  *
@@ -47,7 +48,7 @@ const IFRANE_BBOX = {
 };
 
 const FIRMS_CONFIG = {
-  source: 'VIIRS_SNPP_NRT', // VIIRS from Suomi-NPP satellite (375m resolution, ~3hr updates)
+  source: 'VIIRS_NOAA20_NRT', // VIIRS from NOAA-20 satellite (375m resolution, ~3hr updates)
   dayRange: 1, // Last 24 hours of detections
   timeout: 10000, // 10 second timeout
 } as const;
@@ -154,7 +155,7 @@ export const GET = withApiHandler(async (request: Request) => {
     });
   }
 
-  const bboxString = `${IFRANE_BBOX.minLat},${IFRANE_BBOX.minLon},${IFRANE_BBOX.maxLat},${IFRANE_BBOX.maxLon}`;
+  const bboxString = `${IFRANE_BBOX.minLon},${IFRANE_BBOX.minLat},${IFRANE_BBOX.maxLon},${IFRANE_BBOX.maxLat}`;
 
   // 3. Try cache first (15-minute TTL)
   const cached = await getCachedFirmsDetections(bboxString, FIRMS_CONFIG.source, FIRMS_CONFIG.dayRange);
@@ -172,14 +173,69 @@ export const GET = withApiHandler(async (request: Request) => {
     return response;
   }
 
-  // 4. Fetch from FIRMS API with multi-endpoint fallback
-  const result = await fetchFirmsWithFallback({
-    apiKey,
-    source: FIRMS_CONFIG.source,
-    bbox: bboxString,
-    dayRange: FIRMS_CONFIG.dayRange,
-    timeoutMs: FIRMS_CONFIG.timeout,
-  });
+  // 4. Fetch from FIRMS API with multi-endpoint fallback, then EFFIS if all FIRMS fail
+  let result;
+
+  try {
+    result = await fetchFirmsWithFallback({
+      apiKey,
+      source: FIRMS_CONFIG.source,
+      bbox: bboxString,
+      dayRange: FIRMS_CONFIG.dayRange,
+      timeoutMs: FIRMS_CONFIG.timeout,
+    });
+  } catch (firmsError) {
+    // FIRMS completely failed — try EFFIS as fallback
+    logger.warn({
+      event: 'firms_failed_trying_effis',
+      meta: { firmsError: (firmsError as Error)?.message },
+    });
+
+    try {
+      const effisResult = await fetchEffisDetections({ bbox: MIDDLE_ATLAS_BBOX });
+
+      // Normalize EFFIS GeoJSON to match FIRMS structure
+      const effisGeo = effisResult.geojson as { features?: { geometry: { type: string; coordinates: unknown }; properties: Record<string, unknown> }[] };
+      const geoJSON = {
+        type: 'FeatureCollection' as const,
+        features: (effisGeo?.features ?? []).map((f) => ({
+          type: 'Feature' as const,
+          geometry: f.geometry,
+          properties: {
+            ...f.properties,
+            _source: 'effis' as const,
+          },
+        })),
+      };
+
+      const normalizedGeoJSON = geoJSON as unknown as Parameters<typeof getFirmsStats>[0];
+      const stats = getFirmsStats(normalizedGeoJSON);
+      await setCachedFirmsDetections(bboxString, FIRMS_CONFIG.source, FIRMS_CONFIG.dayRange, normalizedGeoJSON);
+
+      logger.info({
+        event: 'effis_fallback_success',
+        meta: { detections: geoJSON.features.length, durationMs: Math.round(effisResult.durationMs) },
+      });
+
+      const apiResponse = NextResponse.json(geoJSON);
+      apiResponse.headers.set('X-Cache', 'MISS');
+      apiResponse.headers.set('X-Data-Source', 'effis-fallback');
+      apiResponse.headers.set('X-Detection-Count', String(geoJSON.features.length));
+      apiResponse.headers.set('X-High-Confidence-Count', String(stats.highConfidence));
+      apiResponse.headers.set('X-Recent-Count', String(stats.recentCount));
+      headers.forEach((value, key) => apiResponse.headers.set(key, value));
+      return apiResponse;
+    } catch (effisError) {
+      logger.error({
+        event: 'all_fire_sources_failed',
+        meta: {
+          firmsError: (firmsError as Error)?.message,
+          effisError: (effisError as Error)?.message,
+        },
+      });
+      throw firmsError; // Re-throw original FIRMS error
+    }
+  }
 
   // 5. Validate CSV response
   if (!isFirmsCSVResponse(result.csvText)) {
@@ -226,6 +282,7 @@ export const GET = withApiHandler(async (request: Request) => {
   // 8. Return successful response with metadata headers
   const apiResponse = NextResponse.json(geoJSON);
   apiResponse.headers.set('X-Cache', 'MISS');
+  apiResponse.headers.set('X-Data-Source', 'firms');
   apiResponse.headers.set('Cache-Control', 'public, s-maxage=900, stale-while-revalidate=300');
   apiResponse.headers.set('X-Detection-Count', String(geoJSON.features.length));
   apiResponse.headers.set('X-High-Confidence-Count', String(stats.highConfidence));

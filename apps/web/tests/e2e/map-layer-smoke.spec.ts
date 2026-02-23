@@ -10,6 +10,7 @@ import { setLanguage, mockAuthMe, mockGeoRoutes, mockWeather } from './helpers';
 
 const BASE_LAYERS = ['Incidents', 'Infrastructure', 'Resources', 'Risk zones', 'Satellite Fire Detections'];
 const DISPATCH_LAYERS = ['Routes', 'Active Teams', 'Isochrones', 'Vehicles'];
+const EFFIS_LAYERS = ['Fire Weather Index', 'Burned Areas'];
 
 async function setupMapPage(page: import('@playwright/test').Page) {
   await setLanguage(page, 'en');
@@ -38,6 +39,30 @@ test('all dispatch layer toggles present and default to aria-checked="true"', as
     await expect(toggle).toBeVisible();
     await expect(toggle).toHaveAttribute('aria-checked', 'true');
   }
+});
+
+test('EFFIS layer toggles present and default to aria-checked="false"', async ({ page }) => {
+  await setupMapPage(page);
+
+  for (const name of EFFIS_LAYERS) {
+    const toggle = page.getByRole('switch', { name });
+    await expect(toggle).toBeVisible();
+    // EFFIS layers are off by default (GPU-heavy raster overlays)
+    await expect(toggle).toHaveAttribute('aria-checked', 'false');
+  }
+});
+
+test('toggle EFFIS FWI layer on/off', async ({ page }) => {
+  await setupMapPage(page);
+
+  const toggle = page.getByRole('switch', { name: 'Fire Weather Index' });
+  await expect(toggle).toHaveAttribute('aria-checked', 'false');
+
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-checked', 'true');
+
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-checked', 'false');
 });
 
 test('toggle base layer (Incidents) off/on reflects aria-checked state', async ({ page }) => {

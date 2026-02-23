@@ -3,7 +3,7 @@ import { logger } from '@/lib/observability/logger';
 
 /**
  * Parse CSV line to FirmsDetection object
- * CSV columns: latitude,longitude,brightness,scan,track,acq_date,acq_time,satellite,instrument,confidence,version,bright_t31,frp,daynight
+ * CSV columns: latitude,longitude,bright_ti4,scan,track,acq_date,acq_time,satellite,instrument,confidence,version,bright_ti5,frp,daynight
  */
 function parseCSVLine(line: string, index: number): FirmsDetection | null {
   const cols = line.split(',');
@@ -234,11 +234,13 @@ export function isFirmsCSVResponse(text: string): boolean {
   if (lines.length === 0) return false;
 
   // Check if first line is CSV header with required columns
+  // VIIRS format uses "bright_ti4" while MODIS uses "brightness"
   const firstLine = lines[0];
   const lowerFirst = firstLine.toLowerCase();
+  const hasBrightnessColumn = lowerFirst.includes('brightness') || lowerFirst.includes('bright_ti4');
   const hasRequiredHeaders = lowerFirst.includes('latitude')
     && lowerFirst.includes('longitude')
-    && lowerFirst.includes('brightness');
+    && hasBrightnessColumn;
 
   return hasRequiredHeaders;
 }
