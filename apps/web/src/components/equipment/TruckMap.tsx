@@ -103,7 +103,7 @@ export default function TruckMap({ trucks }: TruckMapProps) {
       </ReactMapGL>
 
       {/* Legend */}
-      <div className="absolute bottom-6 left-6 z-[1000] rounded-lg bg-white p-4 shadow-lg">
+      <div className="absolute bottom-6 left-6 z-[1000] rounded-lg bg-black p-4 shadow-lg">
         <div className="mb-3 text-right text-sm font-bold">حالات الشاحنات</div>
         <div className="space-y-2">
           <div className="flex items-center gap-2">
