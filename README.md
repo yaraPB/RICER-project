@@ -3,7 +3,7 @@
 # 🔥 RICER Platform
 ### Resilient Infrastructures and Coordinated Emergency Response
 
-**GIS and AI-Integrated Forest Fire Management Platform for Ifrane Province, Morocco**
+**GIS-Integrated Forest Fire Management Platform for Ifrane Province, Morocco**
 
 [![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js&logoColor=white)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -21,7 +21,7 @@
 
 ## 🌟 Overview
 
-RICER is a **production-ready forest fire management platform** designed specifically for Ifrane Province, Morocco. The platform integrates modern GIS technology, real-time data analytics, and AI-driven insights to reduce the impact of forest fires on critical infrastructure while enhancing coordination among emergency response stakeholders.
+RICER is a **production-ready forest fire management platform** designed specifically for Ifrane Province, Morocco. The platform integrates modern GIS technology, real-time data analytics, and data-driven risk modeling to reduce the impact of forest fires on critical infrastructure while enhancing coordination among emergency response stakeholders.
 
 ### Mission
 
@@ -29,21 +29,25 @@ To provide a centralized, data-driven platform that enables government agencies,
 
 ### Key Highlights
 
-- 🗺️ **GIS-Powered** - Interactive maps with real-time fire incident tracking using MapLibre GL
+- 🗺️ **GIS-Powered** - Interactive maps with real-time fire incident tracking using MapLibre GL + deck.gl
+- 🛰️ **Satellite Integration** - NASA FIRMS/VIIRS fire detections, MODIS NDVI vegetation stress, and Copernicus EFFIS fire weather
 - ⚡ **Real-Time Response** - Instant fire reporting, weather monitoring, and truck deployment tracking
 - 🏛️ **Multi-Agency Coordination** - Supports 16 Moroccan government departments and emergency services
-- 🌍 **Multilingual** - Full Arabic (RTL) and French support for Moroccan context
+- 🌍 **Multilingual** - Full Arabic (RTL), French, and English support for Moroccan context
 - 🔒 **Secure & Role-Based** - JWT authentication with civilian and official access levels
-- 📊 **Advanced Analytics** - Fire pattern analysis, cause distribution, and predictive insights
-- ✅ **Fully Tested** - Comprehensive test suite with 80%+ code coverage
-- 🚀 **Production-Ready** - Deployed infrastructure with Docker and Vercel support
+- 📊 **Advanced Analytics** - Fire pattern analysis, precipitation tracking, PAMF/RMA commune risk assessment
+- 🌿 **Environmental Monitoring** - NDVI vegetation health, soil moisture, water reservoirs, wind vectors
+- 📱 **Responsive & Mobile-First** - Optimized for phones (390px), tablets (768px), and desktops with adaptive layouts, touch-friendly targets, and mobile-specific navigation
+- ✅ **Fully Tested** - 1150+ tests across unit, integration, and E2E suites
+- 🚀 **Production-Ready** - GPU-tiered rendering, deployed infrastructure with Docker and Vercel support
 
 ### Impact Metrics
 
 - **16 Government Departments** integrated for coordinated emergency response
 - **Real-Time Tracking** of fire incidents, equipment, and emergency vehicles
-- **80%+ Test Coverage** ensuring reliability and stability
+- **1150+ Automated Tests** ensuring reliability and stability
 - **Ifrane Province-Wide** coverage with localized data and infrastructure mapping
+- **6 Satellite Data Sources** (FIRMS, VIIRS, EFFIS, MODIS NDVI, JRC Water, Open-Meteo)
 
 ---
 
@@ -62,7 +66,7 @@ Real-time weather monitoring with temperature, wind speed, and wind direction fo
 <td width="33%">
 
 #### 🗺️ Interactive Fire Map
-View all active, monitored, and resolved fire incidents with color-coded status markers
+View all active, monitored, and resolved fire incidents with color-coded status markers, satellite detections, and environmental overlays
 
 </td>
 <td width="33%">
@@ -122,10 +126,19 @@ All civilian features **PLUS**:
 </table>
 
 #### 📊 Advanced Analytics
-- 14-day incident timeline with trend analysis
-- Fire cause distribution (pie charts)
-- Summary statistics and KPIs
-- Data visualization with Recharts
+- Incident timeline with trend analysis
+- Fire cause distribution and response time breakdown
+- Precipitation tracker with KPIs (rainfall 30d, days since rain, deficit %)
+- PAMF (fire pressure per commune) and RMA (burned area per commune) risk assessment
+- Summary statistics, KPIs, and data visualization with Recharts
+
+#### 🌿 Environmental Monitoring Layers
+- **NDVI Vegetation Stress** - NASA MODIS Terra 8-day composite with adjustable opacity
+- **Soil Moisture** - Multi-depth (surface, root, deep) from Open-Meteo
+- **Water Reservoirs** - JRC Surface Water + 6 regional dam markers
+- **Wind Vectors** - Real-time wind speed/direction grid
+- **EFFIS Fire Weather Index** - 6-day forecast from Copernicus
+- **EFFIS Burned Areas** - Recent and seasonal burned area mapping
 
 ---
 
@@ -144,7 +157,7 @@ All civilian features **PLUS**:
 </tr>
 <tr>
 <td><strong>Maps & GIS</strong></td>
-<td>MapLibre GL JS, Leaflet, React-Leaflet, OpenStreetMap</td>
+<td>MapLibre GL JS v4.7, react-map-gl v7.1, deck.gl v8.9 (MapboxOverlay), OpenStreetMap, MapTiler</td>
 </tr>
 <tr>
 <td><strong>Backend</strong></td>
@@ -155,8 +168,8 @@ All civilian features **PLUS**:
 <td>MongoDB Atlas</td>
 </tr>
 <tr>
-<td><strong>APIs</strong></td>
-<td>Open-Meteo (Weather), WhatsApp Business API (planned)</td>
+<td><strong>External APIs</strong></td>
+<td>NASA FIRMS/VIIRS, NASA GIBS (NDVI), Copernicus EFFIS, JRC Surface Water, Open-Meteo (Weather, Soil Moisture, Precipitation Archive)</td>
 </tr>
 <tr>
 <td><strong>DevOps</strong></td>
@@ -164,7 +177,7 @@ All civilian features **PLUS**:
 </tr>
 <tr>
 <td><strong>Testing</strong></td>
-<td>Jest, React Testing Library, Playwright (E2E)</td>
+<td>Vitest, React Testing Library, Playwright (E2E)</td>
 </tr>
 </table>
 
@@ -190,8 +203,11 @@ graph TB
 
     subgraph "External Services"
         H[Open-Meteo API]
-        I[OpenStreetMap]
-        J[WhatsApp API]
+        I[OpenStreetMap / MapTiler]
+        J[NASA FIRMS / VIIRS]
+        K[NASA GIBS - NDVI]
+        L[Copernicus EFFIS]
+        M[JRC Surface Water]
     end
 
     A --> C
@@ -203,13 +219,17 @@ graph TB
     D --> H
     C --> I
     D --> J
+    D --> K
+    D --> L
+    C --> M
 ```
 
 ### Database Schema
 
-The platform uses 7 main collections:
+The platform uses 8 main collections:
 - **User** - Civilians and government officials with role-based access
 - **Incident** - Fire incident records with location and status
+- **FireEventRecord** - Structured fire event data with burn perimeters, PAMF/RMA statistics, and commune-level aggregation
 - **Report** - User-submitted fire reports
 - **Equipment** - Vehicles, tools, gear, supplies (5 categories)
 - **RetardantProduct** - Fire retardant inventory
@@ -296,6 +316,7 @@ The platform supports coordinated response across 16 Moroccan government departm
 
 - **Arabic (RTL)** - Primary language with complete right-to-left UI support
 - **French** - Secondary language for official communications
+- **English** - International accessibility
 - **Arabic date formatting** and cardinal directions
 - **Department names** in both Arabic and French
 
@@ -303,8 +324,12 @@ The platform supports coordinated response across 16 Moroccan government departm
 
 - Localized to Ifrane Province geography and infrastructure
 - Integration with provincial forest department (DPEFLCD)
-- Weather data specific to Ifrane coordinates
+- Weather, precipitation, and soil moisture data specific to Ifrane coordinates
 - Infrastructure mapping for local water points, fire breaks, and watchtowers
+- 6 regional reservoir/dam locations with capacity data
+- 8 commune boundaries for PAMF/RMA fire risk choropleth analysis
+- GPU-tiered map rendering (WebGPU / WebGL2 / fallback) for device compatibility
+- Fully responsive UI with adaptive grids, collapsible panels, and mobile tab bar navigation
 
 ---
 
@@ -322,8 +347,12 @@ The platform supports coordinated response across 16 Moroccan government departm
 All API endpoints are documented in the code with JSDoc comments. Key endpoints:
 
 - **Authentication:** `/api/auth/signup`, `/api/auth/signin`, `/api/auth/logout`, `/api/auth/me`
-- **Public Data:** `/api/weather`, `/api/incidents`, `/api/reports`, `/api/analytics`
-- **Officials Only:** `/api/equipment`, `/api/reports/[id]` (PATCH)
+- **Public Data:** `/api/weather`, `/api/incidents`, `/api/reports`
+- **Public Environmental:** `/api/weather/wind`, `/api/weather/precipitation`, `/api/weather/soil-moisture`, `/api/ndvi/latest-date`
+- **Satellite Detections:** `/api/detections/combined` (NASA FIRMS + EFFIS), `/api/effis/burned-areas`
+- **Analytics (Auth):** `/api/analytics`, `/api/analytics/pamf-rma`, `/api/analytics/temporal`, `/api/analytics/response`
+- **Fire Records (Auth):** `/api/fire-records` (CRUD), `/api/fire-records/export`, `/api/fire-records/stats`
+- **Officials Only:** `/api/equipment`, `/api/reports/[id]` (PATCH), `/api/geo/vehicles`
 
 ### Testing Documentation
 
@@ -385,9 +414,10 @@ npm run test:coverage
 
 ### Test Coverage
 
-- **Unit Tests:** 80%+ coverage for utility functions and hooks
-- **Integration Tests:** API routes and authentication flows
-- **E2E Tests:** Critical user journeys (sign up, report fire, view analytics)
+- **1150+ Tests** across unit, integration, and E2E suites
+- **Unit Tests:** Store logic (mutual exclusivity, state management), utility functions, color constants, precipitation stats
+- **Integration Tests:** API routes, authentication flows, fire record CRUD, PAMF/RMA aggregation
+- **E2E Tests:** Critical user journeys (sign up, report fire, view analytics, layer toggling, keyboard shortcuts)
 
 ---
 
@@ -459,18 +489,41 @@ For questions, suggestions, or partnership opportunities:
 ```
 RICER-project/
 ├── apps/
-│   └── web/              # Next.js web application
+│   └── web/                    # Next.js web application
 │       ├── src/
-│       │   ├── app/      # App Router pages
+│       │   ├── app/            # App Router pages & API routes
+│       │   │   ├── (protected)/  # Auth-gated pages (map, analytics, reports...)
+│       │   │   └── api/          # REST API routes
+│       │   │       ├── ndvi/           # NDVI latest date probe (NASA GIBS)
+│       │   │       ├── weather/        # Wind, precipitation, soil moisture
+│       │   │       ├── analytics/      # PAMF/RMA, temporal, response, rex
+│       │   │       ├── fire-records/   # CRUD, export, stats, compare
+│       │   │       ├── detections/     # FIRMS + EFFIS combined
+│       │   │       └── geo/            # Incidents, resources, vehicles
 │       │   ├── components/
-│       │   ├── lib/      # Utilities and helpers
-│       │   └── types/
-│       ├── prisma/       # Database schema and seed
-│       └── public/       # Static assets
+│       │   │   ├── map/          # RicerMap, MapControls, MapLegend, WeatherWidget
+│       │   │   ├── analytics/    # AnalyticsTabs, panels (Overview, Environment, etc.)
+│       │   │   ├── coordination/ # CommLogTimeline, IncidentSelector
+│       │   │   ├── fire-records/ # FireRecordTable, detail views, comparison, filters
+│       │   │   ├── equipment/    # TruckMap, DispatchTruckDialog
+│       │   │   ├── shell/        # AppShell, Navbar, SidebarRail, MobileTabBar, Footer
+│       │   │   └── ui/           # Button, Card, Badge, Skeleton, etc.
+│       │   ├── lib/              # Utilities and helpers
+│       │   │   ├── map/            # Colors, layers, styles, GPU detection
+│       │   │   ├── api/            # fetchWithAuth
+│       │   │   └── errors/         # AppError, withApiHandler
+│       │   ├── store/            # Zustand stores (map, fire records, analytics...)
+│       │   ├── hooks/            # Custom React hooks
+│       │   ├── i18n/             # Translations (ar, fr, en)
+│       │   └── types/            # TypeScript type definitions
+│       ├── prisma/               # Database schema and seed
+│       ├── public/
+│       │   └── data/             # Static GeoJSON (reservoirs, communes)
+│       └── tests/                # Unit, integration, and E2E tests
 ├── data/
-│   └── gis/              # GIS datasets and QGIS projects
-├── docs/                 # Project documentation
-└── scripts/              # Utility scripts
+│   └── gis/                    # GIS datasets and QGIS projects
+├── docs/                       # Project documentation
+└── scripts/                    # Utility scripts
 ```
 
 ---

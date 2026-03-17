@@ -3,7 +3,6 @@ import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { withApiHandler } from '@/lib/errors/withApiHandler';
 import { AppError } from '@/lib/errors/AppError';
-import { validateGeometry } from '@/lib/validation/geojson';
 import { logger } from '@/lib/observability/logger';
 import { withRetry } from '@/lib/database/withRetry';
 
@@ -23,10 +22,15 @@ export const GET = withApiHandler(async (request: Request) => {
 
   const features = items
     .map((infra) => {
-      const geometry = validateGeometry(infra.geometry);
+      // Build geometry from lat/lng fields instead of legacy geometry JSON
+      const geometry =
+        infra.latitude != null && infra.longitude != null
+          ? { type: 'Point' as const, coordinates: [infra.longitude, infra.latitude] }
+          : null;
+
       if (!geometry) {
         invalidCount++;
-        if (invalidIds.length < 5) invalidIds.push(infra.id); // Only store first 5 samples
+        if (invalidIds.length < 5) invalidIds.push(infra.id);
         return null;
       }
       validCount++;
@@ -38,13 +42,13 @@ export const GET = withApiHandler(async (request: Request) => {
           type: infra.type,
           name: infra.name,
           status: infra.status,
-          description: infra.description,
+          // Map notes → description for backward compatibility with map layers
+          description: infra.notes ?? '',
         },
       };
     })
     .filter((f): f is NonNullable<typeof f> => f !== null);
 
-  // Single summary log instead of individual warnings
   if (invalidCount > 0) {
     logger.warn({
       event: 'invalid_infrastructure_filtered',

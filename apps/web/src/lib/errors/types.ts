@@ -41,5 +41,8 @@ export const ERROR_CODE_RANGES = {
   DISPATCH: { min: 6000, max: 6999 },
   VEHICLE: { min: 7000, max: 7999 },
   FIRE_RECORD: { min: 8000, max: 8999 },
+  COORDINATION: { min: 9000, max: 9999 },
+  OPERATIONS: { min: 10000, max: 10999 },
+  EQUIPMENT: { min: 11000, max: 11999 },
 } as const;
 

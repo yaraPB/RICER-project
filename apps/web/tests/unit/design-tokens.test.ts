@@ -183,10 +183,10 @@ describe('Design Tokens Integration', () => {
 
   describe('Design Token Usage', () => {
     const filesToCheck = [
-      'src/app/(protected)/analytics/page.tsx',
-      'src/app/(protected)/report/page.tsx',
+      'src/components/analytics/panels/OverviewPanel.tsx',
+      'src/components/report/ConfirmationScreen.tsx',
       'src/app/(protected)/reports-list/page.tsx',
-      'src/app/(protected)/equipment/page.tsx',
+      'src/components/equipment/EquipmentSection.tsx',
     ];
 
     filesToCheck.forEach((filePath) => {

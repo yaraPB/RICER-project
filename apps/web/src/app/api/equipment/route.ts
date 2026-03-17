@@ -3,9 +3,6 @@ import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { withApiHandler } from '@/lib/errors/withApiHandler';
 import { AppError } from '@/lib/errors/AppError';
-import { DEFAULT_LIMITS } from '@/types/pagination';
-import type { OffsetPaginationResponse } from '@/types/pagination';
-import { labelOperation } from '@/lib/errors/context';
 
 export const GET = withApiHandler(async (request: Request) => {
   const currentUser = await getCurrentUser(request);
@@ -13,101 +10,53 @@ export const GET = withApiHandler(async (request: Request) => {
   if (currentUser.role !== 'OFFICIAL') throw new AppError(2001);
 
   const url = new URL(request.url);
-  const type = url.searchParams.get('type'); // 'equipment', 'retardant', 'infrastructure', 'trucks'
-  const limit = Math.min(
-    parseInt(url.searchParams.get('limit') || String(DEFAULT_LIMITS.EQUIPMENT)),
-    200
-  );
-  const offset = parseInt(url.searchParams.get('offset') || '0');
+  const type = url.searchParams.get('type') || undefined;
+  const status = url.searchParams.get('status') || undefined;
 
-  // If no specific type requested, return all data arrays
-  if (!type) {
-    const [equipment, retardantProducts, infrastructure, truckDeployments] = await Promise.all([
-      labelOperation(prisma.equipment.findMany({ orderBy: { category: 'asc' } }), 'equipment:find_all_equipment'),
-      labelOperation(prisma.retardantProduct.findMany({ orderBy: { productName: 'asc' } }), 'equipment:find_all_retardant'),
-      labelOperation(prisma.infrastructure.findMany({ orderBy: { type: 'asc' } }), 'equipment:find_all_infrastructure'),
-      labelOperation(prisma.truckDeployment.findMany({ orderBy: { truckName: 'asc' } }), 'equipment:find_all_trucks'),
-    ]);
+  const where: Record<string, string> = {};
+  if (type) where.type = type;
+  if (status) where.status = status;
 
-    return NextResponse.json({ equipment, retardantProducts, infrastructure, truckDeployments });
+  const items = await prisma.equipment.findMany({
+    where,
+    orderBy: [{ type: 'asc' }, { name: 'asc' }],
+  });
+
+  return NextResponse.json({ items });
+});
+
+export const POST = withApiHandler(async (request: Request) => {
+  const currentUser = await getCurrentUser(request);
+  if (!currentUser) throw new AppError(2000);
+  if (currentUser.role !== 'OFFICIAL') throw new AppError(2001);
+
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch (error) {
+    throw new AppError(1000, { cause: error });
   }
 
-  // Fetch specific type with pagination
-  let data: unknown[];
-  let total: number;
+  const { type, name, status, quantity, department, latitude, longitude, lastMaintenance, notes } = body;
 
-  switch (type) {
-    case 'equipment':
-      [data, total] = await Promise.all([
-        labelOperation(
-          prisma.equipment.findMany({
-            skip: offset,
-            take: limit,
-            orderBy: { category: 'asc' },
-          }),
-          'equipment:find_equipment'
-        ),
-        labelOperation(prisma.equipment.count(), 'equipment:count_equipment'),
-      ]);
-      break;
+  const fields = [];
+  if (!type || typeof type !== 'string') fields.push({ field: 'type', code: 'required' });
+  if (!name || typeof name !== 'string') fields.push({ field: 'name', code: 'required' });
+  if (fields.length) throw new AppError(11003, { fields });
 
-    case 'retardant':
-      [data, total] = await Promise.all([
-        labelOperation(
-          prisma.retardantProduct.findMany({
-            skip: offset,
-            take: limit,
-            orderBy: { productName: 'asc' },
-          }),
-          'equipment:find_retardant'
-        ),
-        labelOperation(prisma.retardantProduct.count(), 'equipment:count_retardant'),
-      ]);
-      break;
-
-    case 'infrastructure':
-      [data, total] = await Promise.all([
-        labelOperation(
-          prisma.infrastructure.findMany({
-            skip: offset,
-            take: limit,
-            orderBy: { type: 'asc' },
-          }),
-          'equipment:find_infrastructure'
-        ),
-        labelOperation(prisma.infrastructure.count(), 'equipment:count_infrastructure'),
-      ]);
-      break;
-
-    case 'trucks':
-      [data, total] = await Promise.all([
-        labelOperation(
-          prisma.truckDeployment.findMany({
-            skip: offset,
-            take: limit,
-            orderBy: { truckName: 'asc' },
-          }),
-          'equipment:find_trucks'
-        ),
-        labelOperation(prisma.truckDeployment.count(), 'equipment:count_trucks'),
-      ]);
-      break;
-
-    default:
-      throw new AppError(1001, {
-        fields: [{ field: 'type', code: 'invalid' }],
-      });
-  }
-
-  const response: OffsetPaginationResponse<typeof data[number]> = {
-    data,
-    pagination: {
-      offset,
-      limit,
-      total,
-      hasMore: offset + limit < total,
+  const item = await prisma.equipment.create({
+    data: {
+      type: type as string,
+      name: name as string,
+      status: typeof status === 'string' ? status : 'OPERATIONNEL',
+      quantity: typeof quantity === 'number' ? quantity : 1,
+      department: typeof department === 'string' ? department : undefined,
+      latitude: typeof latitude === 'number' ? latitude : undefined,
+      longitude: typeof longitude === 'number' ? longitude : undefined,
+      lastMaintenance: typeof lastMaintenance === 'string' ? new Date(lastMaintenance) : undefined,
+      notes: typeof notes === 'string' ? notes : undefined,
     },
-  };
+  });
 
-  return NextResponse.json(response);
+  return NextResponse.json({ item }, { status: 201 });
 });

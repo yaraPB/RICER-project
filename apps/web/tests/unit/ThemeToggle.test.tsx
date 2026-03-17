@@ -62,19 +62,30 @@ describe('ThemeToggle Component', () => {
   });
 
   describe('initialization', () => {
-    it('renders with light theme by default', async () => {
+    it('renders with dark theme by default', async () => {
       render(<ThemeToggle />);
 
       await waitFor(() => {
         const button = screen.getByTestId('theme-toggle');
         expect(button).toBeInTheDocument();
-        expect(button).toHaveAttribute('aria-label', 'Dark mode');
+        expect(button).toHaveAttribute('aria-label', 'Light mode');
       });
 
-      expect(screen.getByTestId('icon-moon')).toBeInTheDocument();
+      expect(screen.getByTestId('icon-sun')).toBeInTheDocument();
     });
 
-    it('initializes from localStorage if available', async () => {
+    it('initializes from localStorage if light is stored', async () => {
+      localStorageMock['theme'] = 'light';
+
+      render(<ThemeToggle />);
+
+      await waitFor(() => {
+        expect(document.documentElement.classList.contains('dark')).toBe(false);
+        expect(screen.getByTestId('icon-moon')).toBeInTheDocument();
+      });
+    });
+
+    it('initializes dark when localStorage has dark', async () => {
       localStorageMock['theme'] = 'dark';
 
       render(<ThemeToggle />);
@@ -85,21 +96,7 @@ describe('ThemeToggle Component', () => {
       });
     });
 
-    it('respects system preference when no localStorage value', async () => {
-      Object.defineProperty(window, 'matchMedia', {
-        writable: true,
-        value: vi.fn().mockImplementation((query: string) => ({
-          matches: query === '(prefers-color-scheme: dark)',
-          media: query,
-          onchange: null,
-          addListener: vi.fn(),
-          removeListener: vi.fn(),
-          addEventListener: vi.fn(),
-          removeEventListener: vi.fn(),
-          dispatchEvent: vi.fn(),
-        })),
-      });
-
+    it('defaults to dark when no localStorage value', async () => {
       render(<ThemeToggle />);
 
       await waitFor(() => {
@@ -110,29 +107,8 @@ describe('ThemeToggle Component', () => {
   });
 
   describe('theme toggling', () => {
-    it('switches from light to dark theme', async () => {
-      const user = userEvent.setup();
-      render(<ThemeToggle />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('icon-moon')).toBeInTheDocument();
-      });
-
-      const button = screen.getByTestId('theme-toggle');
-      await user.click(button);
-
-      await waitFor(() => {
-        expect(document.documentElement.classList.contains('dark')).toBe(true);
-        expect(localStorage.setItem).toHaveBeenCalledWith('theme', 'dark');
-        expect(screen.getByTestId('icon-sun')).toBeInTheDocument();
-        expect(button).toHaveAttribute('aria-label', 'Light mode');
-      });
-    });
-
     it('switches from dark to light theme', async () => {
       const user = userEvent.setup();
-      localStorageMock['theme'] = 'dark';
-
       render(<ThemeToggle />);
 
       await waitFor(() => {
@@ -150,8 +126,10 @@ describe('ThemeToggle Component', () => {
       });
     });
 
-    it('toggles multiple times correctly', async () => {
+    it('switches from light to dark theme', async () => {
       const user = userEvent.setup();
+      localStorageMock['theme'] = 'light';
+
       render(<ThemeToggle />);
 
       await waitFor(() => {
@@ -159,23 +137,43 @@ describe('ThemeToggle Component', () => {
       });
 
       const button = screen.getByTestId('theme-toggle');
-
-      // First click: light -> dark
       await user.click(button);
+
       await waitFor(() => {
         expect(document.documentElement.classList.contains('dark')).toBe(true);
+        expect(localStorage.setItem).toHaveBeenCalledWith('theme', 'dark');
+        expect(screen.getByTestId('icon-sun')).toBeInTheDocument();
+        expect(button).toHaveAttribute('aria-label', 'Light mode');
+      });
+    });
+
+    it('toggles multiple times correctly', async () => {
+      const user = userEvent.setup();
+      render(<ThemeToggle />);
+
+      // Default is dark
+      await waitFor(() => {
+        expect(screen.getByTestId('icon-sun')).toBeInTheDocument();
       });
 
-      // Second click: dark -> light
+      const button = screen.getByTestId('theme-toggle');
+
+      // First click: dark -> light
       await user.click(button);
       await waitFor(() => {
         expect(document.documentElement.classList.contains('dark')).toBe(false);
       });
 
-      // Third click: light -> dark
+      // Second click: light -> dark
       await user.click(button);
       await waitFor(() => {
         expect(document.documentElement.classList.contains('dark')).toBe(true);
+      });
+
+      // Third click: dark -> light
+      await user.click(button);
+      await waitFor(() => {
+        expect(document.documentElement.classList.contains('dark')).toBe(false);
       });
     });
   });
@@ -186,19 +184,20 @@ describe('ThemeToggle Component', () => {
       render(<ThemeToggle />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('icon-moon')).toBeInTheDocument();
+        expect(screen.getByTestId('icon-sun')).toBeInTheDocument();
       });
 
       const button = screen.getByTestId('theme-toggle');
       await user.click(button);
 
       await waitFor(() => {
-        expect(localStorage.setItem).toHaveBeenCalledWith('theme', 'dark');
+        expect(localStorage.setItem).toHaveBeenCalledWith('theme', 'light');
       });
     });
 
     it('persists theme across re-renders', async () => {
       const user = userEvent.setup();
+      localStorageMock['theme'] = 'light';
       const { unmount } = render(<ThemeToggle />);
 
       await waitFor(() => {
@@ -225,17 +224,7 @@ describe('ThemeToggle Component', () => {
   });
 
   describe('accessibility', () => {
-    it('has proper aria-label in light mode', async () => {
-      render(<ThemeToggle />);
-
-      await waitFor(() => {
-        const button = screen.getByTestId('theme-toggle');
-        expect(button).toHaveAttribute('aria-label', 'Dark mode');
-      });
-    });
-
-    it('has proper aria-label in dark mode', async () => {
-      localStorageMock['theme'] = 'dark';
+    it('has proper aria-label in dark mode (default)', async () => {
       render(<ThemeToggle />);
 
       await waitFor(() => {
@@ -244,12 +233,22 @@ describe('ThemeToggle Component', () => {
       });
     });
 
+    it('has proper aria-label in light mode', async () => {
+      localStorageMock['theme'] = 'light';
+      render(<ThemeToggle />);
+
+      await waitFor(() => {
+        const button = screen.getByTestId('theme-toggle');
+        expect(button).toHaveAttribute('aria-label', 'Dark mode');
+      });
+    });
+
     it('is keyboard accessible', async () => {
       const user = userEvent.setup();
       render(<ThemeToggle />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('icon-moon')).toBeInTheDocument();
+        expect(screen.getByTestId('icon-sun')).toBeInTheDocument();
       });
 
       const button = screen.getByTestId('theme-toggle');
@@ -258,32 +257,32 @@ describe('ThemeToggle Component', () => {
       button.focus();
       expect(button).toHaveFocus();
 
-      // Press Enter
+      // Press Enter to toggle dark -> light
       await user.keyboard('{Enter}');
 
       await waitFor(() => {
-        expect(document.documentElement.classList.contains('dark')).toBe(true);
+        expect(document.documentElement.classList.contains('dark')).toBe(false);
       });
     });
   });
 
   describe('icon rendering', () => {
-    it('displays moon icon in light mode', async () => {
-      render(<ThemeToggle />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('icon-moon')).toBeInTheDocument();
-        expect(screen.queryByTestId('icon-sun')).not.toBeInTheDocument();
-      });
-    });
-
-    it('displays sun icon in dark mode', async () => {
-      localStorageMock['theme'] = 'dark';
+    it('displays sun icon in dark mode (default)', async () => {
       render(<ThemeToggle />);
 
       await waitFor(() => {
         expect(screen.getByTestId('icon-sun')).toBeInTheDocument();
         expect(screen.queryByTestId('icon-moon')).not.toBeInTheDocument();
+      });
+    });
+
+    it('displays moon icon in light mode', async () => {
+      localStorageMock['theme'] = 'light';
+      render(<ThemeToggle />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('icon-moon')).toBeInTheDocument();
+        expect(screen.queryByTestId('icon-sun')).not.toBeInTheDocument();
       });
     });
   });

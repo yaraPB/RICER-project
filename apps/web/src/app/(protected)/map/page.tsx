@@ -7,16 +7,21 @@ import type { WeatherData, IncidentStatus } from '@/types';
 import { useTranslation } from '@/hooks/useTranslation';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { KpiCard } from '@/components/ui/KpiCard';
 import { Icon } from '@/components/ui/Icon';
 import { RightDrawer } from '@/components/shell/RightDrawer';
 import type { TranslationKey } from '@/i18n/translations';
-import { getApiErrorUserMessage } from '@/lib/errors/sdk';
+
+import { fetchWithAuth } from '@/lib/api/fetchWithAuth';
 import { useMapStore } from '@/store/useMapStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useDispatchStore } from '@/store/useDispatchStore';
 import { DispatchPanel } from '@/components/dispatch/DispatchPanel';
 import { IncidentFireRecordPanel } from '@/components/fire-records/IncidentFireRecordPanel';
+import { computeSACILevel } from '@/lib/map/complexity';
+import { computePOILevel } from '@/lib/map/poiLevel';
+
+const MapStatusBar = dynamic(() => import('@/components/map/MapStatusBar'), { ssr: false });
+const WeatherWidget = dynamic(() => import('@/components/map/WeatherWidget'), { ssr: false });
 
 function MapDataErrorBanner() {
   const { t } = useTranslation();
@@ -32,7 +37,7 @@ function MapDataErrorBanner() {
   };
 
   return (
-    <div role="alert" className="rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
+    <div role="alert" className="absolute top-3 left-1/2 -translate-x-1/2 z-20 max-w-md rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning shadow-xl backdrop-blur-md">
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1">
           <div className="font-semibold">{t('mapDataWarning')}</div>
@@ -40,8 +45,9 @@ function MapDataErrorBanner() {
             {dataErrors.incidents && <div>• Incidents: {dataErrors.incidents}</div>}
             {dataErrors.resources && <div>• Resources: {dataErrors.resources}</div>}
             {dataErrors.infrastructure && <div>• Infrastructure: {dataErrors.infrastructure}</div>}
-            {dataErrors.riskBasins && <div>• Risk basins: {dataErrors.riskBasins}</div>}
             {dataErrors.firmsDetections && <div>• FIRMS Detections: {dataErrors.firmsDetections}</div>}
+            {dataErrors.effisDetections && <div>• EFFIS Detections: {dataErrors.effisDetections}</div>}
+            {dataErrors.wind && <div>• Wind: {dataErrors.wind}</div>}
           </div>
         </div>
         <button
@@ -70,31 +76,6 @@ const RicerMap = dynamic(() => import('@/components/map/RicerMap'), {
   loading: () => <RicerMapLoading />,
 });
 
-type RiskLevel = 'low' | 'moderate' | 'high' | 'extreme';
-
-/**
- * Normalized FWI proxy score in [0, 1].
- * Weights: temperature 35%, dryness (1-humidity) 35%, wind 30%.
- * Assumptions: temp ceiling 40°C, wind ceiling 50 km/h, humidity 0-100%.
- * Falls back gracefully when humidity is absent.
- */
-function getRiskScore(weather: WeatherData): number {
-  const tempNorm = Math.min(weather.temperature, 40) / 40;
-  const humidity = weather.humidity ?? 50; // default 50% if not available
-  const dryNorm = 1 - Math.min(humidity, 100) / 100;
-  const windNorm = Math.min(weather.windSpeed, 50) / 50;
-  return tempNorm * 0.35 + dryNorm * 0.35 + windNorm * 0.30;
-}
-
-function getRiskLevel(weather: WeatherData | null): RiskLevel | null {
-  if (!weather) return null;
-  const score = getRiskScore(weather);
-  if (score >= 0.75) return 'extreme';
-  if (score >= 0.55) return 'high';
-  if (score >= 0.35) return 'moderate';
-  return 'low';
-}
-
 const INCIDENT_STATUS_KEYS: Record<IncidentStatus, TranslationKey> = {
   VIGILANCE: 'statusVigilance',
   ALERTE: 'statusAlerte',
@@ -113,10 +94,9 @@ const INCIDENT_STATUS_TONES: Record<IncidentStatus, 'success' | 'warning' | 'dan
 
 export default function MapPage() {
   const router = useRouter();
-  const { t, language } = useTranslation();
+  const { t } = useTranslation();
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [weatherLoading, setWeatherLoading] = useState(true);
-  const [weatherError, setWeatherError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [shareStatus, setShareStatus] = useState<string | null>(null);
@@ -124,35 +104,32 @@ export default function MapPage() {
 
   const selectedIncidentId = useMapStore((s) => s.selectedIncidentId);
   const setSelectedIncidentId = useMapStore((s) => s.setSelectedIncidentId);
-  // Read incidents from shared store (RicerMap is the single poller)
   const incidents = useMapStore((s) => s.incidents);
+  const setStoreWeather = useMapStore((s) => s.setWeather);
   const user = useAuthStore((s) => s.user);
 
-  // Open drawer whenever an incident is selected
   useEffect(() => {
     if (selectedIncidentId) setDrawerOpen(true);
   }, [selectedIncidentId]);
 
   const fetchWeather = useCallback(async () => {
-    setWeatherError(null);
     try {
-      const response = await fetch('/api/weather');
+      const response = await fetchWithAuth('/api/weather');
       const data = (await response.json().catch(() => null)) as unknown;
       if (!response.ok) {
         setWeather(null);
-        setWeatherError(getApiErrorUserMessage(data, 'weatherLoadFailed')); // Store key, not translated message
         return;
       }
-      setWeather(data as WeatherData);
+      const w = data as WeatherData;
+      setWeather(w);
+      setStoreWeather(w);
     } catch {
       setWeather(null);
-      setWeatherError('connectionError'); // Store key, not translated message
     } finally {
       setWeatherLoading(false);
     }
-  }, []); // Remove [t] dependency
+  }, [setStoreWeather]);
 
-  // Update lastUpdated whenever incidents change (set by RicerMap poller)
   useEffect(() => {
     if (incidents.features.length > 0) {
       setLastUpdated(Date.now());
@@ -164,7 +141,7 @@ export default function MapPage() {
 
     setUpdateError(null);
     try {
-      const response = await fetch(`/api/incidents/${selectedIncidentId}`, {
+      const response = await fetchWithAuth(`/api/incidents/${selectedIncidentId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ [field]: value })
@@ -176,16 +153,15 @@ export default function MapPage() {
         return;
       }
 
-      // Refresh incidents list via a direct fetch; RicerMap will sync on next poll
       try {
-        const refreshRes = await fetch('/api/geo/incidents');
+        const refreshRes = await fetchWithAuth('/api/geo/incidents');
         if (refreshRes.ok) {
           const refreshed = await refreshRes.json();
           useMapStore.getState().setIncidents(refreshed);
           useMapStore.getState().setLastSuccessfulSync(new Date());
         }
       } catch {
-        // Non-critical; map will sync on next poll interval
+        // Non-critical
       }
     } catch {
       setUpdateError(t('connectionError'));
@@ -194,7 +170,6 @@ export default function MapPage() {
 
   useEffect(() => {
     fetchWeather();
-    // incidents are fetched and polled by RicerMap; no second loop needed here
   }, [fetchWeather]);
 
   const selectedIncident = useMemo(
@@ -240,25 +215,6 @@ export default function MapPage() {
     }
   }, [selectedIncident, t]);
 
-  const directionKeys = ['windN', 'windNE', 'windE', 'windSE', 'windS', 'windSW', 'windW', 'windNW'] as const;
-  const directionIndex = weather ? Math.round(weather.windDirection / 45) % 8 : 0;
-  const windDirectionText = weather ? t(directionKeys[directionIndex]) : '';
-  const risk = getRiskLevel(weather);
-
-  const riskLabel =
-    risk === 'low'
-      ? t('riskLow')
-      : risk === 'moderate'
-        ? t('riskModerate')
-        : risk === 'high'
-          ? t('riskHigh')
-          : risk === 'extreme'
-            ? t('riskExtreme')
-            : t('unknown');
-
-  const riskTone: 'success' | 'warning' | 'danger' =
-    risk === 'extreme' || risk === 'high' ? 'danger' : risk === 'moderate' ? 'warning' : 'success';
-
   const getStatusLabel = (status: IncidentStatus) => t(INCIDENT_STATUS_KEYS[status]);
   const getStatusTone = (status: IncidentStatus) => INCIDENT_STATUS_TONES[status];
 
@@ -280,244 +236,188 @@ export default function MapPage() {
 
   const coords = selectedIncident?.geometry?.coordinates as [number, number] | undefined;
 
+  // SACI + POI for selected incident
+  const saci = selectedIncident
+    ? computeSACILevel(selectedIncident.properties.severity, selectedIncident.properties.status, 0)
+    : null;
+  const poi = selectedIncident
+    ? computePOILevel(selectedIncident.properties.severity, selectedIncident.properties.status)
+    : null;
+
   return (
-    <div className="flex h-[calc(100vh-4rem)] w-full overflow-hidden">
-      <section className="flex flex-1 flex-col gap-4 overflow-auto p-4 md:p-6">
-        {weatherError ? (
-          <div role="alert" className="rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
-            {weatherError}
-          </div>
-        ) : null}
+    <div className="relative h-[calc(100vh-4rem)] w-full overflow-hidden">
+      {/* Map fills entire viewport */}
+      <RicerMap />
 
-        <MapDataErrorBanner />
+      {/* Floating overlays */}
+      <MapStatusBar weather={weather} activeIncidents={activeIncidents} lastUpdated={lastUpdated} />
+      <WeatherWidget weather={weather} loading={weatherLoading} />
+      <MapDataErrorBanner />
 
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div className="min-w-0">
-            <div className="flex items-center gap-3">
-              <h1 className="text-xl font-extrabold tracking-tight md:text-2xl">
-                {t('fireMapTitle')}
-              </h1>
-              <Badge tone="primary" className="hidden sm:inline-flex">
-                {t('activeIncidents')}: {activeIncidents}
-              </Badge>
-            </div>
-            <p className="mt-1 text-sm text-muted-foreground">{t('fireMapDesc')}</p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {lastUpdated ? (
-              <Badge tone="neutral">
-                {t('lastUpdated')}{' '}
-                {new Date(lastUpdated).toLocaleTimeString(language === 'ar' ? 'ar-MA' : language === 'fr' ? 'fr-FR' : 'en-US', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </Badge>
-            ) : null}
-            <Button
-              variant="secondary"
-              onClick={() => {
-                fetch('/api/geo/incidents')
-                  .then((r) => r.ok ? r.json() : null)
-                  .then((d) => { if (d) { useMapStore.getState().setIncidents(d); useMapStore.getState().setLastSuccessfulSync(new Date()); } })
-                  .catch(() => {});
-              }}
-              aria-label="Refresh"
-            >
-              <Icon name="refresh" aria-hidden={true} size={20} />
-              <span className="sr-only sm:not-sr-only">Refresh</span>
-            </Button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <KpiCard
-            label={t('riskIndex')}
-            value={<span className={riskTone === 'danger' ? 'text-danger' : riskTone === 'warning' ? 'text-warning' : 'text-success'}>{riskLabel}</span>}
-            hint={
-              weather && !weatherLoading
-                ? `${weather.temperature}°C • ${weather.windSpeed} km/h`
-                : weatherLoading
-                  ? '…'
-                  : '—'
-            }
-            tone={riskTone}
-            icon={<Icon name="warning" aria-hidden={true} size={22} />}
-          />
-          <KpiCard
-            label={t('activeIncidents')}
-            value={activeIncidents}
-            hint={`${incidents.features.length} total`}
-            tone={activeIncidents > 0 ? 'warning' : 'neutral'}
-            icon={<Icon name="fire" aria-hidden={true} size={22} />}
-          />
-          <KpiCard
-            label={t('temperature')}
-            value={weather && !weatherLoading ? `${weather.temperature}°C` : '—'}
-            hint={weatherLoading ? '…' : null}
-            tone="neutral"
-            icon={<Icon name="thermostat" aria-hidden={true} size={22} />}
-          />
-          <KpiCard
-            label={t('windSpeed')}
-            value={weather && !weatherLoading ? `${weather.windSpeed} km/h` : '—'}
-            hint={weather && !weatherLoading ? `${windDirectionText} • ${weather.windDirection}°` : weatherLoading ? '…' : null}
-            tone="neutral"
-            icon={<Icon name="air" aria-hidden={true} size={22} />}
-          />
-        </div>
-
-        <div className="relative flex-1 overflow-hidden rounded-lg border border-border bg-surface shadow-elev-1">
-          <RicerMap />
-        </div>
-
-        <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
-          <span>MapTiler • MapLibre GL JS • Deck.gl</span>
-          <a
-            href="http://sysfeu.com/"
-            target="_blank"
-            rel="noreferrer"
-            className="font-semibold text-primary hover:underline"
-          >
-            sysfeu.com
-          </a>
-        </div>
-      </section>
-
-      <RightDrawer
-        title={t('incidentDetails')}
-        open={drawerOpen}
-        onOpenChange={(open) => {
-          setDrawerOpen(open);
-          if (!open) setSelectedIncidentId(null);
-        }}
-      >
-        <div className="space-y-5 p-4">
-          {!selectedIncident ? (
-            <div className="rounded-lg border border-border bg-surface-2 p-4 text-sm text-muted-foreground">
-              {t('selectIncident')}
-            </div>
-          ) : (
-            <>
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    #{selectedIncident.properties.id.slice(0, 6)}
+      {/* Incident detail drawer — only when selected */}
+      {selectedIncidentId && (
+        <RightDrawer
+          title={t('incidentDetails')}
+          open={drawerOpen}
+          onOpenChange={(open) => {
+            setDrawerOpen(open);
+            if (!open) setSelectedIncidentId(null);
+          }}
+        >
+          <div className="space-y-5 p-4">
+            {!selectedIncident ? (
+              <div className="rounded-lg border border-border bg-surface-2 p-4 text-sm text-muted-foreground">
+                {t('selectIncident')}
+              </div>
+            ) : (
+              <>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                      #{selectedIncident.properties.id.slice(0, 6)}
+                    </div>
+                    <div className="mt-1 text-lg font-extrabold tracking-tight">
+                      {getStatusLabel(selectedIncident.properties.status)}
+                    </div>
+                    {coords && (
+                      <div className="mt-1 text-sm text-muted-foreground">
+                        {coords[1].toFixed(4)}, {coords[0].toFixed(4)}
+                      </div>
+                    )}
                   </div>
-                  <div className="mt-1 text-lg font-extrabold tracking-tight">
+                  <Badge tone={getStatusTone(selectedIncident.properties.status)}>
                     {getStatusLabel(selectedIncident.properties.status)}
-                  </div>
-                  {coords && (
-                    <div className="mt-1 text-sm text-muted-foreground">
-                      {coords[1].toFixed(4)}, {coords[0].toFixed(4)}
+                  </Badge>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div className="rounded-lg border border-border bg-surface-2 p-3">
+                    <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                      {t('cause')}
                     </div>
-                  )}
-                </div>
-                <Badge tone={getStatusTone(selectedIncident.properties.status)}>
-                  {getStatusLabel(selectedIncident.properties.status)}
-                </Badge>
-              </div>
-
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div className="rounded-lg border border-border bg-surface-2 p-3">
-                  <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    {t('cause')}
+                    <div className="mt-2 text-sm font-semibold">{getCauseLabel(selectedIncident.properties.cause)}</div>
                   </div>
-                  <div className="mt-2 text-sm font-semibold">{getCauseLabel(selectedIncident.properties.cause)}</div>
-                </div>
-                <div className="rounded-lg border border-border bg-surface-2 p-3">
-                  <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    Severity
+                  <div className="rounded-lg border border-border bg-surface-2 p-3">
+                    <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                      {t('severity')}
+                    </div>
+                    <div className="mt-2 text-sm font-semibold">{selectedIncident.properties.severity}/5</div>
                   </div>
-                  <div className="mt-2 text-sm font-semibold">{selectedIncident.properties.severity}/5</div>
                 </div>
-              </div>
 
-              {selectedIncident.properties.description ? (
-                <div className="rounded-lg border border-border bg-surface-2 p-3">
-                  <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    {t('description')}
-                  </div>
-                  <div className="mt-2 text-sm">{selectedIncident.properties.description}</div>
-                </div>
-              ) : null}
-
-              <div className="flex flex-col gap-2">
-                <Button variant="primary" onClick={handleDispatchReinforcements}>
-                  <Icon name="campaign" aria-hidden={true} size={20} />
-                  {t('dispatchReinforcements')}
-                </Button>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button variant="secondary" onClick={handleShare}>
-                    <Icon name="share" aria-hidden={true} size={20} />
-                    {shareStatus || t('share')}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    onClick={() => router.push(`/reports-list`)}
-                  >
-                    <Icon name="open" aria-hidden={true} size={20} />
-                    {t('openReport')}
-                  </Button>
-                </div>
-              </div>
-
-              {user?.role === 'OFFICIAL' && (
-                <div className="space-y-4 border-t border-border pt-4">
-                  <h3 className="font-semibold">{t('manageIncident')}</h3>
-
-                  {/* Status Update */}
-                  <div>
-                    <label className="mb-2 block text-sm font-medium">{t('updateStatus')}</label>
-                    <div className="flex flex-wrap gap-2">
-                      {(['VIGILANCE', 'ALERTE', 'INTERVENTION', 'MAITRISE', 'ETEINT'] as IncidentStatus[]).map((s) => (
-                        <button
-                          key={s}
-                          onClick={() => handleUpdateIncident('status', s)}
-                          className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                            selectedIncident.properties.status === s
-                              ? 'bg-primary text-white'
-                              : 'bg-surface-2 text-foreground hover:bg-surface-3'
-                          }`}
+                {/* SACI + POI indicators */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {saci && (
+                    <div className="rounded-lg border border-border bg-surface-2 p-3">
+                      <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                        {t('saciLevel' as TranslationKey)}
+                      </div>
+                      <div className="mt-2 flex items-center gap-2">
+                        <span
+                          className="inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white"
+                          style={{ backgroundColor: saci.color }}
                         >
-                          {t(INCIDENT_STATUS_KEYS[s])}
-                        </button>
-                      ))}
+                          {saci.level}
+                        </span>
+                        <span className="text-sm font-semibold">{t(saci.labelKey as TranslationKey)}</span>
+                      </div>
                     </div>
-                  </div>
-
-                  {/* Severity Update */}
-                  <div>
-                    <label className="mb-2 block text-sm font-medium">{t('severity')}</label>
-                    <input
-                      type="range"
-                      min="1"
-                      max="5"
-                      value={selectedIncident.properties.severity}
-                      onChange={(e) => handleUpdateIncident('severity', parseInt(e.target.value))}
-                      className="w-full"
-                    />
-                    <div className="mt-1 text-sm text-muted-foreground">
-                      {selectedIncident.properties.severity}/5
-                    </div>
-                  </div>
-
-                  {updateError && (
-                    <div className="rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">
-                      {updateError}
+                  )}
+                  {poi && (
+                    <div className="rounded-lg border border-border bg-surface-2 p-3">
+                      <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                        {t('poiLevel' as TranslationKey)}
+                      </div>
+                      <div className="mt-2 text-sm font-semibold">
+                        POI {poi.level} — {t(poi.labelKey as TranslationKey)}
+                      </div>
                     </div>
                   )}
                 </div>
-              )}
 
-              {/* Fire Event Record Panel */}
-              {selectedIncident && (
-                <IncidentFireRecordPanel incidentId={selectedIncident.properties.id} />
-              )}
-            </>
-          )}
-        </div>
-      </RightDrawer>
+                {selectedIncident.properties.description ? (
+                  <div className="rounded-lg border border-border bg-surface-2 p-3">
+                    <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                      {t('description')}
+                    </div>
+                    <div className="mt-2 text-sm">{selectedIncident.properties.description}</div>
+                  </div>
+                ) : null}
+
+                <div className="flex flex-col gap-2">
+                  <Button variant="primary" onClick={handleDispatchReinforcements}>
+                    <Icon name="campaign" aria-hidden={true} size={20} />
+                    {t('dispatchReinforcements')}
+                  </Button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button variant="secondary" onClick={handleShare}>
+                      <Icon name="share" aria-hidden={true} size={20} />
+                      {shareStatus || t('share')}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => router.push(`/reports-list`)}
+                    >
+                      <Icon name="open" aria-hidden={true} size={20} />
+                      {t('openReport')}
+                    </Button>
+                  </div>
+                </div>
+
+                {user?.role === 'OFFICIAL' && (
+                  <div className="space-y-4 border-t border-border pt-4">
+                    <h3 className="font-semibold">{t('manageIncident')}</h3>
+
+                    <div>
+                      <label className="mb-2 block text-sm font-medium">{t('updateStatus')}</label>
+                      <div className="flex flex-wrap gap-2">
+                        {(['VIGILANCE', 'ALERTE', 'INTERVENTION', 'MAITRISE', 'ETEINT'] as IncidentStatus[]).map((s) => (
+                          <button
+                            key={s}
+                            onClick={() => handleUpdateIncident('status', s)}
+                            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                              selectedIncident.properties.status === s
+                                ? 'bg-primary text-white'
+                                : 'bg-surface-2 text-foreground hover:bg-surface-3'
+                            }`}
+                          >
+                            {t(INCIDENT_STATUS_KEYS[s])}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-sm font-medium">{t('severity')}</label>
+                      <input
+                        type="range"
+                        min="1"
+                        max="5"
+                        value={selectedIncident.properties.severity}
+                        onChange={(e) => handleUpdateIncident('severity', parseInt(e.target.value))}
+                        className="w-full"
+                      />
+                      <div className="mt-1 text-sm text-muted-foreground">
+                        {selectedIncident.properties.severity}/5
+                      </div>
+                    </div>
+
+                    {updateError && (
+                      <div className="rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">
+                        {updateError}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {selectedIncident && (
+                  <IncidentFireRecordPanel incidentId={selectedIncident.properties.id} />
+                )}
+              </>
+            )}
+          </div>
+        </RightDrawer>
+      )}
 
       {/* Dispatch Panel */}
       <DispatchPanel

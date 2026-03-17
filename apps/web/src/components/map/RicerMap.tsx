@@ -18,14 +18,20 @@ import type { MapboxOverlayProps } from '@deck.gl/mapbox/typed';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useMapStore } from '@/store/useMapStore';
 import { useDispatchStore } from '@/store/useDispatchStore';
+import { useToastStore } from '@/store/useToastStore';
 import MapControls from '@/components/map/MapControls';
 import MapLegend from './MapLegend';
 import { useTranslation } from '@/hooks/useTranslation';
+import type { TranslationKey } from '@/i18n/translations';
 import { getMapStyle, HAS_PREMIUM_TILES } from '@/lib/map/styles';
-import { INCIDENT_STATUS_COLORS, FIRMS_CONFIDENCE_COLORS } from '@/lib/map/colors';
+import { INCIDENT_STATUS_COLORS, FIRMS_CONFIDENCE_COLORS, SOIL_MOISTURE_COLORS, RESERVOIR_COLORS, PAMF_COLORS, RMA_COLORS } from '@/lib/map/colors';
+import { usePopulationAtRisk } from '@/hooks/usePopulationAtRisk';
+import { useFireSpreadVectors } from '@/hooks/useFireSpreadVectors';
+import { registerSlopeProtocol, unregisterSlopeProtocol, configureSlopeProtocol } from '@/lib/map/slopeProtocol';
+import { fetchWithAuth } from '@/lib/api/fetchWithAuth';
 import { asGeoJSON } from '@/lib/map/helpers';
 import { logger } from '@/lib/observability/logger';
-import { createResourceLayer, createInfrastructureLayers, createIncidentPulseLayer } from '@/lib/map/layers';
+import { createResourceLayer, createInfrastructureLayers, createIncidentPulseLayer, createRetardantLayer } from '@/lib/map/layers';
 import {
   createRouteLayer,
   createActiveTeamsLayer,
@@ -37,43 +43,50 @@ import {
 } from '@/lib/map/dispatchLayers';
 import { detectGPUCapabilities, type GPUTier } from '@/lib/gpu/detection';
 import { getLayerConfigForTier } from '@/lib/map/performanceLayers';
+import { createWindArrowImage } from '@/lib/map/windArrow';
 import type {
   GeoFeatureCollection,
   GeoIncidentProps,
   GeoResourceProps,
   GeoInfrastructureProps,
-  RiskBasinProps,
   GeoFirmsDetectionProps,
   GeoVehicleProps,
+  GeoWindPointProps,
 } from '@/types';
 
 /* ────────── helpers ────────── */
 
-/**
- * Format time ago from date (e.g., "2 minutes ago", "1 hour ago")
- */
-function formatTimeAgo(date: Date): string {
-  const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
-
-  if (seconds < 60) return `${seconds}s ago`;
-
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
 
 /* ────────── stable empty refs ────────── */
 
 const EMPTY_RESOURCES: GeoFeatureCollection<GeoResourceProps> = { type: 'FeatureCollection', features: [] };
 const EMPTY_INFRASTRUCTURE: GeoFeatureCollection<GeoInfrastructureProps> = { type: 'FeatureCollection', features: [] };
-const EMPTY_RISK_BASINS: GeoFeatureCollection<RiskBasinProps> = { type: 'FeatureCollection', features: [] };
 const EMPTY_FIRMS: GeoFeatureCollection<GeoFirmsDetectionProps> = { type: 'FeatureCollection', features: [] };
 const EMPTY_VEHICLES: GeoFeatureCollection<GeoVehicleProps> = { type: 'FeatureCollection', features: [] };
+const EMPTY_WIND: GeoFeatureCollection<GeoWindPointProps> = { type: 'FeatureCollection', features: [] };
+const EMPTY_GEOJSON: any = { type: 'FeatureCollection', features: [] };
+
+/* ────────── population at risk badge ────────── */
+
+function PopulationAtRiskBadge({ center }: { center: [number, number] }) {
+  const { population, loading } = usePopulationAtRisk(center);
+  if (loading) return <div className="text-[10px] text-muted-foreground animate-pulse mt-1">...</div>;
+  if (population === null || population === 0) return null;
+  const formatted = population >= 1000
+    ? `~${(population / 1000).toFixed(1).replace(/\.0$/, '')}K`
+    : `~${population}`;
+  const isHighRisk = population > 5000;
+  return (
+    <div className={`mt-1.5 flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] font-medium ${
+      isHighRisk
+        ? 'bg-red-500/15 text-red-400 border border-red-500/30'
+        : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+    }`}>
+      <span className="text-xs">&#x1F465;</span>
+      <span>{formatted} people at risk (5km)</span>
+    </div>
+  );
+}
 
 /* ────────── component ────────── */
 
@@ -94,7 +107,6 @@ export default function RicerMap() {
   const layers = useMapStore((s) => s.layers);
   const selectedIncidentId = useMapStore((s) => s.selectedIncidentId);
   const setSelectedIncidentId = useMapStore((s) => s.setSelectedIncidentId);
-  const is3DEnabled = useMapStore((s) => s.is3DEnabled);
   const basemap = useMapStore((s) => s.basemap);
   const isHeatmapEnabled = useMapStore((s) => s.isHeatmapEnabled);
   const setDataError = useMapStore((s) => s.setDataError);
@@ -111,9 +123,9 @@ export default function RicerMap() {
   const setIncidents = setStoreIncidents;
   const [resources, setResources] = useState(EMPTY_RESOURCES);
   const [infrastructure, setInfrastructure] = useState(EMPTY_INFRASTRUCTURE);
-  const [riskBasins, setRiskBasins] = useState(EMPTY_RISK_BASINS);
+  const [retardantData, setRetardantData] = useState<{ coordinates: [number, number]; name: string }[]>([]);
   const [firmsDetections, setFirmsDetections] = useState(EMPTY_FIRMS);
-  const [firmsLastUpdate, setFirmsLastUpdate] = useState<Date | null>(null);
+  const setFirmsLastUpdate = useMapStore((s) => s.setFirmsLastUpdate);
   const [hoveredIncident, setHoveredIncident] = useState<{
     id: string;
     properties: GeoIncidentProps;
@@ -129,8 +141,69 @@ export default function RicerMap() {
   const [gpuTier, setGpuTier] = useState<GPUTier>('tier-c'); // Start with safest tier
   const [isochroneData, setIsochroneData] = useState<any | null>(null);
   const [vehiclesData, setVehiclesData] = useState(EMPTY_VEHICLES);
+  const [windData, setWindData] = useState(EMPTY_WIND);
+  const setWindLastUpdate = useMapStore((s) => s.setWindLastUpdate);
+  const [soilMoistureData, setSoilMoistureData] = useState(EMPTY_GEOJSON);
+  const [burnedAreasVector, setBurnedAreasVector] = useState(EMPTY_GEOJSON);
 
-  const prevIs3D = useRef(is3DEnabled);
+  /* NDVI state */
+  const [ndviDate, setNdviDate] = useState<string | null>(null);
+  const ndviOpacity = useMapStore((s) => s.ndviOpacity);
+
+  /* Reservoir state */
+  const [reservoirData, setReservoirData] = useState<any | null>(null);
+
+  /* Population grid state */
+  const [populationGridData, setPopulationGridData] = useState<any | null>(null);
+
+  /* PAMF/RMA state */
+  const [communesData, setCommunesData] = useState<any | null>(null);
+  const [pamfRmaStats, setPamfRmaStats] = useState<any | null>(null);
+  const setPamfRmaHasData = useMapStore((s) => s.setPamfRmaHasData);
+
+  /* EFFIS / Soil Moisture store controls */
+  const effisFwiDay = useMapStore((s) => s.effisFwiDay);
+  const effisFwiOpacity = useMapStore((s) => s.effisFwiOpacity);
+  const effisFwiMode = useMapStore((s) => s.effisFwiMode);
+  const effisBurnedAreaMode = useMapStore((s) => s.effisBurnedAreaMode);
+  const soilMoistureDepth = useMapStore((s) => s.soilMoistureDepth);
+
+  /* CAMS Aerosol store controls */
+  const camsAerosolMode = useMapStore((s) => s.camsAerosolMode);
+  const camsAerosolOpacity = useMapStore((s) => s.camsAerosolOpacity);
+
+  /* Population Density store controls */
+  const populationDensityOpacity = useMapStore((s) => s.populationDensityOpacity);
+
+  /* Toast notifications */
+  const addToast = useToastStore((s) => s.addToast);
+
+  /* Tile availability state — lives in store so MapControls/MapLegend can read it */
+  const tileAvailability = useMapStore((s) => s.tileAvailability);
+  const setTileAvailable = useMapStore((s) => s.setTileAvailable);
+  const tileRetryCount = useMapStore((s) => s.tileRetryCount);
+  const incrementTileRetry = useMapStore((s) => s.incrementTileRetry);
+  const resetTileRetry = useMapStore((s) => s.resetTileRetry);
+
+  // Convenience aliases matching old variable names
+  const jrcTilesAvailable = tileAvailability.jrcWater;
+  const popTilesAvailable = tileAvailability.worldpop;
+  const landCoverTilesAvailable = tileAvailability.landCover;
+  const effisFwiTilesAvailable = tileAvailability.effisFwi;
+  const effisBurnedTilesAvailable = tileAvailability.effisBurned;
+  const camsTilesAvailable = tileAvailability.cams;
+
+  /* Land Cover store controls */
+  const landCoverOpacity = useMapStore((s) => s.landCoverOpacity);
+
+  /* Fire Spread controls */
+  const fireSpreadOpacity = useMapStore((s) => s.fireSpreadOpacity);
+  const fireSpreadSimPoint = useMapStore((s) => s.fireSpreadSimPoint);
+  const setFireSpreadSimPoint = useMapStore((s) => s.setFireSpreadSimPoint);
+
+  /* Terrain layer controls */
+  const slopeOpacity = useMapStore((s) => s.slopeOpacity);
+  const hillshadeExaggeration = useMapStore((s) => s.hillshadeExaggeration);
 
   // Memoize the GPU tier config so it doesn't recompute on every render
   const tierConfig = useMemo(() => getLayerConfigForTier(gpuTier), [gpuTier]);
@@ -151,6 +224,17 @@ export default function RicerMap() {
       console.error('[Map] GPU detection error, using Tier C:', error);
       setGpuTier('tier-c');
     });
+  }, []);
+
+  /* ═══════════ Slope protocol lifecycle ═══════════ */
+
+  useEffect(() => {
+    const tileUrl = HAS_PREMIUM_TILES
+      ? `https://api.maptiler.com/tiles/terrain-rgb/{z}/{x}/{y}.png?key=${process.env.NEXT_PUBLIC_MAPTILER_API_KEY}`
+      : 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png';
+    configureSlopeProtocol(tileUrl, HAS_PREMIUM_TILES ? 'mapbox' : 'terrarium');
+    registerSlopeProtocol();
+    return () => unregisterSlopeProtocol();
   }, []);
 
   /* ═══════════ Animation loop (Tier A/B only) ═══════════ */
@@ -266,31 +350,16 @@ export default function RicerMap() {
     async function fetchStatic() {
       if (cancelled) return;
       try {
-        const [infraRes, riskRes] = await Promise.allSettled([
-          fetch('/api/geo/infrastructure', { signal: abortController.signal }).then((r) =>
-            r.ok ? r.json() : Promise.reject(`HTTP ${r.status}`),
-          ),
-          fetch('/api/geo/risk-basins', { signal: abortController.signal }).then((r) =>
-            r.ok ? r.json() : Promise.reject(`HTTP ${r.status}`),
-          ),
-        ]);
-        if (infraRes.status === 'fulfilled') {
-          setInfrastructure(infraRes.value);
+        const res = await fetch('/api/geo/infrastructure', { signal: abortController.signal });
+        if (res.ok) {
+          setInfrastructure(await res.json());
           setDataError('infrastructure', null);
         } else {
-          const reason = String(infraRes.reason);
-          if (!reason.includes('AbortError')) setDataError('infrastructure', reason);
-        }
-        if (riskRes.status === 'fulfilled') {
-          setRiskBasins(riskRes.value);
-          setDataError('riskBasins', null);
-        } else {
-          const reason = String(riskRes.reason);
-          if (!reason.includes('AbortError')) setDataError('riskBasins', reason);
+          setDataError('infrastructure', `HTTP ${res.status}`);
         }
       } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') return;
-        console.error('Failed to fetch static data:', error);
+        setDataError('infrastructure', 'Network error');
       }
     }
 
@@ -338,12 +407,35 @@ export default function RicerMap() {
       }
     }
 
+    let retardantDisabled = false;
+    async function fetchRetardant() {
+      if (cancelled || retardantDisabled) return;
+      try {
+        const res = await fetch('/api/retardant', { signal: abortController.signal });
+        if (!res.ok) {
+          if (res.status === 403) { retardantDisabled = true; return; }
+          return;
+        }
+        const json = await res.json();
+        const items = (json.items ?? [])
+          .filter((r: { storageLat?: number; storageLng?: number }) => r.storageLat != null && r.storageLng != null)
+          .map((r: { storageLat: number; storageLng: number; name: string }) => ({
+            coordinates: [r.storageLng, r.storageLat] as [number, number],
+            name: r.name,
+          }));
+        setRetardantData(items);
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') return;
+      }
+    }
+
     // Initial fetch
     fetchIncidents();
     fetchResources();
     fetchVehicles();
     fetchStatic();
     fetchFirms();
+    fetchRetardant();
 
     // Per-source intervals using tier-aware durations
     const incidentInterval = setInterval(fetchIncidents, tierConfig.pollingInterval.incidents);
@@ -361,6 +453,313 @@ export default function RicerMap() {
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setDataError, setLastSuccessfulSync, tierConfig.pollingInterval.incidents, tierConfig.pollingInterval.resources, tierConfig.pollingInterval.firms]);
+
+  /* ═══════════ Wind vectors fetch (30-min refresh) ═══════════ */
+
+  useEffect(() => {
+    if (!layers.windVectors && !layers.fireSpread) {
+      setWindData(EMPTY_WIND);
+      return;
+    }
+
+    let cancelled = false;
+    const controller = new AbortController();
+
+    async function fetchWind() {
+      if (cancelled) return;
+      try {
+        const res = await fetch('/api/weather/wind', { signal: controller.signal });
+        if (!res.ok) {
+          setDataError('wind', `HTTP ${res.status}`);
+          return;
+        }
+        const data = await res.json();
+        setWindData(data);
+        setWindLastUpdate(new Date());
+        setDataError('wind', null);
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') return;
+        setDataError('wind', error instanceof Error ? error.message : 'Network error');
+      }
+    }
+
+    fetchWind();
+    const interval = setInterval(fetchWind, 30 * 60 * 1000);
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+      clearInterval(interval);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layers.windVectors, layers.fireSpread, setDataError]);
+
+  /* ═══════════ Soil moisture fetch (5-min refresh) ═══════════ */
+
+  useEffect(() => {
+    if (!layers.soilMoisture && !layers.fireSpread) {
+      setSoilMoistureData(EMPTY_GEOJSON);
+      return;
+    }
+
+    let cancelled = false;
+    const controller = new AbortController();
+
+    async function fetchSoilMoisture() {
+      if (cancelled) return;
+      try {
+        const res = await fetch('/api/weather/soil-moisture', { signal: controller.signal });
+        if (!res.ok) {
+          const { useToastStore } = await import('@/store/useToastStore');
+          useToastStore.getState().addToast('Soil moisture data temporarily unavailable.', 'warning');
+          return;
+        }
+        const data = await res.json();
+        if (data.features) {
+          setSoilMoistureData(data);
+        }
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') return;
+        console.warn('[SoilMoisture] Fetch failed:', error);
+      }
+    }
+
+    fetchSoilMoisture();
+    const interval = setInterval(fetchSoilMoisture, 5 * 60 * 1000);
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+      clearInterval(interval);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layers.soilMoisture, layers.fireSpread]);
+
+  /* ═══════════ EFFIS Burned Areas vector fetch ═══════════ */
+
+  useEffect(() => {
+    if (!layers.effisBurnedAreas) {
+      setBurnedAreasVector(EMPTY_GEOJSON);
+      return;
+    }
+
+    let cancelled = false;
+    const controller = new AbortController();
+
+    async function fetchBurnedAreas() {
+      if (cancelled) return;
+      try {
+        const res = await fetch('/api/effis/burned-areas', { signal: controller.signal });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data?.type === 'FeatureCollection' && data.features?.length > 0) {
+          setBurnedAreasVector(data);
+        }
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') return;
+      }
+    }
+
+    fetchBurnedAreas();
+    const interval = setInterval(fetchBurnedAreas, 60 * 60 * 1000);
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+      clearInterval(interval);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layers.effisBurnedAreas]);
+
+  /* ═══════════ NDVI date probe (fetch latest available date) ═══════════ */
+
+  useEffect(() => {
+    if (!layers.ndvi) {
+      setNdviDate(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    function fallbackDate(): string {
+      const d = new Date();
+      d.setDate(d.getDate() - 10);
+      // Round down to nearest 8-day period start (Jan 1 = day 1)
+      const dayOfYear = Math.floor((d.getTime() - new Date(d.getFullYear(), 0, 0).getTime()) / 86400000);
+      const rounded = dayOfYear - (dayOfYear % 8) + 1;
+      const result = new Date(d.getFullYear(), 0, rounded);
+      return result.toISOString().split('T')[0];
+    }
+
+    fetch('/api/ndvi/latest-date')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled) {
+          setNdviDate(data?.date ?? fallbackDate());
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setNdviDate(fallbackDate());
+      });
+
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layers.ndvi]);
+
+  /* ═══════════ Reservoir data fetch ═══════════ */
+
+  useEffect(() => {
+    if (!layers.reservoirs) {
+      setReservoirData(null);
+      return;
+    }
+
+    let cancelled = false;
+    fetch('/data/reservoirs.geojson')
+      .then((res) => {
+        if (!res.ok) throw new Error(`Reservoir GeoJSON: ${res.status}`);
+        return res.json();
+      })
+      .then((data) => {
+        if (!cancelled && data) setReservoirData(data);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          console.error('[Reservoirs] Failed to load reservoir data', err);
+          addToast('Reservoir data unavailable', 'warning');
+        }
+      });
+
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layers.reservoirs]);
+
+  /* ═══════════ Population grid data fetch (for usePopulationAtRisk hook) ═══════════ */
+
+  useEffect(() => {
+    if (!layers.populationDensity) {
+      setPopulationGridData(null);
+      return;
+    }
+
+    let cancelled = false;
+    fetch('/data/ifrane-population-grid.json')
+      .then((res) => {
+        if (!res.ok) throw new Error(`Population grid: ${res.status}`);
+        return res.json();
+      })
+      .then((data) => {
+        if (!cancelled && data) setPopulationGridData(data);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          console.error('[Population] Failed to load population grid', err);
+        }
+      });
+
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layers.populationDensity]);
+
+  /* ═══════════ PAMF/RMA data fetch ═══════════ */
+
+  useEffect(() => {
+    if (!layers.pamfCommunes && !layers.rmaCommunes) {
+      setCommunesData(null);
+      setPamfRmaStats(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchGeojson = fetch('/data/communes-ifrane.geojson').then((r) => {
+      if (!r.ok) throw new Error(`GeoJSON fetch failed: ${r.status}`);
+      return r.json();
+    });
+
+    const fetchStats = fetchWithAuth('/api/analytics/pamf-rma').then((r) => {
+      if (!r.ok) throw new Error(`PAMF-RMA API failed: ${r.status}`);
+      return r.json();
+    });
+
+    Promise.all([
+      fetchGeojson.catch((err) => {
+        console.error('[PAMF/RMA] Failed to load communes GeoJSON:', err);
+        if (!cancelled) addToast(t('pamfGeoJsonError' as TranslationKey), 'error', 6000);
+        return null;
+      }),
+      fetchStats.catch((err) => {
+        console.error('[PAMF/RMA] Failed to fetch fire pressure data:', err);
+        if (!cancelled) addToast(t('pamfApiError' as TranslationKey), 'error', 6000);
+        return null;
+      }),
+    ])
+      .then(([geojson, stats]) => {
+        if (cancelled) return;
+
+        if (!geojson) {
+          setPamfRmaHasData(false);
+          return;
+        }
+
+        setCommunesData(geojson);
+
+        if (stats) {
+          setPamfRmaStats(stats);
+          const hasData = stats.hasData ?? false;
+          setPamfRmaHasData(hasData);
+
+          // Merge stats into GeoJSON properties with area normalization
+          if (stats.communes && geojson.features) {
+            const statsMap = new Map(stats.communes.map((c: any) => [c.name, c]));
+            const geojsonNames = new Set<string>();
+
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (geojson.features as any[]).forEach((f: any) => {
+              const name = f.properties?.name;
+              geojsonNames.add(name);
+              const s: any = statsMap.get(name);
+              const areaKm2 = f.properties?.areaKm2 ?? 0;
+              const forestedHa = f.properties?.forestedAreaHa ?? 0;
+
+              if (s) {
+                // PAMF = fires per year / commune area (km²)
+                f.properties['pamf'] = areaKm2 > 0
+                  ? +(s.pamf / areaKm2).toFixed(4) : 0;
+                // RMA = (burned ha per year / forested ha) × 100 (percentage)
+                if (forestedHa > 0) {
+                  f.properties['rma'] = +((s.rma / forestedHa) * 100).toFixed(4);
+                } else {
+                  console.warn(`[PAMF/RMA] Commune "${name}" has 0 forested area, setting RMA to 0`);
+                  f.properties['rma'] = 0;
+                }
+              } else {
+                // No fire records for this commune — default to 0
+                f.properties['pamf'] = 0;
+                f.properties['rma'] = 0;
+              }
+            });
+
+            // Warn about name mismatches
+            Array.from(statsMap.keys()).forEach((apiName) => {
+              if (!geojsonNames.has(apiName as string)) {
+                console.warn(`[PAMF/RMA] API commune "${apiName}" not found in GeoJSON`);
+              }
+            });
+          }
+
+          // Empty dataset: show note
+          if (!hasData && !cancelled) {
+            addToast(t('pamfNoRecords' as TranslationKey), 'info', 5000);
+          }
+        } else {
+          setPamfRmaHasData(false);
+        }
+      });
+
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layers.pamfCommunes, layers.rmaCommunes]);
 
   /* ═══════════ Fly-to on incident selection ═══════════ */
 
@@ -381,42 +780,6 @@ export default function RicerMap() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedIncidentId]);
 
-  /* ═══════════ 3D toggle ═══════════ */
-
-  useEffect(() => {
-    if (prevIs3D.current !== is3DEnabled) {
-      prevIs3D.current = is3DEnabled;
-      setViewState({ ...viewState, pitch: is3DEnabled ? 50 : 0 });
-    }
-  }, [is3DEnabled, setViewState, viewState]);
-
-  /* ═══════════ Terrain + Fog (3D mode) ═══════════ */
-
-  useEffect(() => {
-    const map = mapRef.current?.getMap() as any;
-    if (!map) return;
-    const apply = () => {
-      if (is3DEnabled) {
-        map.setTerrain({ source: 'terrain-dem', exaggeration: 1.5 });
-        map.setFog({
-          color: 'rgb(220, 230, 240)',
-          'high-color': 'rgb(80, 130, 200)',
-          'horizon-blend': 0.04,
-          'space-color': 'rgb(8, 8, 20)',
-          'star-intensity': 0.5,
-        });
-      } else {
-        map.setTerrain(null);
-        map.setFog({});
-      }
-    };
-    if (map.isStyleLoaded()) {
-      apply();
-    } else {
-      map.once('style.load', apply);
-    }
-  }, [is3DEnabled]);
-
   /* ═══════════ Fullscreen ═══════════ */
 
   const toggleFullscreen = useCallback(() => {
@@ -434,6 +797,100 @@ export default function RicerMap() {
     return () => document.removeEventListener('fullscreenchange', handler);
   }, []);
 
+  /* ═══════════ Dynamic WMS tile URLs ═══════════ */
+
+  const effisFwiTileUrl = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + effisFwiDay);
+    const timeParam = d.toISOString().slice(0, 10);
+    const layerName = effisFwiMode === 'ranking' ? 'mf010.ranking' : 'mf010.fwi';
+    return `/api/effis/tiles?layer=${layerName}&time=${timeParam}&bbox={bbox-epsg-3857}`;
+  }, [effisFwiDay, effisFwiMode]);
+
+  // EFFIS Burned Areas WMS tile URL.
+  // Available layers: modis.ba (cumulative), modis.ba.season (full season),
+  // modis.ba.week (last 7 days), modis.ba.month (last 30 days).
+  // Note: effis.nrt.ba is deprecated (PostGIS query errors as of 2026).
+  const effisBurnedTileUrl = useMemo(() => {
+    const layerName = effisBurnedAreaMode === 'recent' ? 'modis.ba' : 'modis.ba.season';
+    return `/api/effis/tiles?layer=${layerName}&bbox={bbox-epsg-3857}`;
+  }, [effisBurnedAreaMode]);
+
+  /* ═══════════ NDVI tile URL ═══════════ */
+
+  const ndviTileUrl = useMemo(() => {
+    if (!ndviDate) return null;
+    return `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_NDVI_8Day/default/${ndviDate}/GoogleMapsCompatible_Level9/{z}/{y}/{x}.png`;
+  }, [ndviDate]);
+
+  /* ═══════════ JRC Surface Water tile URL ═══════════ */
+  // Source: JRC Global Surface Water dataset (free, no key). Max zoom: 13.
+  // Layers available: occurrence, transitions, seasonality, recurrence, change, extent.
+  // Error tile: https://storage.googleapis.com/global-surface-water/downloads_ancillary/blank.png
+
+  const jrcWaterTileUrl = 'https://storage.googleapis.com/global-surface-water/tiles2021/occurrence/{z}/{x}/{y}.png';
+
+  /* ═══════════ WorldPop Population Density tile URL ═══════════ */
+  // Source: WorldPop ArcGIS ImageServer (free, no key). 1km resolution, 2000-2020.
+  // Uses bbox-based WMS-style fetching via {bbox-epsg-3857} template.
+  // Fallback: local heatmap from ifrane-population-grid.json (synthetic census data).
+  // Alternative endpoints if this breaks:
+  //   - NASA SEDAC GPW v4: https://sedac.ciesin.columbia.edu/geoserver/wms (may be unreliable)
+  //   - Pre-processed WorldPop GeoTIFF: https://hub.worldpop.org/geodata/summary?id=49659
+
+  const worldPopTileUrl = '/api/population/tiles?bbox={bbox-epsg-3857}';
+
+  /* ═══════════ CAMS Aerosol WMS tile URL ═══════════ */
+
+  const camsWmsLayer = useMemo(() =>
+    camsAerosolMode === 'dust' ? 'composition_duaod550'
+      : camsAerosolMode === 'smoke' ? 'composition_bbaod550'
+      : 'composition_aod550',
+    [camsAerosolMode],
+  );
+
+  const camsAerosolTileUrl = useMemo(() => {
+    // Use the Next.js proxy to avoid CORS issues and handle CRS conversion
+    return `/api/cams/tiles?layer=${camsWmsLayer}&bbox={bbox-epsg-3857}`;
+  }, [camsWmsLayer]);
+
+  /* ═══════════ CAMS health check (probe proxy on toggle/mode change) ═══════════ */
+
+  useEffect(() => {
+    if (!layers.camsAerosol) return;
+
+    let cancelled = false;
+    // Probe with a bbox covering Ifrane Province (EPSG:3857)
+    const testBbox = '-612835,3895304,-534072,3962893';
+    fetch(`/api/cams/tiles?layer=${camsWmsLayer}&bbox=${testBbox}`)
+      .then((res) => {
+        if (cancelled) return;
+        const error = res.headers.get('X-CAMS-Error');
+        if (error) {
+          console.warn('[CAMS] Health check failed:', error);
+          setTileAvailable('cams', false);
+          addToast('CAMS aerosol data temporarily unavailable (ECMWF service may be down).', 'warning');
+        } else {
+          setTileAvailable('cams', true);
+          resetTileRetry('cams');
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setTileAvailable('cams', false);
+          addToast('CAMS aerosol data temporarily unavailable.', 'warning');
+        }
+      });
+
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layers.camsAerosol, camsWmsLayer]);
+
+  /* ═══════════ Soil moisture depth property ═══════════ */
+
+  const soilMoistureProperty = soilMoistureDepth === 'surface' ? 'surface' : soilMoistureDepth === 'root' ? 'root' : 'deep';
+  const soilMoistureClassProp = soilMoistureDepth === 'surface' ? 'surfaceClass' : soilMoistureDepth === 'root' ? 'rootClass' : 'deepClass';
+
   /* ═══════════ Prepared GeoJSON ═══════════ */
 
   const incidentSourceData = useMemo(() => ({
@@ -448,6 +905,11 @@ export default function RicerMap() {
       },
     })),
   }), [incidents.features, layers.incidents]);
+
+  const firmsSourceData = useMemo(() => ({
+    type: 'FeatureCollection' as const,
+    features: layers.firmsDetections ? firmsDetections.features : [],
+  }), [firmsDetections.features, layers.firmsDetections]);
 
   const heatmapData = useMemo(() => ({
     type: 'FeatureCollection' as const,
@@ -472,12 +934,20 @@ export default function RicerMap() {
     if (!tierConfig.useDeckGL) return [];
 
     const list: any[] = [];
-    const resourceLayer = createResourceLayer(resources, layers.resources);
+    const resourceActiveTypes: Record<string, boolean> = {
+      TRUCK: layers.rscTrucks,
+      AIRCRAFT: layers.rscAircraft,
+      PERSONNEL: layers.rscPersonnel,
+      EQUIPMENT: layers.rscEquipment,
+    };
+    const resourceLayer = createResourceLayer(resources, layers.resources, resourceActiveTypes);
     if (resourceLayer) list.push(resourceLayer);
     const infraLayers = createInfrastructureLayers(infrastructure, layers.infrastructure);
     list.push(...infraLayers);
+    const retardantLayer = createRetardantLayer(retardantData, layers.retardant);
+    if (retardantLayer) list.push(retardantLayer);
     return list;
-  }, [tierConfig.useDeckGL, resources, infrastructure, layers.resources, layers.infrastructure]);
+  }, [tierConfig.useDeckGL, resources, infrastructure, retardantData, layers.resources, layers.infrastructure, layers.retardant, layers.rscTrucks, layers.rscAircraft, layers.rscPersonnel, layers.rscEquipment]);
 
   // Dispatch layers: routes + teams — recomputes only when dispatch state changes
   const dispatchDeckLayers = useMemo(() => {
@@ -532,6 +1002,13 @@ export default function RicerMap() {
 
   const handleClick = useCallback(
     (event: MapLayerMouseEvent) => {
+      // Shift+click places a fire spread simulation point
+      if (layers.fireSpread && event.originalEvent?.shiftKey) {
+        const { lng, lat } = event.lngLat;
+        setFireSpreadSimPoint({ lon: lng, lat });
+        return;
+      }
+
       const features = event.features;
       if (!features || features.length === 0) return;
       const feature = features[0];
@@ -559,7 +1036,8 @@ export default function RicerMap() {
         setHoveredIncident(null);
       }
     },
-    [viewState, setSelectedIncidentId],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [viewState, setSelectedIncidentId, layers.fireSpread, setFireSpreadSimPoint],
   );
 
   /* ═══════════ Hover handlers with debouncing ═══════════ */
@@ -616,6 +1094,66 @@ export default function RicerMap() {
         return;
       }
 
+      // Handle wind arrow hover
+      if (feature.layer?.id === 'wind-arrows') {
+        setHoverInfo({
+          longitude: coords[0],
+          latitude: coords[1],
+          layer: 'wind-arrows',
+          feature,
+        });
+        setHoveredIncident(null);
+        return;
+      }
+
+      // Handle soil moisture hover
+      if (feature.layer?.id === 'soil-moisture-circles') {
+        setHoverInfo({
+          longitude: coords[0],
+          latitude: coords[1],
+          layer: 'soil-moisture-circles',
+          feature,
+        });
+        setHoveredIncident(null);
+        return;
+      }
+
+      // Handle burned areas vector click/hover
+      if (feature.layer?.id === 'effis-burned-vector-fill') {
+        setHoverInfo({
+          longitude: event.lngLat.lng,
+          latitude: event.lngLat.lat,
+          layer: 'effis-burned-vector-fill',
+          feature,
+        });
+        setHoveredIncident(null);
+        return;
+      }
+
+      // Handle reservoir hover
+      if (feature.layer?.id === 'reservoir-circles') {
+        setHoverInfo({
+          longitude: coords[0],
+          latitude: coords[1],
+          layer: 'reservoir-circles',
+          feature,
+        });
+        setHoveredIncident(null);
+        return;
+      }
+
+      // Handle PAMF/RMA commune hover
+      if (feature.layer?.id === 'pamf-fill' || feature.layer?.id === 'rma-fill') {
+        setHoverInfo({
+          longitude: event.lngLat.lng,
+          latitude: event.lngLat.lat,
+          layer: feature.layer.id,
+          feature,
+        });
+        setHoveredIncident(null);
+        return;
+      }
+
       // Handle incident hover (existing logic)
       if (feature.properties.id && feature.layer?.id === 'incidents-unclustered') {
         setHoveredIncident({
@@ -640,6 +1178,106 @@ export default function RicerMap() {
     setHoverInfo(null);
   }, []);
 
+  /* ═══════════ Fire Spread Vectors ═══════════ */
+
+  const { vectors: fireSpreadVectors, status: fireSpreadStatus } = useFireSpreadVectors(
+    firmsDetections,
+    incidents,
+    windData,
+    soilMoistureData,
+    layers.fireSpread,
+    fireSpreadSimPoint,
+  );
+
+  const setFireSpreadStatus = useMapStore((s) => s.setFireSpreadStatus);
+
+  // Sync fire spread status to store (so MapControls/MapLegend can read it)
+  useEffect(() => {
+    setFireSpreadStatus(fireSpreadStatus);
+  }, [fireSpreadStatus, setFireSpreadStatus]);
+
+  // Clear simulation point when fire spread layer is turned off
+  useEffect(() => {
+    if (!layers.fireSpread && fireSpreadSimPoint) {
+      setFireSpreadSimPoint(null);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layers.fireSpread]);
+
+  /* ═══════════ Register SDF wind arrow on map load ═══════════ */
+
+  const handleMapLoad = useCallback(() => {
+    const map = mapRef.current?.getMap() as any;
+    if (map && !map.hasImage('wind-arrow')) {
+      const img = createWindArrowImage(32);
+      map.addImage('wind-arrow', img, { sdf: true });
+    }
+    if (map) {
+      map.on('error', (e: any) => {
+        const srcId = e.sourceId || e.source?.id;
+        // Suppress broken-tile icons for NDVI raster source
+        if (srcId === 'ndvi-tiles') {
+          console.warn('[NDVI] Tile load error — GIBS may not have data for this date', e.error?.message);
+          e.preventDefault?.();
+          return;
+        }
+        // Map source IDs → store tile availability keys
+        const SRC_TO_TILE_KEY: Record<string, keyof typeof tileAvailability> = {
+          'jrc-water': 'jrcWater',
+          'worldpop-density': 'worldpop',
+          'esa-landcover': 'landCover',
+          'effis-fwi': 'effisFwi',
+          'effis-burned-areas': 'effisBurned',
+          'cams-aerosol': 'cams',
+        };
+        const tileKey = SRC_TO_TILE_KEY[srcId];
+        if (tileKey) {
+          console.warn(`[${srcId}] Tile load error`, e.error?.message);
+          setTileAvailable(tileKey, false);
+          e.preventDefault?.();
+          return;
+        }
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* ═══════════ Unified WMS tile auto-retry with exponential backoff ═══════════ */
+  // Backoff schedule: 60s → 120s → 300s, max 3 auto-retries per service.
+
+  const RETRY_DELAYS = [60_000, 120_000, 300_000]; // 1min, 2min, 5min
+  const MAX_AUTO_RETRIES = 3;
+
+  const tileServices: { key: keyof typeof tileAvailability; label: string }[] = useMemo(() => [
+    { key: 'effisFwi', label: 'EFFIS FWI' },
+    { key: 'effisBurned', label: 'EFFIS Burned' },
+    { key: 'worldpop', label: 'WorldPop' },
+    { key: 'cams', label: 'CAMS' },
+    { key: 'landCover', label: 'LandCover' },
+    { key: 'jrcWater', label: 'JRC Water' },
+  ], []);
+
+  useEffect(() => {
+    const timers: ReturnType<typeof setTimeout>[] = [];
+
+    for (const svc of tileServices) {
+      if (tileAvailability[svc.key]) continue; // already available
+      const retries = tileRetryCount[svc.key] || 0;
+      if (retries >= MAX_AUTO_RETRIES) continue; // stop after 3
+
+      const delay = RETRY_DELAYS[Math.min(retries, RETRY_DELAYS.length - 1)];
+      const timer = setTimeout(() => {
+        console.info(`[${svc.label}] Auto-retrying (attempt ${retries + 1}/${MAX_AUTO_RETRIES}) after ${delay / 1000}s`);
+        incrementTileRetry(svc.key);
+        setTileAvailable(svc.key, true);
+      }, delay);
+      timers.push(timer);
+    }
+
+    return () => timers.forEach(clearTimeout);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tileAvailability, tileRetryCount]);
+
   /* ═══════════ Map style ═══════════ */
 
   const mapStyle = useMemo(() => getMapStyle(basemap), [basemap]);
@@ -657,12 +1295,19 @@ export default function RicerMap() {
         {...viewState}
         onMove={(e) => setViewState(e.viewState)}
         mapStyle={mapStyle as any}
+        onLoad={handleMapLoad}
         onClick={handleClick}
         interactiveLayerIds={[
           'incidents-unclustered',
           'incidents-cluster',
           'firms-detections-unclustered',
           'firms-cluster',
+          'wind-arrows',
+          'soil-moisture-circles',
+          'effis-burned-vector-fill',
+          'reservoir-circles',
+          'pamf-fill',
+          'rma-fill',
         ]}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
@@ -683,23 +1328,34 @@ export default function RicerMap() {
           encoding={HAS_PREMIUM_TILES ? 'mapbox' : 'terrarium'}
         />
 
-        {/* ═══ Sky atmosphere (3D mode only) ═══ */}
-        {is3DEnabled && (
-          <Layer
-            id="sky"
-            type="sky"
-            paint={{
-              'sky-type': 'atmosphere',
-              'sky-atmosphere-sun': [0.0, 90.0],
-              'sky-atmosphere-sun-intensity': 15,
-            }}
-          />
+        {/* ═══ Hillshade layer (native MapLibre, zero extra cost) ═══ */}
+        <Layer
+          id="hillshade-layer"
+          type="hillshade"
+          source="terrain-dem"
+          layout={{ visibility: layers.hillshade ? 'visible' : 'none' }}
+          paint={{
+            'hillshade-exaggeration': hillshadeExaggeration,
+            'hillshade-shadow-color': '#473B24',
+            'hillshade-highlight-color': '#FFFFFF',
+            'hillshade-illumination-direction': 315,
+          }}
+        />
+
+        {/* ═══ Slope overlay (Tier A/B only — custom protocol) ═══ */}
+        {tierConfig.dataLimits.enableWMSOverlays && (
+          <Source id="slope-tiles" type="raster" tiles={['slope://{z}/{x}/{y}']} tileSize={256}>
+            <Layer
+              id="slope-layer"
+              type="raster"
+              layout={{ visibility: layers.slope ? 'visible' : 'none' }}
+              paint={{ 'raster-opacity': slopeOpacity }}
+            />
+          </Source>
         )}
 
         {/* ═══ Heatmap layer ═══ */}
-        {isHeatmapEnabled &&
-          layers.incidents &&
-          incidents.features.length > 0 && (
+        {incidents.features.length > 0 && (
             <Source
               id="incidents-heat"
               type="geojson"
@@ -709,6 +1365,7 @@ export default function RicerMap() {
                 id="incidents-heatmap"
                 type="heatmap"
                 maxzoom={16}
+                layout={{ visibility: isHeatmapEnabled && layers.incidents ? 'visible' : 'none' }}
                 paint={{
                   'heatmap-weight': [
                     'interpolate',
@@ -774,96 +1431,203 @@ export default function RicerMap() {
             </Source>
           )}
 
-        {/* ═══ Risk basin polygons / 3D extrusions ═══ */}
-        {layers.riskBasins && riskBasins.features.length > 0 && (
+        {/* ═══ Population density — WorldPop raster tiles (primary) ═══ */}
+        {/* WorldPop ArcGIS ImageServer: 1km resolution, bbox-based WMS-style. */}
+        {/* Restricted to Ifrane Province bounding box to limit tile fetching. */}
+        {popTilesAvailable && (
           <Source
-            id="risk-basins"
-            type="geojson"
-            data={asGeoJSON(riskBasins)}
+            id="worldpop-density"
+            type="raster"
+            tiles={[worldPopTileUrl]}
+            tileSize={256}
+            maxzoom={14}
+            bounds={[-5.6, 33.0, -4.8, 33.8]}
           >
-            {is3DEnabled ? (
-              <Layer
-                id="risk-basin-3d"
-                type="fill-extrusion"
-                paint={{
-                  'fill-extrusion-color': [
-                    'match',
-                    ['get', 'riskLevel'],
-                    1,
-                    '#22c55e',
-                    2,
-                    '#f59e0b',
-                    3,
-                    '#f97316',
-                    4,
-                    '#ef4444',
-                    5,
-                    '#991b1b',
-                    '#6b7280',
-                  ],
-                  'fill-extrusion-height': ['*', ['get', 'riskLevel'], 150],
-                  'fill-extrusion-base': 0,
-                  'fill-extrusion-opacity': 0.45,
-                }}
-              />
-            ) : (
-              <>
-                <Layer
-                  id="risk-basin-fill"
-                  type="fill"
-                  paint={{
-                    'fill-color': [
-                      'match',
-                      ['get', 'riskLevel'],
-                      1,
-                      '#22c55e',
-                      2,
-                      '#f59e0b',
-                      3,
-                      '#f97316',
-                      4,
-                      '#ef4444',
-                      5,
-                      '#991b1b',
-                      '#6b7280',
-                    ],
-                    'fill-opacity': 0.18,
-                  }}
-                />
-                <Layer
-                  id="risk-basin-border"
-                  type="line"
-                  paint={{
-                    'line-color': [
-                      'match',
-                      ['get', 'riskLevel'],
-                      1,
-                      '#22c55e',
-                      2,
-                      '#f59e0b',
-                      3,
-                      '#f97316',
-                      4,
-                      '#ef4444',
-                      5,
-                      '#991b1b',
-                      '#6b7280',
-                    ],
-                    'line-width': 2,
-                    'line-opacity': 0.6,
-                  }}
-                />
-              </>
-            )}
+            <Layer
+              id="worldpop-density-layer"
+              type="raster"
+              layout={{ visibility: layers.populationDensity ? 'visible' : 'none' }}
+              paint={{ 'raster-opacity': populationDensityOpacity * 0.5 }}
+            />
+          </Source>
+        )}
+
+        {/* ═══ Population density — local heatmap (fallback + popAtRisk data) ═══ */}
+        {populationGridData && populationGridData.features?.length > 0 && (
+          <Source id="population-density" type="geojson" data={populationGridData}>
+            <Layer
+              id="population-density-heatmap"
+              type="heatmap"
+              maxzoom={16}
+              layout={{ visibility: (layers.populationDensity && (!popTilesAvailable || !tierConfig.dataLimits.enableWMSOverlays)) ? 'visible' : 'none' }}
+              paint={{
+                // Ifrane grid: min=1, median=16, P75=130, P95=726, max=1545
+                'heatmap-weight': [
+                  'interpolate', ['linear'], ['get', 'pop'],
+                  0, 0,
+                  5, 0.05,     // Very rural: barely visible
+                  25, 0.15,    // Small villages
+                  100, 0.3,    // Small towns
+                  500, 0.55,   // Ifrane outskirts
+                  1000, 0.8,   // Dense urban
+                  1545, 1.0,   // Peak density
+                ],
+                'heatmap-intensity': [
+                  'interpolate', ['linear'], ['zoom'],
+                  7, 0.3,      // Low when zoomed out (prevents purple wash)
+                  10, 0.8,
+                  13, 1.5,
+                ],
+                'heatmap-color': [
+                  'interpolate', ['linear'], ['heatmap-density'],
+                  0, 'rgba(0,0,0,0)',
+                  0.05, 'rgba(255,255,178,0.4)', // Faint yellow for very rural
+                  0.2, '#fecc5c',                 // Yellow for villages
+                  0.4, '#fd8d3c',                 // Orange for towns
+                  0.6, '#f03b20',                 // Red-orange for urban
+                  0.8, '#bd0026',                 // Deep red for dense urban
+                  1.0, '#800026',                 // Dark red for peak
+                ],
+                'heatmap-radius': [
+                  'interpolate', ['linear'], ['zoom'],
+                  7, 8,        // Small radius when zoomed out
+                  10, 18,
+                  13, 35,
+                ],
+                'heatmap-opacity': [
+                  'interpolate', ['linear'], ['zoom'],
+                  7, populationDensityOpacity * 0.9,
+                  14, populationDensityOpacity * 0.4,
+                ],
+              }}
+            />
+          </Source>
+        )}
+
+        {/* ════════════════════════════════════════════════════════════
+            WMS RASTER OVERLAYS — grouped below vector layers for z-order
+            Order: raster base → vectors → markers (later = higher z)
+            ════════════════════════════════════════════════════════════ */}
+
+        {/* ─── EFFIS FWI: day-aware WMS with dynamic TIME parameter ─── */}
+        {tierConfig.dataLimits.enableWMSOverlays && effisFwiTilesAvailable && (
+          <Source
+            key={`effis-fwi-${effisFwiDay}-${effisFwiMode}`}
+            id="effis-fwi"
+            type="raster"
+            tiles={[effisFwiTileUrl]}
+            tileSize={256}
+          >
+            <Layer id="effis-fwi-layer" type="raster" layout={{ visibility: layers.effisFWI ? 'visible' : 'none' }} paint={{ 'raster-opacity': effisFwiOpacity, 'raster-brightness-min': 0.05, 'raster-contrast': 0.15 }} />
+          </Source>
+        )}
+        {/* ─── EFFIS Burned Areas WMS ─── */}
+        {tierConfig.dataLimits.enableWMSOverlays && effisBurnedTilesAvailable && (
+          <Source
+            key={`effis-burned-${effisBurnedAreaMode}`}
+            id="effis-burned-areas"
+            type="raster"
+            tiles={[effisBurnedTileUrl]}
+            tileSize={256}
+          >
+            <Layer id="effis-burned-areas-layer" type="raster" layout={{ visibility: layers.effisBurnedAreas ? 'visible' : 'none' }} paint={{ 'raster-opacity': 0.5 }} />
+          </Source>
+        )}
+        {/* ─── EFFIS Burned Areas WFS vector overlay ─── */}
+        {burnedAreasVector.features.length > 0 && (
+          <Source id="effis-burned-vector" type="geojson" data={burnedAreasVector}>
+            <Layer
+              id="effis-burned-vector-fill"
+              type="fill"
+              layout={{ visibility: layers.effisBurnedAreas ? 'visible' : 'none' }}
+              paint={{ 'fill-color': '#7f1d1d', 'fill-opacity': 0.35 }}
+            />
+            <Layer
+              id="effis-burned-vector-outline"
+              type="line"
+              layout={{ visibility: layers.effisBurnedAreas ? 'visible' : 'none' }}
+              paint={{ 'line-color': '#991b1b', 'line-width': 1.5, 'line-opacity': 0.7 }}
+            />
+          </Source>
+        )}
+        {/* ─── CAMS Aerosol ─── */}
+        {tierConfig.dataLimits.enableWMSOverlays && camsTilesAvailable && (
+          <Source
+            key={`cams-aerosol-${camsAerosolMode}`}
+            id="cams-aerosol"
+            type="raster"
+            tiles={[camsAerosolTileUrl]}
+            tileSize={256}
+          >
+            <Layer
+              id="cams-aerosol-layer"
+              type="raster"
+              layout={{ visibility: layers.camsAerosol ? 'visible' : 'none' }}
+              paint={{ 'raster-opacity': camsAerosolOpacity }}
+            />
+          </Source>
+        )}
+        {/* ─── ESA WorldCover Land Cover ─── */}
+        {tierConfig.dataLimits.enableWMSOverlays && landCoverTilesAvailable && (
+          <Source
+            id="esa-landcover"
+            type="raster"
+            tiles={['https://services.terrascope.be/wmts/v2?layer=WORLDCOVER_2021_MAP&style=&tilematrixset=EPSG:3857&Service=WMTS&Request=GetTile&Version=1.0.0&Format=image/png&TileMatrix=EPSG:3857:{z}&TileCol={x}&TileRow={y}']}
+            tileSize={256}
+            minzoom={6}
+            maxzoom={14}
+          >
+            <Layer
+              id="esa-landcover-layer"
+              type="raster"
+              layout={{ visibility: layers.landCover ? 'visible' : 'none' }}
+              paint={{ 'raster-opacity': landCoverOpacity }}
+            />
+          </Source>
+        )}
+        {/* ─── NDVI — NASA GIBS MODIS Terra ─── */}
+        {tierConfig.dataLimits.enableWMSOverlays && ndviTileUrl && (
+          <Source
+            key={`ndvi-${ndviDate}`}
+            id="ndvi-tiles"
+            type="raster"
+            tiles={[ndviTileUrl]}
+            tileSize={256}
+            maxzoom={9}
+          >
+            <Layer
+              id="ndvi-layer"
+              type="raster"
+              layout={{ visibility: layers.ndvi ? 'visible' : 'none' }}
+              paint={{ 'raster-opacity': ndviOpacity }}
+            />
+          </Source>
+        )}
+        {/* ─── JRC Surface Water raster ─── */}
+        {tierConfig.dataLimits.enableWMSOverlays && jrcTilesAvailable && (
+          <Source
+            id="jrc-water"
+            type="raster"
+            tiles={[jrcWaterTileUrl]}
+            tileSize={256}
+            maxzoom={13}
+          >
+            <Layer
+              id="jrc-water-layer"
+              type="raster"
+              layout={{ visibility: layers.reservoirs ? 'visible' : 'none' }}
+              paint={{ 'raster-opacity': 0.5 }}
+            />
           </Source>
         )}
 
         {/* ═══ Isochrone reachability polygons ═══ */}
-        {layers.isochrones && isochroneData && isochroneData.features?.length > 0 && (
+        {isochroneData && isochroneData.features?.length > 0 && (
           <Source id="isochrones" type="geojson" data={isochroneData}>
             <Layer
               id="isochrone-fill"
               type="fill"
+              layout={{ visibility: layers.isochrones ? 'visible' : 'none' }}
               paint={{
                 'fill-color': [
                   'step',
@@ -884,6 +1648,7 @@ export default function RicerMap() {
             <Layer
               id="isochrone-border"
               type="line"
+              layout={{ visibility: layers.isochrones ? 'visible' : 'none' }}
               paint={{
                 'line-color': [
                   'step',
@@ -900,42 +1665,226 @@ export default function RicerMap() {
         )}
 
         {/* ════════════════════════════════════════════════════════════
-            EFFIS WMS RASTER OVERLAYS (Fire Weather Index + Burned Areas)
-            Placed before point layers for correct z-order (raster underneath)
+            WIND VECTORS — rotated, color-coded arrows
             ════════════════════════════════════════════════════════════ */}
-        {tierConfig.dataLimits.enableWMSOverlays && layers.effisFWI && (
-          <Source
-            id="effis-fwi"
-            type="raster"
-            tiles={[
-              'https://maps.effis.emergency.copernicus.eu/effis?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=fwi.fwi&STYLES=&FORMAT=image/png&TRANSPARENT=true&SRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}',
-            ]}
-            tileSize={256}
-          >
-            <Layer id="effis-fwi-layer" type="raster" paint={{ 'raster-opacity': 0.6 }} />
+        {windData.features.length > 0 && (
+          <Source id="wind-vectors" type="geojson" data={asGeoJSON(windData)}>
+            <Layer
+              id="wind-arrows"
+              type="symbol"
+              layout={{
+                visibility: layers.windVectors ? 'visible' : 'none',
+                'icon-image': 'wind-arrow',
+                'icon-size': 0.8,
+                'icon-rotate': ['get', 'direction'],
+                'icon-rotation-alignment': 'map',
+                'icon-allow-overlap': true,
+              }}
+              paint={{
+                'icon-color': [
+                  'interpolate', ['linear'], ['get', 'speed'],
+                  0, '#22c55e',
+                  10, '#22c55e',
+                  15, '#f97316',
+                  25, '#ef4444',
+                ],
+                'icon-opacity': 0.85,
+              }}
+            />
           </Source>
         )}
-        {tierConfig.dataLimits.enableWMSOverlays && layers.effisBurnedAreas && (
-          <Source
-            id="effis-burned-areas"
-            type="raster"
-            tiles={[
-              'https://maps.effis.emergency.copernicus.eu/effis?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=burnt.ba&STYLES=&FORMAT=image/png&TRANSPARENT=true&SRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}',
-            ]}
-            tileSize={256}
-          >
-            <Layer id="effis-burned-areas-layer" type="raster" paint={{ 'raster-opacity': 0.5 }} />
+
+        {/* ════════════════════════════════════════════════════════════
+            FIRE SPREAD PREDICTION VECTORS — Rothermel model arrows
+            ════════════════════════════════════════════════════════════ */}
+        {fireSpreadVectors && fireSpreadVectors.features.length > 0 && (
+          <Source id="fire-spread-vectors" type="geojson" data={fireSpreadVectors as any}>
+            {/* Spread direction lines */}
+            <Layer
+              id="fire-spread-lines"
+              type="line"
+              filter={['==', '$type', 'LineString']}
+              layout={{
+                visibility: layers.fireSpread ? 'visible' : 'none',
+                'line-cap': 'round',
+              }}
+              paint={{
+                'line-color': ['match', ['get', 'riskLevel'],
+                  'low', '#4caf50', 'moderate', '#ffeb3b',
+                  'high', '#ff9800', 'extreme', '#f44336', '#808080'],
+                'line-width': ['interpolate', ['linear'], ['get', 'relativeRate'],
+                  0, 2, 0.5, 3, 1, 6],
+                'line-opacity': fireSpreadOpacity,
+              }}
+            />
+            {/* Arrowhead dots at endpoints */}
+            <Layer
+              id="fire-spread-tips"
+              type="circle"
+              filter={['==', ['get', 'isTip'], true]}
+              layout={{ visibility: layers.fireSpread ? 'visible' : 'none' }}
+              paint={{
+                'circle-radius': ['interpolate', ['linear'], ['get', 'relativeRate'],
+                  0, 3, 1, 7],
+                'circle-color': ['match', ['get', 'riskLevel'],
+                  'low', '#4caf50', 'moderate', '#ffeb3b',
+                  'high', '#ff9800', 'extreme', '#f44336', '#808080'],
+                'circle-opacity': fireSpreadOpacity,
+                'circle-stroke-width': 1,
+                'circle-stroke-color': 'rgba(0,0,0,0.3)',
+              }}
+            />
+          </Source>
+        )}
+
+        {reservoirData && reservoirData.features?.length > 0 && (
+          <Source id="reservoirs" type="geojson" data={reservoirData}>
+            <Layer
+              id="reservoir-circles"
+              type="circle"
+              layout={{ visibility: layers.reservoirs ? 'visible' : 'none' }}
+              paint={{
+                'circle-radius': 8,
+                'circle-color': RESERVOIR_COLORS.marker,
+                'circle-stroke-width': 2.5,
+                'circle-stroke-color': '#ffffff',
+                'circle-opacity': 0.9,
+              }}
+            />
+            <Layer
+              id="reservoir-labels"
+              type="symbol"
+              layout={{
+                visibility: layers.reservoirs ? 'visible' : 'none',
+                'text-field': ['get', 'name'],
+                'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold', 'sans-serif'],
+                'text-size': 11,
+                'text-offset': [0, 1.5],
+                'text-anchor': 'top',
+                'text-optional': true,
+              }}
+              paint={{
+                'text-color': RESERVOIR_COLORS.label,
+                'text-halo-color': '#ffffff',
+                'text-halo-width': 1.5,
+              }}
+            />
+          </Source>
+        )}
+
+        {/* ════════════════════════════════════════════════════════════
+            PAMF/RMA — commune choropleth
+            ════════════════════════════════════════════════════════════ */}
+        {communesData && communesData.features?.length > 0 && (
+          <Source id="communes-pamf-rma" type="geojson" data={communesData}>
+            {/* PAMF fill — fires per km² per year */}
+            <Layer
+              id="pamf-fill"
+              type="fill"
+              layout={{ visibility: layers.pamfCommunes ? 'visible' : 'none' }}
+              paint={{
+                'fill-color': pamfRmaStats?.hasData
+                  ? [
+                      'interpolate', ['linear'], ['coalesce', ['get', 'pamf'], 0],
+                      0, PAMF_COLORS.low,
+                      0.5, PAMF_COLORS.moderate,
+                      1.5, PAMF_COLORS.high,
+                      3.0, PAMF_COLORS.extreme,
+                    ]
+                  : PAMF_COLORS.noData,
+                'fill-opacity': 0.45,
+              }}
+            />
+            {/* RMA fill — burned area / forested area percentage */}
+            <Layer
+              id="rma-fill"
+              type="fill"
+              layout={{ visibility: layers.rmaCommunes ? 'visible' : 'none' }}
+              paint={{
+                'fill-color': pamfRmaStats?.hasData
+                  ? [
+                      'interpolate', ['linear'], ['coalesce', ['get', 'rma'], 0],
+                      0, RMA_COLORS.low,
+                      0.1, RMA_COLORS.moderate,
+                      0.5, RMA_COLORS.high,
+                      1.0, RMA_COLORS.extreme,
+                    ]
+                  : RMA_COLORS.noData,
+                'fill-opacity': 0.45,
+              }}
+            />
+            {/* Shared commune outlines */}
+            <Layer
+              id="communes-outline"
+              type="line"
+              layout={{ visibility: layers.pamfCommunes || layers.rmaCommunes ? 'visible' : 'none' }}
+              paint={{
+                'line-color': '#374151',
+                'line-width': 1.5,
+                'line-opacity': 0.6,
+              }}
+            />
+            {/* Commune labels */}
+            <Layer
+              id="communes-labels"
+              type="symbol"
+              layout={{
+                visibility: layers.pamfCommunes || layers.rmaCommunes ? 'visible' : 'none',
+                'text-field': ['get', 'name'],
+                'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold', 'sans-serif'],
+                'text-size': 11,
+                'text-optional': true,
+              }}
+              paint={{
+                'text-color': '#1f2937',
+                'text-halo-color': '#ffffff',
+                'text-halo-width': 1.5,
+              }}
+            />
+          </Source>
+        )}
+
+        {/* ════════════════════════════════════════════════════════════
+            SOIL MOISTURE — circle layer from Open-Meteo grid
+            ════════════════════════════════════════════════════════════ */}
+        {soilMoistureData.features.length > 0 && (
+          <Source id="soil-moisture" type="geojson" data={soilMoistureData}>
+            <Layer
+              id="soil-moisture-circles"
+              type="circle"
+              layout={{ visibility: layers.soilMoisture ? 'visible' : 'none' }}
+              paint={{
+                'circle-radius': [
+                  'interpolate', ['linear'], ['zoom'],
+                  8, 8,
+                  12, 16,
+                  15, 24,
+                ],
+                'circle-color': [
+                  'interpolate',
+                  ['linear'],
+                  ['get', soilMoistureProperty],
+                  0, SOIL_MOISTURE_COLORS.dry,
+                  0.1, SOIL_MOISTURE_COLORS.low,
+                  0.2, SOIL_MOISTURE_COLORS.normal,
+                  0.3, SOIL_MOISTURE_COLORS.wet,
+                ],
+                'circle-opacity': 0.7,
+                'circle-stroke-width': 2,
+                'circle-stroke-color': '#ffffff',
+              }}
+            />
           </Source>
         )}
 
         {/* ════════════════════════════════════════════════════════════
             FIRMS SATELLITE FIRE DETECTIONS
             ════════════════════════════════════════════════════════════ */}
-        {layers.firmsDetections && firmsDetections.features.length > 0 && (
+        {firmsDetections.features.length > 0 && (
           <Source
             id="firms-detections"
             type="geojson"
-            data={asGeoJSON(firmsDetections)}
+            data={asGeoJSON(firmsSourceData)}
             cluster={true}
             clusterRadius={60}
             clusterMaxZoom={13}
@@ -1094,15 +2043,14 @@ export default function RicerMap() {
         )}
 
         {/* ═══ Incident clusters with glow effect ═══ */}
-        {layers.incidents && (
-          <Source
-            id="incidents"
-            type="geojson"
-            data={asGeoJSON(incidentSourceData)}
-            cluster={true}
-            clusterRadius={40}
-            clusterMaxZoom={14}
-          >
+        <Source
+          id="incidents"
+          type="geojson"
+          data={asGeoJSON(incidentSourceData)}
+          cluster={true}
+          clusterRadius={40}
+          clusterMaxZoom={14}
+        >
             {/* Cluster outer glow */}
             <Layer
               id="incidents-cluster-glow"
@@ -1221,8 +2169,7 @@ export default function RicerMap() {
                 'circle-stroke-color': '#ffffff',
               }}
             />
-          </Source>
-        )}
+        </Source>
 
         {/* ═══ Map controls ═══ */}
         <NavigationControl
@@ -1283,6 +2230,7 @@ export default function RicerMap() {
                     {hoveredIncident.properties.cause}
                   </div>
                 )}
+                <PopulationAtRiskBadge center={hoveredIncident.coordinates} />
                 <div className="mt-2 border-t border-border pt-2 text-[11px] text-muted-foreground italic">
                   {t('clickForDetails')}
                 </div>
@@ -1401,25 +2349,193 @@ export default function RicerMap() {
           </Popup>
         )}
 
+        {/* ═══ Wind Arrow Popup ═══ */}
+        {hoverInfo && hoverInfo.layer === 'wind-arrows' && hoverInfo.feature?.properties && (
+          <Popup
+            longitude={hoverInfo.longitude}
+            latitude={hoverInfo.latitude}
+            closeButton={false}
+            closeOnClick={false}
+            offset={[0, -12]}
+            className="wind-popup"
+          >
+            <div className="p-2 min-w-[180px] rounded-lg bg-surface/90 backdrop-blur-md">
+              <div className="flex items-center gap-2 mb-2">
+                <span>💨</span>
+                <span className="font-bold text-sm">{t('windVectors')}</span>
+              </div>
+              <div className="space-y-1 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{t('windSpeed')}:</span>
+                  <span className="font-semibold">{hoverInfo.feature.properties.speed} {t('windSpeedUnit')}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{t('windDirectionDeg' as TranslationKey)}:</span>
+                  <span className="font-semibold">{hoverInfo.feature.properties.direction}°</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{t('windGusts' as TranslationKey)}:</span>
+                  <span className="font-semibold">{hoverInfo.feature.properties.gusts} {t('windSpeedUnit')}</span>
+                </div>
+              </div>
+            </div>
+          </Popup>
+        )}
+
+        {/* ═══ Soil Moisture Popup ═══ */}
+        {hoverInfo && hoverInfo.layer === 'soil-moisture-circles' && hoverInfo.feature?.properties && (
+          <Popup
+            longitude={hoverInfo.longitude}
+            latitude={hoverInfo.latitude}
+            closeButton={false}
+            closeOnClick={false}
+            offset={[0, -12]}
+            className="soil-moisture-popup"
+          >
+            <div className="p-2 min-w-[180px] rounded-lg bg-surface/90 backdrop-blur-md">
+              <div className="flex items-center gap-2 mb-2">
+                <span>💧</span>
+                <span className="font-bold text-sm">{t('soilMoistureValue' as TranslationKey)}</span>
+              </div>
+              <div className="space-y-1 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{t('soilMoistureDepthLabel' as TranslationKey)}:</span>
+                  <span className="font-semibold">
+                    {soilMoistureDepth === 'surface' ? '0-1 cm' : soilMoistureDepth === 'root' ? '9-27 cm' : '27-81 cm'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Value:</span>
+                  <span className="font-semibold">
+                    {Number(hoverInfo.feature.properties[soilMoistureProperty] ?? 0).toFixed(3)} m&sup3;/m&sup3;
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Status:</span>
+                  <span className="font-semibold">
+                    {hoverInfo.feature.properties[soilMoistureClassProp] ?? '—'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </Popup>
+        )}
+
+        {/* ═══ Burned Areas Vector Popup ═══ */}
+        {hoverInfo && hoverInfo.layer === 'effis-burned-vector-fill' && hoverInfo.feature?.properties && (
+          <Popup
+            longitude={hoverInfo.longitude}
+            latitude={hoverInfo.latitude}
+            closeButton={false}
+            closeOnClick={false}
+            offset={[0, -12]}
+            className="burned-area-popup"
+          >
+            <div className="p-2 min-w-[180px] rounded-lg bg-surface/90 backdrop-blur-md">
+              <div className="flex items-center gap-2 mb-2">
+                <span>🔥</span>
+                <span className="font-bold text-sm">{t('burnedAreaName' as TranslationKey)}</span>
+              </div>
+              <div className="space-y-1 text-xs">
+                {hoverInfo.feature.properties.area_ha != null && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">{t('burnedAreaHa' as TranslationKey)}:</span>
+                    <span className="font-semibold">{Number(hoverInfo.feature.properties.area_ha).toFixed(1)} ha</span>
+                  </div>
+                )}
+                {hoverInfo.feature.properties.firedate && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">{t('burnedAreaDate' as TranslationKey)}:</span>
+                    <span className="font-semibold">{hoverInfo.feature.properties.firedate}</span>
+                  </div>
+                )}
+                {hoverInfo.feature.properties.country && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Country:</span>
+                    <span className="font-semibold">{hoverInfo.feature.properties.country}</span>
+                  </div>
+                )}
+              </div>
+              <div className="mt-2 pt-2 border-t border-border text-[10px] text-muted-foreground">
+                Copernicus EFFIS
+              </div>
+            </div>
+          </Popup>
+        )}
+
+        {/* ═══ Reservoir Popup ═══ */}
+        {hoverInfo && hoverInfo.layer === 'reservoir-circles' && hoverInfo.feature?.properties && (
+          <Popup
+            longitude={hoverInfo.longitude}
+            latitude={hoverInfo.latitude}
+            closeButton={false}
+            closeOnClick={false}
+            offset={[0, -12]}
+            className="reservoir-popup"
+          >
+            <div className="p-2 min-w-[180px] rounded-lg bg-surface/90 backdrop-blur-md">
+              <div className="flex items-center gap-2 mb-2">
+                <span>🏊</span>
+                <span className="font-bold text-sm">{hoverInfo.feature.properties.name}</span>
+              </div>
+              <div className="space-y-1 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{t('reservoirCapacity' as TranslationKey)}:</span>
+                  <span className="font-semibold">{hoverInfo.feature.properties.capacity} {hoverInfo.feature.properties.capacityUnit}</span>
+                </div>
+              </div>
+            </div>
+          </Popup>
+        )}
+
+        {/* ═══ PAMF/RMA Commune Popup ═══ */}
+        {hoverInfo && (hoverInfo.layer === 'pamf-fill' || hoverInfo.layer === 'rma-fill') && hoverInfo.feature?.properties && (
+          <Popup
+            longitude={hoverInfo.longitude}
+            latitude={hoverInfo.latitude}
+            closeButton={false}
+            closeOnClick={false}
+            offset={[0, -12]}
+            className="commune-popup"
+          >
+            <div className="p-2 min-w-[200px] rounded-lg bg-surface/90 backdrop-blur-md">
+              <div className="flex items-center gap-2 mb-2">
+                <span>{hoverInfo.layer === 'pamf-fill' ? '📊' : '📈'}</span>
+                <span className="font-bold text-sm">{hoverInfo.feature.properties.name}</span>
+              </div>
+              <div className="space-y-1.5 text-xs">
+                {hoverInfo.layer === 'pamf-fill' && hoverInfo.feature.properties.pamf != null && (
+                  <div className="flex justify-between gap-4">
+                    <span className="text-muted-foreground">{t('pamfValue' as TranslationKey)}:</span>
+                    <span className="font-semibold">{Number(hoverInfo.feature.properties.pamf).toFixed(2)} {t('pamfFiresPerKm2' as TranslationKey)}</span>
+                  </div>
+                )}
+                {hoverInfo.layer === 'rma-fill' && hoverInfo.feature.properties.rma != null && (
+                  <div className="flex justify-between gap-4">
+                    <span className="text-muted-foreground">{t('rmaValue' as TranslationKey)}:</span>
+                    <span className="font-semibold">{Number(hoverInfo.feature.properties.rma).toFixed(3)}%</span>
+                  </div>
+                )}
+                {hoverInfo.feature.properties.pamf == null && hoverInfo.feature.properties.rma == null && (
+                  <div className="text-muted-foreground">{t('insufficientFireData' as TranslationKey)}</div>
+                )}
+              </div>
+            </div>
+          </Popup>
+        )}
+
         <DeckGLOverlay layers={deckLayers} />
       </ReactMapGL>
 
       {/* ═══ Overlay controls ═══ */}
-      <MapControls gpuTier={gpuTier} />
+      <MapControls />
       <MapLegend />
-
-      {/* FIRMS data timestamp */}
-      {firmsLastUpdate && layers.firmsDetections && (
-        <div className="absolute top-4 right-4 text-xs text-muted-foreground bg-background/80 backdrop-blur-sm px-3 py-1.5 rounded-md border border-border/50 shadow-sm">
-          <span className="font-medium">FIRMS:</span> {formatTimeAgo(firmsLastUpdate)}
-        </div>
-      )}
 
       {/* Fullscreen toggle */}
       <button
         type="button"
         onClick={toggleFullscreen}
-        className="absolute bottom-14 left-3 z-10 flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-surface shadow-elev-1 transition-colors hover:bg-surface-2"
+        className="absolute bottom-14 left-3 z-10 flex h-11 w-11 items-center justify-center rounded-lg border border-border bg-surface shadow-elev-1 transition-colors hover:bg-surface-2"
         title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
         aria-label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
       >

@@ -81,7 +81,7 @@ export function RightDrawer({
         data-testid="right-drawer-overlay"
         aria-hidden={true}
         className={cn(
-          'fixed inset-0 z-40 bg-black/30 backdrop-blur-sm transition-opacity md:hidden',
+          'fixed inset-0 z-40 bg-black/40 backdrop-blur-sm transition-opacity duration-200',
           open ? 'opacity-100' : 'pointer-events-none opacity-0'
         )}
         onPointerDown={() => onOpenChange(false)}
@@ -92,22 +92,24 @@ export function RightDrawer({
         aria-labelledby={titleId}
         ref={drawerRef}
         className={cn(
-          'fixed right-0 top-16 z-50 h-[calc(100vh-4rem)] w-full sm:w-[380px] max-w-[95vw] overflow-hidden border-l border-border bg-surface shadow-elev-2 transition-transform md:relative md:top-0 md:z-0 md:h-full md:translate-x-0 md:shadow-none',
-          open ? 'translate-x-0' : 'translate-x-full md:translate-x-0',
+          'fixed right-0 top-16 z-50 h-[calc(100vh-4rem)] w-full sm:w-[400px] max-w-[95vw] overflow-hidden',
+          'glass shadow-elev-3 border-l border-border/40',
+          'transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]',
+          open ? 'translate-x-0' : 'translate-x-full',
           className
         )}
       >
-        <div className="flex h-14 items-center justify-between border-b border-border bg-surface-2 px-4">
-          <div id={titleId} className="min-w-0 text-sm font-extrabold tracking-tight">
+        <div className="flex h-14 items-center justify-between border-b border-border/50 bg-surface-2/60 px-4">
+          <div id={titleId} className="min-w-0 text-sm font-bold tracking-tight">
             {title}
           </div>
           <IconButton
             label={t('closePanel')}
-            className="md:hidden"
+            className=""
             onClick={() => onOpenChange(false)}
             ref={closeButtonRef}
           >
-            <Icon name="close" aria-hidden={true} size={20} />
+            <Icon name="close" aria-hidden={true} size={18} />
           </IconButton>
         </div>
         <div className="h-[calc(100%-3.5rem)] overflow-auto">
@@ -115,7 +117,7 @@ export function RightDrawer({
             href={`#${contentEndId}`}
             className={cn(
               'sr-only focus:not-sr-only',
-              'm-3 inline-flex rounded-md bg-surface px-3 py-2 text-sm font-bold text-foreground shadow-elev-1',
+              'm-3 inline-flex rounded-lg bg-surface px-3 py-2 text-sm font-bold text-foreground shadow-elev-1',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background'
             )}
           >

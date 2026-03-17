@@ -10,7 +10,14 @@ export function FireRecordTable() {
   const { records, isLoading, pagination, fetchRecords } = useFireRecordStore();
 
   if (isLoading && records.length === 0) {
-    return <div className="p-8 text-center text-muted-foreground">{t('loading')}</div>;
+    return (
+      <div className="p-6 space-y-3" aria-busy="true" aria-label={t('loading')}>
+        <div className="h-10 animate-pulse rounded-xl bg-muted" />
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="h-12 animate-pulse rounded-xl bg-muted-foreground/10" />
+        ))}
+      </div>
+    );
   }
 
   if (records.length === 0) {

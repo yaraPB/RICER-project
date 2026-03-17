@@ -10,15 +10,56 @@
 const iconCache = new Map<string, string>();
 
 export function circleIcon(color: string): string {
-  let cached = iconCache.get(color);
+  return shapeIcon('circle', color);
+}
+
+export type IconShape = 'circle' | 'square' | 'diamond' | 'triangle' | 'pentagon' | 'shield' | 'droplet' | 'house' | 'hexagon';
+
+const SHAPE_PATHS: Record<IconShape, string> = {
+  circle: '<circle cx="12" cy="12" r="10" fill="COLOR" stroke="white" stroke-width="2"/>',
+  square: '<rect x="2" y="2" width="20" height="20" rx="3" fill="COLOR" stroke="white" stroke-width="2"/>',
+  diamond: '<polygon points="12,1 23,12 12,23 1,12" fill="COLOR" stroke="white" stroke-width="2"/>',
+  triangle: '<polygon points="12,2 23,21 1,21" fill="COLOR" stroke="white" stroke-width="2"/>',
+  pentagon: '<polygon points="12,2 22,9 19,21 5,21 2,9" fill="COLOR" stroke="white" stroke-width="2"/>',
+  shield: '<path d="M12,2 L21,6 L21,13 C21,18 12,22 12,22 C12,22 3,18 3,13 L3,6 Z" fill="COLOR" stroke="white" stroke-width="2"/>',
+  droplet: '<path d="M12,2 C12,2 4,11 4,15 C4,19.4 7.6,22 12,22 C16.4,22 20,19.4 20,15 C20,11 12,2 12,2 Z" fill="COLOR" stroke="white" stroke-width="2"/>',
+  house: '<path d="M12,2 L22,10 L22,21 C22,21.5 21.5,22 21,22 L3,22 C2.5,22 2,21.5 2,21 L2,10 Z" fill="COLOR" stroke="white" stroke-width="2"/>',
+  hexagon: '<polygon points="12,2 21,6 21,16 12,22 3,16 3,6" fill="COLOR" stroke="white" stroke-width="2"/>',
+};
+
+/**
+ * Creates an SVG icon data URL for map markers with the given shape and color.
+ * Results are cached by shape+color combination.
+ */
+export function shapeIcon(shape: IconShape, color: string): string {
+  const key = `${shape}:${color}`;
+  let cached = iconCache.get(key);
   if (!cached) {
+    const svgBody = SHAPE_PATHS[shape].replace('COLOR', color);
     cached = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
-      `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><circle cx="12" cy="12" r="10" fill="${color}" stroke="white" stroke-width="2"/></svg>`,
+      `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24">${svgBody}</svg>`,
     )}`;
-    iconCache.set(color, cached);
+    iconCache.set(key, cached);
   }
   return cached;
 }
+
+/** Map from resource type to its icon shape */
+export const RESOURCE_SHAPE: Record<string, IconShape> = {
+  TRUCK: 'square',
+  AIRCRAFT: 'diamond',
+  PERSONNEL: 'triangle',
+  EQUIPMENT: 'pentagon',
+};
+
+/** Map from infrastructure type to its icon shape */
+export const INFRA_SHAPE: Record<string, IconShape> = {
+  WATCHTOWER: 'triangle',
+  WATER_POINT: 'droplet',
+  STATION: 'house',
+  FIREBREAK: 'shield',
+  HELIPAD: 'diamond',
+};
 
 /**
  * Type-safe GeoJSON caster for use with map libraries

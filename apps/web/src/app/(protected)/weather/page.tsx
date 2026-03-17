@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { WeatherData } from '@/types';
 import { Icon } from '@/components/ui/Icon';
+import { Card } from '@/components/ui/Card';
 import { useTranslation } from '@/hooks/useTranslation';
+import { fetchWithAuth } from '@/lib/api/fetchWithAuth';
 
 export default function WeatherPage() {
   const { t, language } = useTranslation();
@@ -13,16 +15,16 @@ export default function WeatherPage() {
 
   const fetchWeather = useCallback(async () => {
     try {
-      const response = await fetch('/api/weather');
+      const response = await fetchWithAuth('/api/weather');
       if (!response.ok) throw new Error('Failed to fetch weather');
       const data = await response.json();
       setWeather(data);
     } catch {
-      setError('weatherLoadFailed'); // Store key, not translated message
+      setError('weatherLoadFailed');
     } finally {
       setLoading(false);
     }
-  }, []); // Remove [t] dependency
+  }, []);
 
   useEffect(() => {
     fetchWeather();
@@ -30,19 +32,50 @@ export default function WeatherPage() {
 
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto p-6">
-        <div className="text-center py-12">{t('weatherLoading')}</div>
+      <div className="max-w-7xl mx-auto p-4 md:p-6 page-enter" aria-busy="true" aria-label={t('loading')}>
+        <div className="mb-8">
+          <div className="h-9 w-64 animate-pulse bg-muted rounded-lg mb-2" />
+          <div className="h-5 w-96 animate-pulse bg-muted rounded-lg" />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 stagger-children">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="animate-pulse rounded-xl bg-surface border border-border/40 p-5 shadow-elev-1">
+              <div className="flex items-center justify-between mb-4">
+                <div className="h-11 w-11 rounded-xl bg-muted" />
+                <div className="space-y-2">
+                  <div className="h-4 w-20 rounded-lg bg-muted" />
+                  <div className="h-10 w-16 rounded-lg bg-muted" />
+                </div>
+              </div>
+              <div className="h-4 w-12 rounded-lg bg-muted" />
+            </div>
+          ))}
+        </div>
+        <div className="mt-8 animate-pulse rounded-xl bg-surface border border-border/40 p-6">
+          <div className="flex items-start gap-4">
+            <div className="h-7 w-7 rounded-lg bg-muted" />
+            <div className="flex-1 space-y-2">
+              <div className="h-6 w-48 rounded-lg bg-muted" />
+              <div className="h-4 w-full rounded-lg bg-muted" />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (error || !weather) {
     return (
-      <div className="max-w-7xl mx-auto p-6">
-        <div className="bg-red-50 text-red-600 p-4 rounded-lg text-center">
-          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-          {error ? t(error as any) : t('weatherLoadFailed')}
-        </div>
+      <div className="max-w-7xl mx-auto p-4 md:p-6 page-enter">
+        <Card tone="elevated" className="p-8 text-center">
+          <div className="mb-3 flex justify-center text-danger">
+            <Icon name="warning" aria-hidden={true} size={36} />
+          </div>
+          <p className="text-muted-foreground">
+            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+            {error ? t(error as any) : t('weatherLoadFailed')}
+          </p>
+        </Card>
       </div>
     );
   }
@@ -53,74 +86,68 @@ export default function WeatherPage() {
   const isRTL = language === 'ar';
   const textAlign = isRTL ? 'text-right' : 'text-left';
 
+  const weatherCards = [
+    {
+      icon: 'thermostat' as const,
+      label: t('temperature'),
+      value: `${weather.temperature}°`,
+      unit: t('temperatureUnit'),
+      color: 'text-danger' as const,
+      bgColor: 'bg-danger/10' as const,
+    },
+    {
+      icon: 'air' as const,
+      label: t('windSpeed'),
+      value: String(weather.windSpeed),
+      unit: t('windSpeedUnit'),
+      color: 'text-info' as const,
+      bgColor: 'bg-info/10' as const,
+    },
+    {
+      icon: 'compass' as const,
+      label: t('windDirection'),
+      value: windDirectionText,
+      unit: `${weather.windDirection}°`,
+      color: 'text-success' as const,
+      bgColor: 'bg-success/10' as const,
+    },
+  ];
+
   return (
-    <div className="max-w-7xl mx-auto p-6">
-      <div className="mb-8">
-        <h1 className={`text-3xl font-bold text-gray-900 mb-2 ${textAlign}`}>{t('weatherTitle')}</h1>
-        <p className={`text-gray-600 ${textAlign}`}>{t('weatherSubtitle')}</p>
+    <div className="max-w-7xl mx-auto p-4 md:p-6 page-enter">
+      <div className="mb-6 md:mb-8">
+        <h1 className={`text-fluid-3xl font-bold text-foreground mb-1 ${textAlign}`}>{t('weatherTitle')}</h1>
+        <p className={`text-sm text-muted-foreground ${textAlign}`}>{t('weatherSubtitle')}</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Temperature */}
-        <div className="bg-white rounded-xl shadow-lg p-6">
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-red-600">
-              <Icon name="thermostat" aria-hidden={true} size={40} />
-            </span>
-            <div className={textAlign}>
-              <div className="text-sm text-gray-500 mb-1">{t('temperature')}</div>
-              <div className="text-4xl font-bold text-red-600">
-                {weather.temperature}°
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 stagger-children">
+        {weatherCards.map((card) => (
+          <Card key={card.icon} tone="elevated" className="p-5">
+            <div className="flex items-center justify-between mb-3">
+              <span className={`${card.bgColor} ${card.color} h-11 w-11 rounded-xl grid place-items-center`}>
+                <Icon name={card.icon} aria-hidden={true} size={24} />
+              </span>
+              <div className={textAlign}>
+                <div className="text-xs font-medium text-muted-foreground mb-0.5">{card.label}</div>
+                <div className={`text-3xl font-bold ${card.color}`}>
+                  {card.value}
+                </div>
               </div>
             </div>
-          </div>
-          <div className={`text-sm text-gray-500 ${textAlign}`}>{t('temperatureUnit')}</div>
-        </div>
-
-        {/* Wind Speed */}
-        <div className="bg-white rounded-xl shadow-lg p-6">
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-blue-600">
-              <Icon name="air" aria-hidden={true} size={40} />
-            </span>
-            <div className={textAlign}>
-              <div className="text-sm text-gray-500 mb-1">{t('windSpeed')}</div>
-              <div className="text-4xl font-bold text-blue-600">
-                {weather.windSpeed}
-              </div>
-            </div>
-          </div>
-          <div className={`text-sm text-gray-500 ${textAlign}`}>{t('windSpeedUnit')}</div>
-        </div>
-
-        {/* Wind Direction */}
-        <div className="bg-white rounded-xl shadow-lg p-6">
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-green-600">
-              <Icon name="compass" aria-hidden={true} size={40} />
-            </span>
-            <div className={textAlign}>
-              <div className="text-sm text-gray-500 mb-1">{t('windDirection')}</div>
-              <div className="text-2xl font-bold text-green-600">
-                {windDirectionText}
-              </div>
-            </div>
-          </div>
-          <div className={`text-sm text-gray-500 ${textAlign}`}>
-            {weather.windDirection}°
-          </div>
-        </div>
+            <div className={`text-xs text-muted-foreground ${textAlign}`}>{card.unit}</div>
+          </Card>
+        ))}
       </div>
 
       {/* Weather Alert */}
-      <div className="mt-8 bg-gradient-to-r from-orange-50 to-red-50 rounded-xl p-6 border border-orange-200">
-        <div className="flex items-start gap-4">
-          <span className="text-warning">
-            <Icon name="warning" aria-hidden={true} size={28} />
+      <Card tone="elevated" className="mt-6 md:mt-8 p-5 border-warning/20 bg-warning-muted/30 dark:bg-warning-muted/20">
+        <div className="flex items-start gap-3">
+          <span className="text-warning shrink-0 mt-0.5">
+            <Icon name="warning" aria-hidden={true} size={22} />
           </span>
           <div className={`flex-1 ${textAlign}`}>
-            <h3 className="font-bold text-lg text-gray-900 mb-2">{t('windAlertTitle')}</h3>
-            <p className="text-gray-700">
+            <h3 className="font-bold text-foreground mb-1">{t('windAlertTitle')}</h3>
+            <p className="text-sm text-muted-foreground">
               {weather.windSpeed > 20
                 ? t('windAlertHigh')
                 : weather.temperature > 30
@@ -129,10 +156,10 @@ export default function WeatherPage() {
             </p>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Last Update */}
-      <div className="mt-6 text-center text-sm text-gray-500">
+      <div className="mt-6 text-center text-xs text-muted-foreground">
         {t('lastUpdatedLabel')}: {new Date(weather.timestamp).toLocaleString(language === 'ar' ? 'ar-MA' : 'fr-FR')}
       </div>
     </div>

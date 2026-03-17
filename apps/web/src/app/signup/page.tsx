@@ -94,7 +94,6 @@ export default function SignUpPage() {
         if (errorCode === 3001) {
           setError(t('errorUserExists'));
           setFieldErrors({ cin: t('errorUserExists') });
-          setLoading(false);
           return;
         }
         setError(getApiErrorUserMessage(data, t('signupError')));
@@ -117,14 +116,23 @@ export default function SignUpPage() {
           }
           setFieldErrors(next);
         }
-        setLoading(false);
         return;
       }
 
+      // Auto sign-in: store user in zustand so AuthProvider skips /api/auth/me,
+      // then navigate.  The cookie is already set by the response headers.
       setUser(data.user);
       router.replace('/map');
+
+      // Fallback: if the soft navigation didn't leave the page within 2 s
+      // (stale Router Cache, prefetch race, etc.), force a hard navigation.
+      await new Promise((r) => setTimeout(r, 2000));
+      if (typeof window !== 'undefined' && window.location.pathname !== '/map') {
+        window.location.href = '/map';
+      }
     } catch {
       setError(t('connectionError'));
+    } finally {
       setLoading(false);
     }
   };

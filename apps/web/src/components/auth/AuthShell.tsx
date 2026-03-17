@@ -15,22 +15,24 @@ export type AuthShellProps = {
 
 export function AuthShell({ title, subtitle, children, footer, isRTL }: AuthShellProps) {
   return (
-    <div className="relative isolate min-h-screen overflow-x-clip overflow-y-hidden bg-background">
-      <div className="pointer-events-none absolute -left-24 -top-24 hidden h-72 w-72 rounded-full bg-primary/15 blur-3xl sm:block" />
-      <div className="pointer-events-none absolute -bottom-32 -right-24 hidden h-96 w-96 rounded-full bg-warning/20 blur-3xl sm:block" />
+    <div className="relative isolate min-h-screen overflow-x-clip overflow-y-hidden bg-background bg-dot-grid">
+      {/* Ambient glow orbs */}
+      <div className="pointer-events-none absolute -left-32 -top-32 hidden h-[420px] w-[420px] rounded-full bg-primary/10 blur-[100px] sm:block" />
+      <div className="pointer-events-none absolute -bottom-40 -right-32 hidden h-[500px] w-[500px] rounded-full bg-warning/8 blur-[120px] sm:block" />
+      <div className="pointer-events-none absolute left-1/2 top-1/3 hidden h-[300px] w-[300px] -translate-x-1/2 rounded-full bg-danger/5 blur-[80px] sm:block" />
 
       <div className="absolute end-4 top-4 z-10">
         <LanguageSwitcher />
       </div>
 
       <div className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center p-4 sm:p-6">
-        <Card tone="elevated" className="p-6 sm:p-8" dir={isRTL ? 'rtl' : 'ltr'}>
+        <Card tone="elevated" className="p-6 sm:p-8 animate-scale-in" dir={isRTL ? 'rtl' : 'ltr'}>
           <div className="mb-6 text-center">
-            <div className="mx-auto mb-6 h-24 w-24 bg-surface shadow-elev-2 rounded-lg p-3 transition-all duration-200">
+            <div className="mx-auto mb-5 h-20 w-20 bg-surface-2 shadow-elev-2 rounded-xl p-3 transition-all duration-200">
               <Logo variant="badge" size="xl" priority />
             </div>
-            <h1 className="text-2xl font-extrabold tracking-tight text-foreground">{title}</h1>
-            {subtitle ? <p className="mt-2 text-sm text-muted-foreground">{subtitle}</p> : null}
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">{title}</h1>
+            {subtitle ? <p className="mt-1.5 text-sm text-muted-foreground">{subtitle}</p> : null}
           </div>
 
           {children}
@@ -41,4 +43,3 @@ export function AuthShell({ title, subtitle, children, footer, isRTL }: AuthShel
     </div>
   );
 }
-

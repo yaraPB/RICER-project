@@ -14,8 +14,8 @@ export function AppShell({ topbar, sidebar, rightPanel, children, className }: A
     <div className={cn('min-h-screen bg-background text-foreground', className)}>
       {topbar}
       <div className="relative flex min-h-[calc(100vh-4rem)] w-full overflow-hidden">
-        {sidebar}
-        <main id="main" className="relative flex-1 overflow-auto">
+        <div className="hidden md:block">{sidebar}</div>
+        <main id="main" className="relative flex-1 overflow-auto pb-14 md:pb-0">
           {children}
         </main>
         {rightPanel}

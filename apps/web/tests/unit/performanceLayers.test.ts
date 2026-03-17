@@ -6,7 +6,6 @@ describe('getLayerConfigForTier', () => {
     const cfg = getLayerConfigForTier('tier-a');
     expect(cfg.useDeckGL).toBe(true);
     expect(cfg.enableAnimations).toBe(true);
-    expect(cfg.enable3D).toBe(true);
     expect(cfg.pollingInterval.incidents).toBeLessThan(20_000);
     expect(cfg.dataLimits.enableWMSOverlays).toBe(true);
   });

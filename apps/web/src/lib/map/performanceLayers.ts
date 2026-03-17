@@ -31,11 +31,6 @@ export interface LayerConfig {
   enableAnimations: boolean;
 
   /**
-   * Enable 3D terrain
-   */
-  enable3D: boolean;
-
-  /**
    * Polling intervals (milliseconds)
    */
   pollingInterval: {
@@ -87,7 +82,7 @@ export function getLayerConfigForTier(tier: GPUTier): LayerConfig {
         iconSize: 32,
         maxClusters: Infinity,
         enableAnimations: true,
-        enable3D: true,
+
         pollingInterval: {
           firms: 10_000, // 10s
           incidents: 15_000, // 15s
@@ -108,7 +103,7 @@ export function getLayerConfigForTier(tier: GPUTier): LayerConfig {
         iconSize: 24,
         maxClusters: 100,
         enableAnimations: false,
-        enable3D: false,
+
         pollingInterval: {
           firms: 15_000, // 15s
           incidents: 20_000, // 20s
@@ -129,7 +124,7 @@ export function getLayerConfigForTier(tier: GPUTier): LayerConfig {
         iconSize: 16,
         maxClusters: 0, // No clustering
         enableAnimations: false,
-        enable3D: false,
+
         pollingInterval: {
           firms: 30_000, // 30s
           incidents: 30_000, // 30s

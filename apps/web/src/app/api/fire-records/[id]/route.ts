@@ -3,11 +3,18 @@ import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { withApiHandler, type ApiHandlerContext } from '@/lib/errors/withApiHandler';
 import { AppError } from '@/lib/errors/AppError';
+import type { Prisma } from '@prisma/client';
 import {
   isAlertSource,
   validateAgencyArrivals,
   validateMeansEngaged,
   validateEconomicLoss,
+  validateLocationDetail,
+  validateCauseDetail,
+  validateDamageDetail,
+  validateResponseDetail,
+  validateWeatherAtTime,
+  validatePostFire,
   createAuditEntry,
   isSectionLocked,
 } from '@/lib/fire-records/validation';
@@ -38,9 +45,27 @@ export const PATCH = withApiHandler(async (request: Request, context?: ApiHandle
   const record = await prisma.fireEventRecord.findUnique({ where: { id } });
   if (!record) throw new AppError(8000);
 
-  if (record.recordStatus === 'APPROVED') throw new AppError(8005);
+  if (record.recordStatus === 'LOCKED') throw new AppError(8005);
 
   const body = await request.json();
+
+  // Handle inline status update
+  if (body.recordStatus !== undefined) {
+    if (body.recordStatus === 'VERIFIED' && record.recordStatus === 'DRAFT') {
+      const auditEntry = createAuditEntry(currentUser.userId, currentUser.cin, 'VERIFY');
+      const currentTrail = (record.auditTrail as Prisma.JsonValue[]) || [];
+      const updated = await prisma.fireEventRecord.update({
+        where: { id },
+        data: {
+          recordStatus: 'VERIFIED',
+          auditTrail: [...currentTrail, JSON.parse(JSON.stringify(auditEntry))],
+        },
+      });
+      return NextResponse.json({ record: updated });
+    }
+    throw new AppError(8007);
+  }
+
   const updateFields = Object.keys(body);
 
   // Check locked sections
@@ -59,7 +84,7 @@ export const PATCH = withApiHandler(async (request: Request, context?: ApiHandle
     data.alertSource = body.alertSource;
   }
 
-  const dateFields = ['alertReceivedAt', 'verifiedAt', 'firstResponseAt', 'onSceneAt', 'containedAt', 'extinguishedAt'];
+  const dateFields = ['ignitionAt', 'alertReceivedAt', 'verifiedAt', 'firstResponseAt', 'onSceneAt', 'containedAt', 'extinguishedAt'];
   for (const field of dateFields) {
     if (body[field] !== undefined) {
       data[field] = body[field] ? new Date(body[field]) : null;
@@ -88,6 +113,30 @@ export const PATCH = withApiHandler(async (request: Request, context?: ApiHandle
       throw new AppError(1001, { fields: [{ field: 'economicLoss', code: 'invalid', message: result.error }] });
     }
     data.economicLoss = body.economicLoss;
+  }
+
+  // New Json field validators
+  const jsonValidators: [string, (v: unknown) => { valid: boolean; error?: string }][] = [
+    ['locationDetail', validateLocationDetail],
+    ['causeDetail', validateCauseDetail],
+    ['damageDetail', validateDamageDetail],
+    ['responseDetail', validateResponseDetail],
+    ['weatherAtTime', validateWeatherAtTime],
+    ['postFire', validatePostFire],
+  ];
+
+  for (const [field, validator] of jsonValidators) {
+    if (body[field] !== undefined) {
+      if (body[field] === null) {
+        data[field] = null;
+      } else {
+        const result = validator(body[field]);
+        if (!result.valid) {
+          throw new AppError(1001, { fields: [{ field, code: 'invalid', message: result.error }] });
+        }
+        data[field] = body[field];
+      }
+    }
   }
 
   // Audit entry

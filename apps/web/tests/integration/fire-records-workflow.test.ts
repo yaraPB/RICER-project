@@ -78,13 +78,13 @@ describe('Fire Records Workflow', () => {
       });
 
       const res = await lockSection(
-        createRequest('/api/fire-records/rec-lock-1/lock', { section: 'timeline' }),
+        createRequest('/api/fire-records/rec-lock-1/lock', { section: 'location' }),
         { params: { id: 'rec-lock-1' } }
       );
 
       expect(res.status).toBe(200);
       const body = await res.json();
-      expect(body.record.lockedSections).toContain('timeline');
+      expect(body.record.lockedSections).toContain('location');
     });
 
     it('is idempotent for already-locked section → 200', async () => {
@@ -93,14 +93,14 @@ describe('Fire Records Workflow', () => {
         id: 'rec-lock-2',
         incidentId: 'inc-2',
         recordStatus: 'DRAFT',
-        lockedSections: ['timeline'],
+        lockedSections: ['location'],
         auditTrail: [],
         createdAt: new Date(),
         updatedAt: new Date(),
       });
 
       const res = await lockSection(
-        createRequest('/api/fire-records/rec-lock-2/lock', { section: 'timeline' }),
+        createRequest('/api/fire-records/rec-lock-2/lock', { section: 'location' }),
         { params: { id: 'rec-lock-2' } }
       );
 
@@ -129,13 +129,13 @@ describe('Fire Records Workflow', () => {
   });
 
   describe('POST /api/fire-records/[id]/approve', () => {
-    it('approves with all 5 sections locked → APPROVED', async () => {
+    it('finalizes with all 5 sections locked → LOCKED', async () => {
       mockOfficialUser();
       mockFireRecords.push({
         id: 'rec-approve-1',
         incidentId: 'inc-1',
         recordStatus: 'DRAFT',
-        lockedSections: ['timeline', 'agencyArrivals', 'meansEngaged', 'economicLoss', 'perimeter'],
+        lockedSections: ['location', 'cause', 'damage', 'response', 'postFire'],
         auditTrail: [],
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -148,9 +148,9 @@ describe('Fire Records Workflow', () => {
 
       expect(res.status).toBe(200);
       const body = await res.json();
-      expect(body.record.recordStatus).toBe('APPROVED');
+      expect(body.record.recordStatus).toBe('LOCKED');
       expect(body.record.auditTrail).toHaveLength(1);
-      expect(body.record.auditTrail[0].action).toBe('APPROVE');
+      expect(body.record.auditTrail[0].action).toBe('FINALIZE');
     });
 
     it('rejects with missing sections → 409 (8004) with missingSections', async () => {
@@ -159,7 +159,7 @@ describe('Fire Records Workflow', () => {
         id: 'rec-approve-2',
         incidentId: 'inc-2',
         recordStatus: 'DRAFT',
-        lockedSections: ['timeline', 'agencyArrivals'],
+        lockedSections: ['location', 'cause'],
         auditTrail: [],
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -173,18 +173,18 @@ describe('Fire Records Workflow', () => {
       expect(res.status).toBe(409);
       const body = await res.json();
       expect(body.error.code).toBe(8004);
-      expect(body.error.meta.missingSections).toContain('meansEngaged');
-      expect(body.error.meta.missingSections).toContain('economicLoss');
-      expect(body.error.meta.missingSections).toContain('perimeter');
+      expect(body.error.meta.missingSections).toContain('damage');
+      expect(body.error.meta.missingSections).toContain('response');
+      expect(body.error.meta.missingSections).toContain('postFire');
     });
 
-    it('rejects already approved record → 409 (8005)', async () => {
+    it('rejects already locked record → 409 (8005)', async () => {
       mockOfficialUser();
       mockFireRecords.push({
         id: 'rec-approve-3',
         incidentId: 'inc-3',
-        recordStatus: 'APPROVED',
-        lockedSections: ['timeline', 'agencyArrivals', 'meansEngaged', 'economicLoss', 'perimeter'],
+        recordStatus: 'LOCKED',
+        lockedSections: ['location', 'cause', 'damage', 'response', 'postFire'],
         auditTrail: [],
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -228,7 +228,7 @@ describe('Fire Records Workflow', () => {
       expect(patchRes.status).toBe(200);
 
       // Lock all 5 sections
-      const sections = ['timeline', 'agencyArrivals', 'meansEngaged', 'economicLoss', 'perimeter'];
+      const sections = ['location', 'cause', 'damage', 'response', 'postFire'];
       for (const section of sections) {
         const lockRes = await lockSection(
           createRequest('/api/fire-records/rec-full-1/lock', { section }),
@@ -237,14 +237,14 @@ describe('Fire Records Workflow', () => {
         expect(lockRes.status).toBe(200);
       }
 
-      // Approve
+      // Finalize (approve)
       const approveRes = await approveRecord(
         createRequest('/api/fire-records/rec-full-1/approve', {}),
         { params: { id: 'rec-full-1' } }
       );
       expect(approveRes.status).toBe(200);
       const body = await approveRes.json();
-      expect(body.record.recordStatus).toBe('APPROVED');
+      expect(body.record.recordStatus).toBe('LOCKED');
 
       // PATCH should now fail
       const failRes = await patchRecord(

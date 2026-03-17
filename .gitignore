@@ -1,3 +1,15 @@
+# Credentials
+cred.txt
+credentials.txt
+
+# Binary / reference documents (not source)
+*.pdf
+*.docx
+*.doc
+
+# Temp scripts
+test-firms.ts
+
 # Logs
 logs
 *.log

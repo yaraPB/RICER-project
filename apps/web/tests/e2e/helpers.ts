@@ -213,50 +213,160 @@ export async function mockAnalytics(page: Page) {
   });
 }
 
-export async function mockEquipment(page: Page) {
-  await page.route('**/api/equipment', async (route) => {
+export async function mockNotifications(page: Page) {
+  await page.route('**/api/notifications', async (route) => {
     if (route.request().method() !== 'GET') return route.fallback();
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        equipment: [
+        notifications: [
           {
-            id: 'eq-1',
-            category: 'Vehicles',
-            name: 'Truck 1',
-            quantity: 2,
-            condition: 'Bon',
-            location: 'Ifrane',
-            lastMaintenance: null,
+            id: 'notif-1',
+            title: 'New fire detected',
+            body: 'A fire has been detected near Ifrane forest.',
+            read: false,
             createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
+          },
+          {
+            id: 'notif-2',
+            title: 'Report approved',
+            body: 'Your report #42 has been approved by an official.',
+            read: true,
+            createdAt: new Date(Date.now() - 3600_000).toISOString(),
           },
         ],
-        retardantProducts: [],
-        infrastructure: [],
-        truckDeployments: [],
       }),
     });
   });
+}
+
+export async function mockTokenRefresh(page: Page) {
+  await page.route('**/api/auth/token', async (route) => {
+    if (route.request().method() !== 'POST') return route.fallback();
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ ok: true }),
+    });
+  });
+}
+
+export async function setMobileViewport(page: Page) {
+  await page.setViewportSize({ width: 390, height: 844 });
+}
+
+export async function mockEquipment(page: Page) {
+  const now = new Date().toISOString();
+
+  // Equipment API
+  await page.route('**/api/equipment', async (route) => {
+    const method = route.request().method();
+    if (method === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: [
+            {
+              id: 'eq-1',
+              type: 'VPI',
+              name: 'VPI-01',
+              status: 'OPERATIONNEL',
+              quantity: 2,
+              department: 'DPEFLCD',
+              latitude: 33.53,
+              longitude: -5.11,
+              lastMaintenance: null,
+              notes: null,
+              createdAt: now,
+              updatedAt: now,
+            },
+          ],
+        }),
+      });
+    } else if (method === 'POST') {
+      const body = route.request().postDataJSON();
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          item: { id: 'eq-new', ...body, createdAt: now, updatedAt: now },
+        }),
+      });
+    } else {
+      return route.fallback();
+    }
+  });
 
   await page.route('**/api/equipment/*', async (route) => {
-    if (route.request().method() !== 'PATCH') return route.fallback();
+    const method = route.request().method();
+    if (method === 'PATCH') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          item: { id: 'eq-1', type: 'VPI', name: 'VPI-01', status: 'OPERATIONNEL', quantity: 3, department: 'DPEFLCD', createdAt: now, updatedAt: now },
+        }),
+      });
+    } else if (method === 'DELETE') {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true }) });
+    } else {
+      return route.fallback();
+    }
+  });
+
+  // Retardant API
+  await page.route('**/api/retardant', async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        equipment: {
-          id: 'eq-1',
-          category: 'Vehicles',
-          name: 'Truck 1',
-          quantity: 3,
-          condition: 'Bon',
-          location: 'Ifrane',
-          lastMaintenance: null,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
+        items: [
+          {
+            id: 'ret-1',
+            name: 'Mousse A',
+            type: 'MOUSSE',
+            quantity: 500,
+            unit: 'L',
+            storageLocation: 'Dépôt Ifrane',
+            storageLat: null,
+            storageLng: null,
+            expiryDate: null,
+            acquisitionDate: '2025-06-01T00:00:00.000Z',
+            notes: null,
+            createdAt: now,
+            updatedAt: now,
+          },
+        ],
+      }),
+    });
+  });
+
+  // Infrastructure API
+  await page.route('**/api/infrastructure', async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        items: [
+          {
+            id: 'infra-1',
+            type: 'WATCHTOWER',
+            name: 'Tour Nord',
+            latitude: 33.54,
+            longitude: -5.10,
+            status: 'OPERATIONNEL',
+            capacity: null,
+            capacityUnit: null,
+            lastInspectionDate: null,
+            notes: 'Near main road',
+            createdAt: now,
+            updatedAt: now,
+          },
+        ],
       }),
     });
   });

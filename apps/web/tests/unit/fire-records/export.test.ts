@@ -60,7 +60,7 @@ describe('recordsToCSV', () => {
     const csv = recordsToCSV(mockRecords);
     const headerLine = csv.split('\n')[0];
     expect(headerLine).toBe(
-      'id,incidentId,alertSource,recordStatus,burnAreaHa,alertReceivedAt,verifiedAt,firstResponseAt,onSceneAt,containedAt,extinguishedAt,createdAt'
+      'id,incidentId,alertSource,recordStatus,burnAreaHa,commune,locationName,causeCategory,causeCertainty,surfaceBurnedHa,vegetationTypes,totalDamageEstimate,responseTimeMinutes,personnelCount,vehicleCount,aircraftCount,temperatureC,humidityPct,windSpeedKmh,severityAssessment,recoveryStatus,ignitionAt,alertReceivedAt,verifiedAt,firstResponseAt,onSceneAt,containedAt,extinguishedAt,createdAt'
     );
   });
 

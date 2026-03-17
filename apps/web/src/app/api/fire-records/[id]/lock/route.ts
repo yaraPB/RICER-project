@@ -26,7 +26,7 @@ export const POST = withApiHandler(async (request: Request, context?: ApiHandler
   const record = await prisma.fireEventRecord.findUnique({ where: { id } });
   if (!record) throw new AppError(8000);
 
-  if (record.recordStatus === 'APPROVED') throw new AppError(8005);
+  if (record.recordStatus === 'LOCKED') throw new AppError(8005);
 
   // Idempotent: if already locked, just return success
   if (record.lockedSections.includes(section)) {

@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Public_Sans, Roboto_Mono } from 'next/font/google';
+import { Urbanist, JetBrains_Mono } from 'next/font/google';
 import dynamic from 'next/dynamic';
 import './globals.css';
 import LocaleSync from '@/components/layout/LocaleSync';
@@ -39,14 +39,14 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 };
 
-const fontSans = Public_Sans({
+const fontSans = Urbanist({
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
+  weight: ['300', '400', '500', '600', '700', '800'],
   variable: '--font-sans',
   display: 'swap',
 });
 
-const fontMono = Roboto_Mono({
+const fontMono = JetBrains_Mono({
   subsets: ['latin'],
   variable: '--font-mono',
   display: 'swap',

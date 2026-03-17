@@ -21,6 +21,8 @@ export type Scope =
   | 'equipment:read'
   | 'equipment:write'
   | 'analytics:read'
+  | 'coordination:read'
+  | 'coordination:write'
   | 'admin';
 
 export interface AccessTokenPayload {

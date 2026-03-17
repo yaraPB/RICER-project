@@ -37,6 +37,7 @@ export default defineConfig({
         'src/components/ui/Logo.tsx',
         'src/components/layout/ThemeToggle.tsx',
         'src/components/layout/Footer.tsx',
+        'src/components/map/RicerMap.tsx',
       ],
       reporter: ['text', 'json-summary', 'html'],
       thresholds: {

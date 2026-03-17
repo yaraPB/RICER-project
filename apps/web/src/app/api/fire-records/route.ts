@@ -8,6 +8,20 @@ import type { CursorPaginationResponse } from '@/types/pagination';
 import { isAlertSource, createAuditEntry } from '@/lib/fire-records/validation';
 import type { Prisma } from '@prisma/client';
 
+function buildDisplayId(record: {
+  alertReceivedAt?: Date | null;
+  createdAt: Date;
+  locationDetail?: Prisma.JsonValue;
+  burnAreaHa?: number | null;
+}): string {
+  const date = record.alertReceivedAt ?? record.createdAt;
+  const dateStr = date.toISOString().slice(0, 10);
+  const loc = record.locationDetail as Record<string, unknown> | null;
+  const locName = loc?.locationName ?? loc?.commune ?? '';
+  const size = record.burnAreaHa != null ? `${record.burnAreaHa} ha` : '';
+  return [dateStr, locName, size].filter(Boolean).join(' — ');
+}
+
 export const GET = withApiHandler(async (request: Request) => {
   const currentUser = await getCurrentUser(request);
   if (!currentUser) throw new AppError(2000);
@@ -25,7 +39,14 @@ export const GET = withApiHandler(async (request: Request) => {
   const minArea = url.searchParams.get('minArea')
     ? parseFloat(url.searchParams.get('minArea')!)
     : undefined;
+  const maxArea = url.searchParams.get('maxArea')
+    ? parseFloat(url.searchParams.get('maxArea')!)
+    : undefined;
   const search = url.searchParams.get('search') || undefined;
+  const commune = url.searchParams.get('commune') || undefined;
+  const cause = url.searchParams.get('cause') || undefined;
+  const sortBy = url.searchParams.get('sortBy') || 'createdAt';
+  const sortOrder = (url.searchParams.get('sortOrder') || 'desc') as 'asc' | 'desc';
 
   const where: Record<string, unknown> = {};
   if (status) where.recordStatus = status;
@@ -37,11 +58,23 @@ export const GET = withApiHandler(async (request: Request) => {
     };
   }
   if (minArea !== undefined && !isNaN(minArea)) {
-    where.burnAreaHa = { gte: minArea };
+    where.burnAreaHa = { ...(where.burnAreaHa as object || {}), gte: minArea };
+  }
+  if (maxArea !== undefined && !isNaN(maxArea)) {
+    where.burnAreaHa = { ...(where.burnAreaHa as object || {}), lte: maxArea };
   }
   if (search) {
     where.incidentId = { contains: search };
   }
+  if (commune) {
+    where.locationDetail = { path: ['commune'], string_contains: commune };
+  }
+  if (cause) {
+    where.causeDetail = { path: ['category'], equals: cause };
+  }
+
+  const allowedSortFields = ['createdAt', 'burnAreaHa', 'alertReceivedAt'];
+  const orderField = allowedSortFields.includes(sortBy) ? sortBy : 'createdAt';
 
   const records = await prisma.fireEventRecord.findMany({
     where,
@@ -50,7 +83,7 @@ export const GET = withApiHandler(async (request: Request) => {
       skip: 1,
     }),
     take: limit + 1,
-    orderBy: { createdAt: 'desc' },
+    orderBy: { [orderField]: sortOrder },
   });
 
   const total = await prisma.fireEventRecord.count({ where });
@@ -59,8 +92,14 @@ export const GET = withApiHandler(async (request: Request) => {
   const data = hasMore ? records.slice(0, limit) : records;
   const nextCursor = hasMore ? data[data.length - 1].id : null;
 
-  const response: CursorPaginationResponse<(typeof data)[number]> = {
-    data,
+  // Enrich with displayId
+  const enrichedData = data.map((r) => ({
+    ...r,
+    displayId: buildDisplayId(r),
+  }));
+
+  const response: CursorPaginationResponse<(typeof enrichedData)[number]> = {
+    data: enrichedData,
     pagination: {
       cursor: nextCursor,
       hasMore,
@@ -77,7 +116,7 @@ export const POST = withApiHandler(async (request: Request) => {
   if (currentUser.role !== 'OFFICIAL') throw new AppError(2001);
 
   const body = await request.json();
-  const { incidentId, alertSource } = body;
+  const { incidentId, alertSource, locationDetail } = body;
 
   if (!incidentId || typeof incidentId !== 'string') {
     throw new AppError(1000, { message: 'incidentId is required' });
@@ -99,6 +138,15 @@ export const POST = withApiHandler(async (request: Request) => {
 
   const auditEntry = createAuditEntry(currentUser.userId, currentUser.cin, 'CREATE');
 
+  // Auto-populate locationDetail from incident if not provided
+  let resolvedLocationDetail = locationDetail || undefined;
+  if (!resolvedLocationDetail && incident.location) {
+    const loc = incident.location as { coordinates?: [number, number] };
+    if (loc.coordinates) {
+      resolvedLocationDetail = { coordinates: loc.coordinates };
+    }
+  }
+
   const record = await prisma.fireEventRecord.create({
     data: {
       incidentId,
@@ -106,6 +154,9 @@ export const POST = withApiHandler(async (request: Request) => {
       recordStatus: 'DRAFT',
       lockedSections: [],
       auditTrail: [JSON.parse(JSON.stringify(auditEntry)) as Prisma.InputJsonValue],
+      ...(resolvedLocationDetail && {
+        locationDetail: resolvedLocationDetail as Prisma.InputJsonValue,
+      }),
     },
   });
 

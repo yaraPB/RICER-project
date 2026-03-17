@@ -6,6 +6,7 @@ import { Icon } from '@/components/ui/Icon';
 import { STATUS_COLORS } from '@/config/constants';
 import type { Report } from '@/types';
 import { clientLogger } from '@/lib/observability/clientLogger';
+import { fetchWithAuth } from '@/lib/api/fetchWithAuth';
 
 interface NotificationsPanelProps {
   isOpen: boolean;
@@ -28,7 +29,7 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
       setErrorRequestId(null);
 
       try {
-        const res = await fetch('/api/reports?limit=10');
+        const res = await fetchWithAuth('/api/reports?limit=10');
         const requestId = res.headers.get('x-request-id');
 
         if (res.ok) {
@@ -117,8 +118,20 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
               </div>
             </div>
           ) : loading ? (
-            <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
-              {t('loading')}...
+            <div className="p-4 space-y-3" aria-busy="true" aria-label={t('loading')}>
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-start gap-3 animate-pulse">
+                  <div className="mt-1 h-3 w-3 flex-shrink-0 rounded-full bg-muted-foreground/10" />
+                  <div className="flex-1 space-y-2">
+                    <div className="flex justify-between">
+                      <div className="h-4 w-32 rounded-xl bg-muted-foreground/10" />
+                      <div className="h-3 w-16 rounded-xl bg-muted-foreground/10" />
+                    </div>
+                    <div className="h-3 w-full rounded-xl bg-muted-foreground/10" />
+                    <div className="h-3 w-20 rounded-xl bg-muted-foreground/10" />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : recentReports.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 px-4 text-center">

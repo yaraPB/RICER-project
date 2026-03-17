@@ -4,13 +4,18 @@ import { useEffect } from 'react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useFireRecordStore } from '@/store/useFireRecordStore';
-import { FireRecordFilters } from '@/components/fire-records/FireRecordFilters';
-import { FireRecordTable } from '@/components/fire-records/FireRecordTable';
+import { FireDatabaseKpis } from '@/components/fire-records/FireDatabaseKpis';
+import { FireRecordFiltersV2 } from '@/components/fire-records/FireRecordFiltersV2';
+import { FireRecordTableV2 } from '@/components/fire-records/FireRecordTableV2';
+import { FireRecordMapView } from '@/components/fire-records/FireRecordMapView';
+import { ComparisonBar } from '@/components/fire-records/ComparisonBar';
+import { ComparisonView } from '@/components/fire-records/ComparisonView';
+import { ImportFirmsDialog } from '@/components/fire-records/ImportFirmsDialog';
 
 export default function FireDatabasePage() {
   const { t } = useTranslation();
   const { user } = useAuthStore();
-  const { fetchRecords, reset } = useFireRecordStore();
+  const { fetchRecords, reset, viewMode, comparisonRecords } = useFireRecordStore();
 
   useEffect(() => {
     fetchRecords();
@@ -31,25 +36,27 @@ export default function FireDatabasePage() {
   };
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mb-6 flex items-center justify-between">
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 page-enter">
+      {/* Header */}
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">{t('fireDatabaseTitle')}</h1>
+          <h1 className="text-fluid-2xl font-bold">{t('fireDatabaseTitle')}</h1>
           <p className="mt-1 text-sm text-muted-foreground">{t('fireDatabaseDesc')}</p>
         </div>
 
         {user?.role === 'OFFICIAL' && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2 shrink-0">
+            <ImportFirmsDialog />
             <button
               onClick={() => handleExport('csv')}
-              className="rounded border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted"
+              className="rounded-lg border border-border/60 px-3 py-1.5 text-sm font-medium hover:bg-muted transition-colors"
               data-testid="export-csv"
             >
               {t('fireRecordExportCSV')}
             </button>
             <button
               onClick={() => handleExport('geojson')}
-              className="rounded border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted"
+              className="rounded-lg border border-border/60 px-3 py-1.5 text-sm font-medium hover:bg-muted transition-colors"
               data-testid="export-geojson"
             >
               {t('fireRecordExportGeoJSON')}
@@ -59,9 +66,21 @@ export default function FireDatabasePage() {
       </div>
 
       <div className="space-y-4">
-        <FireRecordFilters />
-        <div className="rounded-lg border border-border bg-surface shadow-sm">
-          <FireRecordTable />
+        {/* KPI Cards */}
+        <FireDatabaseKpis />
+
+        {/* Filters */}
+        <FireRecordFiltersV2 />
+
+        {/* Comparison bar */}
+        <ComparisonBar />
+
+        {/* Comparison view (when loaded) */}
+        {comparisonRecords.length > 0 && <ComparisonView />}
+
+        {/* Main content area */}
+        <div className="rounded-lg border border-border/60 bg-surface shadow-elev-1">
+          {viewMode === 'table' ? <FireRecordTableV2 /> : <FireRecordMapView />}
         </div>
       </div>
     </div>

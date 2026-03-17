@@ -17,7 +17,7 @@ export const POST = withApiHandler(async (request: Request, context?: ApiHandler
   const record = await prisma.fireEventRecord.findUnique({ where: { id } });
   if (!record) throw new AppError(8000);
 
-  if (record.recordStatus === 'APPROVED') throw new AppError(8005);
+  if (record.recordStatus === 'LOCKED') throw new AppError(8005);
 
   // Check all sections are locked
   const missingSections = LOCKABLE_SECTIONS.filter(
@@ -31,7 +31,7 @@ export const POST = withApiHandler(async (request: Request, context?: ApiHandler
   const auditEntry = createAuditEntry(
     currentUser.userId,
     currentUser.cin,
-    'APPROVE'
+    'FINALIZE'
   );
 
   const currentTrail = (record.auditTrail as Prisma.JsonValue[]) || [];
@@ -40,7 +40,7 @@ export const POST = withApiHandler(async (request: Request, context?: ApiHandler
   const updated = await prisma.fireEventRecord.update({
     where: { id },
     data: {
-      recordStatus: 'APPROVED',
+      recordStatus: 'LOCKED',
       auditTrail: newTrail,
     },
   });

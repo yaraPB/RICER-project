@@ -17,7 +17,7 @@ describe('useFireRecordStore', () => {
 
   it('clears filters to defaults', () => {
     const store = useFireRecordStore.getState();
-    store.setFilters({ status: 'APPROVED', minArea: 10 });
+    store.setFilters({ status: 'LOCKED', minArea: 10 });
     store.clearFilters();
 
     const state = useFireRecordStore.getState();
@@ -56,7 +56,7 @@ describe('useFireRecordStore', () => {
 
   it('resets all state', () => {
     const store = useFireRecordStore.getState();
-    store.setFilters({ status: 'APPROVED' });
+    store.setFilters({ status: 'LOCKED' });
     store.setIsEditing(true);
     store.reset();
 

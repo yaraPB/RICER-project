@@ -3,7 +3,20 @@ import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { withApiHandler } from '@/lib/errors/withApiHandler';
 import { AppError } from '@/lib/errors/AppError';
-import { formatValueForError } from '@/lib/errors/context';
+
+export const GET = withApiHandler(async (request: Request, context) => {
+  const currentUser = await getCurrentUser(request);
+  if (!currentUser) throw new AppError(2000);
+  if (currentUser.role !== 'OFFICIAL') throw new AppError(2001);
+
+  const id = context?.params?.id;
+  if (!id) throw new AppError(1000);
+
+  const item = await prisma.equipment.findUnique({ where: { id } });
+  if (!item) throw new AppError(11000);
+
+  return NextResponse.json({ item });
+});
 
 export const PATCH = withApiHandler(async (request: Request, context) => {
   const currentUser = await getCurrentUser(request);
@@ -13,54 +26,49 @@ export const PATCH = withApiHandler(async (request: Request, context) => {
   const id = context?.params?.id;
   if (!id) throw new AppError(1000);
 
-  let body: { quantity?: unknown; condition?: unknown };
+  const existing = await prisma.equipment.findUnique({ where: { id } });
+  if (!existing) throw new AppError(11000);
+
+  let body: Record<string, unknown>;
   try {
     body = await request.json();
   } catch (error) {
     throw new AppError(1000, { cause: error });
   }
 
-  const quantity = body.quantity;
-  const condition = body.condition;
+  const data: Record<string, unknown> = {};
+  if (typeof body.type === 'string') data.type = body.type;
+  if (typeof body.name === 'string') data.name = body.name;
+  if (typeof body.status === 'string') data.status = body.status;
+  if (typeof body.quantity === 'number') data.quantity = body.quantity;
+  if (typeof body.department === 'string') data.department = body.department;
+  if (body.department === null) data.department = null;
+  if (typeof body.latitude === 'number') data.latitude = body.latitude;
+  if (body.latitude === null) data.latitude = null;
+  if (typeof body.longitude === 'number') data.longitude = body.longitude;
+  if (body.longitude === null) data.longitude = null;
+  if (typeof body.lastMaintenance === 'string') data.lastMaintenance = new Date(body.lastMaintenance);
+  if (body.lastMaintenance === null) data.lastMaintenance = null;
+  if (typeof body.notes === 'string') data.notes = body.notes;
+  if (body.notes === null) data.notes = null;
 
-  const validConditions = ['Bon', 'Moyen', 'Mauvais'] as const;
-  type EquipmentCondition = (typeof validConditions)[number];
+  const item = await prisma.equipment.update({ where: { id }, data });
 
-  const fields = [];
+  return NextResponse.json({ item });
+});
 
-  if (quantity !== undefined && (typeof quantity !== 'number' || quantity < 0 || !Number.isInteger(quantity))) {
-    fields.push({
-      field: 'quantity',
-      code: 'invalid',
-      message: `Quantity must be a non-negative integer, got: ${formatValueForError(quantity)}`,
-    });
-  }
+export const DELETE = withApiHandler(async (request: Request, context) => {
+  const currentUser = await getCurrentUser(request);
+  if (!currentUser) throw new AppError(2000);
+  if (currentUser.role !== 'OFFICIAL') throw new AppError(2001);
 
-  if (condition !== undefined && (typeof condition !== 'string' || !validConditions.includes(condition as EquipmentCondition))) {
-    fields.push({
-      field: 'condition',
-      code: 'invalid',
-      message: `Condition must be one of ${validConditions.join(', ')}, got: ${formatValueForError(condition)}`,
-    });
-  }
+  const id = context?.params?.id;
+  if (!id) throw new AppError(1000);
 
-  if (fields.length) {
-    throw new AppError(1001, {
-      fields,
-      meta: {
-        invalidValues: {
-          quantity,
-          condition,
-        },
-      },
-    });
-  }
+  const existing = await prisma.equipment.findUnique({ where: { id } });
+  if (!existing) throw new AppError(11000);
 
-  const updateData: { quantity?: number; condition?: EquipmentCondition } = {};
-  if (typeof quantity === 'number') updateData.quantity = quantity;
-  if (typeof condition === 'string') updateData.condition = condition as EquipmentCondition;
+  await prisma.equipment.delete({ where: { id } });
 
-  const equipment = await prisma.equipment.update({ where: { id }, data: updateData });
-
-  return NextResponse.json({ equipment });
+  return NextResponse.json({ success: true });
 });

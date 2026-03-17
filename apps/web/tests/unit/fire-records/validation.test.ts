@@ -166,25 +166,25 @@ describe('createAuditEntry', () => {
 });
 
 describe('isSectionLocked', () => {
-  it('detects locked timeline fields', () => {
-    const result = isSectionLocked(['timeline'], ['alertSource', 'alertReceivedAt']);
+  it('detects locked response fields', () => {
+    const result = isSectionLocked(['response'], ['alertSource', 'alertReceivedAt']);
     expect(result.locked).toBe(true);
-    expect(result.section).toBe('timeline');
+    expect(result.section).toBe('response');
   });
 
-  it('detects locked agencyArrivals', () => {
-    const result = isSectionLocked(['agencyArrivals'], ['agencyArrivals']);
+  it('detects locked location fields', () => {
+    const result = isSectionLocked(['location'], ['locationDetail']);
     expect(result.locked).toBe(true);
-    expect(result.section).toBe('agencyArrivals');
+    expect(result.section).toBe('location');
   });
 
   it('returns false when section is not locked', () => {
-    const result = isSectionLocked(['timeline'], ['agencyArrivals']);
+    const result = isSectionLocked(['response'], ['locationDetail']);
     expect(result.locked).toBe(false);
   });
 
   it('returns false for unknown fields', () => {
-    const result = isSectionLocked(['timeline'], ['unknownField']);
+    const result = isSectionLocked(['response'], ['unknownField']);
     expect(result.locked).toBe(false);
   });
 

@@ -70,14 +70,24 @@ export default function SignInPage() {
           }
           setFieldErrors(next);
         }
-        setLoading(false);
         return;
       }
 
+      // Store user in zustand so AuthProvider skips the /api/auth/me check,
+      // then navigate.  The cookie is already set by the response headers.
       setUser(data.user);
       router.replace('/map');
+
+      // Fallback: if the soft navigation didn't leave the page within 2 s
+      // (stale Router Cache, prefetch race, etc.), force a hard navigation
+      // which will pick up the auth cookie and hydrate through AuthProvider.
+      await new Promise((r) => setTimeout(r, 2000));
+      if (typeof window !== 'undefined' && window.location.pathname !== '/map') {
+        window.location.href = '/map';
+      }
     } catch {
       setError(t('connectionError'));
+    } finally {
       setLoading(false);
     }
   };

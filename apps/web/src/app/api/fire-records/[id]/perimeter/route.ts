@@ -19,8 +19,8 @@ export const PUT = withApiHandler(async (request: Request, context?: ApiHandlerC
   const record = await prisma.fireEventRecord.findUnique({ where: { id } });
   if (!record) throw new AppError(8000);
 
-  if (record.recordStatus === 'APPROVED') throw new AppError(8005);
-  if (record.lockedSections.includes('perimeter')) throw new AppError(8002);
+  if (record.recordStatus === 'LOCKED') throw new AppError(8005);
+  if (record.lockedSections.includes('location')) throw new AppError(8002);
 
   const body = await request.json();
   const { polygon } = body;
@@ -33,7 +33,7 @@ export const PUT = withApiHandler(async (request: Request, context?: ApiHandlerC
     currentUser.userId,
     currentUser.cin,
     'UPDATE_PERIMETER',
-    'perimeter'
+    'location'
   );
 
   const currentTrail = (record.auditTrail as Prisma.JsonValue[]) || [];

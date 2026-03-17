@@ -142,19 +142,6 @@ describe('Footer Component', () => {
     });
   });
 
-  describe('information section', () => {
-    it('displays Informations heading', () => {
-      render(<Footer />);
-      expect(screen.getByText('Informations')).toBeInTheDocument();
-    });
-
-    it('displays error codes link', () => {
-      render(<Footer />);
-      const errorCodesLink = screen.getByText("Codes d'erreur");
-      expect(errorCodesLink).toBeInTheDocument();
-      expect(errorCodesLink.closest('a')).toHaveAttribute('href', '/error-codes');
-    });
-  });
 
   describe('copyright section', () => {
     it('displays current year', () => {
@@ -177,10 +164,10 @@ describe('Footer Component', () => {
       expect(footer).toHaveClass('border-t');
     });
 
-    it('has bg-surface-2 class for background', () => {
+    it('has bg-surface-2/50 class for background', () => {
       render(<Footer />);
       const footer = screen.getByRole('contentinfo');
-      expect(footer).toHaveClass('bg-surface-2');
+      expect(footer).toHaveClass('bg-surface-2/50');
     });
 
     it('has mt-auto class for sticky footer', () => {
@@ -196,7 +183,7 @@ describe('Footer Component', () => {
       const grid = container.querySelector('.grid');
       expect(grid).toHaveClass('grid-cols-1');
       expect(grid).toHaveClass('sm:grid-cols-2');
-      expect(grid).toHaveClass('lg:grid-cols-4');
+      expect(grid).toHaveClass('lg:grid-cols-3');
     });
   });
 
@@ -231,7 +218,7 @@ describe('Footer Component', () => {
   });
 
   describe('all sections present', () => {
-    it('contains all four main sections', () => {
+    it('contains all three main sections', () => {
       render(<Footer />);
 
       // Branding
@@ -242,9 +229,6 @@ describe('Footer Component', () => {
 
       // Emergency
       expect(screen.getByText('Urgences')).toBeInTheDocument();
-
-      // Information
-      expect(screen.getByText('Informations')).toBeInTheDocument();
 
       // Copyright
       expect(screen.getByText(new RegExp(currentYear.toString()))).toBeInTheDocument();

@@ -3,21 +3,34 @@ import {
   AlertTriangle,
   BarChart3,
   Bell,
+  Camera,
   CalendarDays,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   ClipboardList,
+  Cloud,
   Compass,
   Database,
+  Droplets,
   ExternalLink,
+  Eye,
   Flame,
   IdCard,
+  Image,
   Info,
   KeyRound,
+  Leaf,
   Loader2,
   LogOut,
   Map,
+  MapPin,
   Megaphone,
+  Menu,
   Moon,
+  MoreHorizontal,
+  Navigation,
+  Pencil,
   Pin,
   Phone,
   RefreshCw,
@@ -25,12 +38,23 @@ import {
   Search,
   Send,
   Share2,
+  Shield,
   Siren,
   Sun,
   Thermometer,
+  Timer,
+  Trash2,
+  TrendingUp,
   Truck,
+  Users,
+  Waves,
   Wind,
+  Mountain,
+  Wrench,
   X,
+  Layers,
+  Plus,
+  ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
@@ -67,7 +91,32 @@ export type IconName =
   | 'cached'
   | 'check'
   | 'info'
-  | 'database';
+  | 'database'
+  | 'more_horiz'
+  | 'camera'
+  | 'image'
+  | 'navigation'
+  | 'check-circle'
+  | 'trash'
+  | 'menu'
+  | 'chevronUp'
+  | 'chevronDown'
+  | 'droplet'
+  | 'eye'
+  | 'leaf'
+  | 'shield'
+  | 'timer'
+  | 'trending_up'
+  | 'users'
+  | 'waves'
+  | 'wrench'
+  | 'cloud'
+  | 'mountain'
+  | 'layers'
+  | 'plus'
+  | 'pencil'
+  | 'mapPin'
+  | 'chevronRight';
 
 export type IconProps = {
   name: IconName;
@@ -143,7 +192,57 @@ export function Icon({ name, className, size = 20, title, ...props }: IconProps)
                                                                   ? Info
                                                                   : name === 'database'
                                                                     ? Database
-                                                                    : Compass;
+                                                                    : name === 'more_horiz'
+                                                                      ? MoreHorizontal
+                                                                      : name === 'camera'
+                                                                        ? Camera
+                                                                        : name === 'image'
+                                                                          ? Image
+                                                                          : name === 'navigation'
+                                                                            ? Navigation
+                                                                            : name === 'check-circle'
+                                                                              ? CheckCircle2
+                                                                              : name === 'trash'
+                                                                                ? Trash2
+                                                                                : name === 'menu'
+                                                                                  ? Menu
+                                                                                  : name === 'chevronUp'
+                                                                                    ? ChevronUp
+                                                                                    : name === 'chevronDown'
+                                                                                      ? ChevronDown
+                                                                                      : name === 'droplet'
+                                                                                        ? Droplets
+                                                                                        : name === 'eye'
+                                                                                          ? Eye
+                                                                                          : name === 'leaf'
+                                                                                            ? Leaf
+                                                                                            : name === 'shield'
+                                                                                              ? Shield
+                                                                                              : name === 'timer'
+                                                                                                ? Timer
+                                                                                                : name === 'trending_up'
+                                                                                                  ? TrendingUp
+                                                                                                  : name === 'users'
+                                                                                                    ? Users
+                                                                                                    : name === 'waves'
+                                                                                                      ? Waves
+                                                                                                      : name === 'wrench'
+                                                                                                        ? Wrench
+                                                                                                        : name === 'cloud'
+                                                                                                          ? Cloud
+                                                                                                          : name === 'mountain'
+                                                                                                            ? Mountain
+                                                                                                            : name === 'layers'
+                                                                                                              ? Layers
+                                                                                                              : name === 'plus'
+                                                                                                                ? Plus
+                                                                                                                : name === 'pencil'
+                                                                                                                  ? Pencil
+                                                                                                                  : name === 'mapPin'
+                                                                                                                    ? MapPin
+                                                                                                                    : name === 'chevronRight'
+                                                                                                                      ? ChevronRight
+                                                                                                                      : Compass;
 
   return (
     <IconComponent

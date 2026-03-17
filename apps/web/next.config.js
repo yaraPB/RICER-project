@@ -6,6 +6,7 @@ const nextConfig = {
   experimental: {
     serverActions: {
       allowedOrigins: ['*'],
+      bodySizeLimit: '10mb',
     },
     optimizePackageImports: ['lucide-react', 'recharts', '@deck.gl/core', '@deck.gl/layers', '@deck.gl/mapbox'],
   },

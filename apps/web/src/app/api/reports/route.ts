@@ -91,6 +91,23 @@ export const POST = withApiHandler(async (request: Request) => {
   const longitudeRaw = (body as { longitude?: unknown })?.longitude;
   const description = typeof (body as { description?: unknown })?.description === 'string' ? (body as { description: string }).description.trim() : '';
   const cause = typeof (body as { cause?: unknown })?.cause === 'string' ? (body as { cause: string }).cause : undefined;
+  const anonymous = (body as { anonymous?: unknown })?.anonymous === true;
+  const contactPhone = typeof (body as { contactPhone?: unknown })?.contactPhone === 'string' ? (body as { contactPhone: string }).contactPhone.trim() || undefined : undefined;
+  const characteristics = (body as { characteristics?: unknown })?.characteristics ?? undefined;
+  const rawImages = Array.isArray((body as { images?: unknown })?.images) ? (body as { images: unknown[] }).images : [];
+
+  // Validate images: max 3, each max 3MB base64
+  const MAX_IMAGES = 3;
+  const MAX_IMAGE_BYTES = 3 * 1024 * 1024; // 3MB
+  const validImages: string[] = [];
+  for (const img of rawImages.slice(0, MAX_IMAGES)) {
+    if (typeof img !== 'string' || !img.startsWith('data:image/')) continue;
+    const base64Part = img.split(',')[1] ?? '';
+    const sizeBytes = Math.ceil(base64Part.length * 0.75);
+    if (sizeBytes <= MAX_IMAGE_BYTES) {
+      validImages.push(img);
+    }
+  }
 
   const fields = [];
   const latitude = typeof latitudeRaw === 'number' ? latitudeRaw : Number(latitudeRaw);
@@ -133,6 +150,12 @@ export const POST = withApiHandler(async (request: Request) => {
     });
   }
 
+  // Generate reference number: RPT-YYYYMMDD-XXXX
+  const now = new Date();
+  const datePart = now.toISOString().slice(0, 10).replace(/-/g, '');
+  const hexPart = Math.random().toString(16).slice(2, 6).toUpperCase();
+  const referenceNumber = `RPT-${datePart}-${hexPart}`;
+
   const report: ReportWithUser = await prisma.report.create({
     data: {
       userId: currentUser.userId,
@@ -140,8 +163,12 @@ export const POST = withApiHandler(async (request: Request) => {
       longitude,
       description,
       cause,
-      images: [],
+      images: validImages,
       status: 'PENDING',
+      anonymous,
+      contactPhone,
+      characteristics: characteristics as object | undefined,
+      referenceNumber,
     },
     include: {
       user: {
@@ -174,7 +201,7 @@ export const POST = withApiHandler(async (request: Request) => {
     }
   }
 
-  return NextResponse.json({ report });
+  return NextResponse.json({ report, referenceNumber });
 });
 
 type ReportWithUser = Prisma.ReportGetPayload<{

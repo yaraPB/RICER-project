@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useNotificationStore } from '@/store/useNotificationStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import LanguageSwitcher from './LanguageSwitcher';
 import { NotificationsPanel } from './NotificationsPanel';
@@ -12,19 +13,47 @@ import { Footer } from './Footer';
 import { AppShell } from '@/components/shell/AppShell';
 import { Topbar } from '@/components/shell/Topbar';
 import { SidebarRail } from '@/components/shell/SidebarRail';
+import { MobileTabBar } from '@/components/shell/MobileTabBar';
 import { SkipLink } from '@/components/shell/SkipLink';
+import { Breadcrumb, type BreadcrumbItem } from '@/components/ui/Breadcrumb';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { IconButton } from '@/components/ui/IconButton';
 import { Icon } from '@/components/ui/Icon';
 import { Logo } from '@/components/ui/Logo';
 import { SearchInput } from '@/components/ui/SearchInput';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { useNotificationPoller } from '@/hooks/useNotificationPoller';
+import { ShortcutsOverlay } from '@/components/ui/ShortcutsOverlay';
+
+const BREADCRUMB_MAP: Record<string, string> = {
+  '/map': 'fireMap',
+  '/analytics': 'analytics',
+  '/report': 'reportFire',
+  '/reports-list': 'reports',
+  '/equipment': 'equipment',
+  '/fire-database': 'fireDatabase',
+  '/coordination': 'coordination',
+  '/operations': 'operationsTitle',
+  '/weather': 'weatherTitle',
+};
 
 export default function Navbar({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { user, logout } = useAuthStore();
+  const unreadCount = useNotificationStore((s) => s.unreadCount);
   const { t } = useTranslation();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const { showOverlay, setShowOverlay } = useKeyboardShortcuts();
+  useNotificationPoller();
+
+  const breadcrumbItems: BreadcrumbItem[] = [];
+  const pageKey = BREADCRUMB_MAP[pathname];
+  if (pageKey) {
+    breadcrumbItems.push({ label: t('commandCenter' as Parameters<typeof t>[0]), href: '/map' });
+    breadcrumbItems.push({ label: t(pageKey as Parameters<typeof t>[0]) });
+  }
 
   const handleLogout = async () => {
     try {
@@ -37,37 +66,18 @@ export default function Navbar({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const navItems = [
-    { href: '/map', label: t('fireMap'), icon: <Icon name="map" aria-hidden={true} size={20} /> },
-    {
-      href: '/analytics',
-      label: t('analytics'),
-      icon: <Icon name="analytics" aria-hidden={true} size={20} />,
-    },
-    {
-      href: '/report',
-      label: t('reportFire'),
-      icon: <Icon name="campaign" aria-hidden={true} size={20} />,
-    },
-    {
-      href: '/reports-list',
-      label: t('reports'),
-      icon: <Icon name="list" aria-hidden={true} size={20} />,
-    },
-  ];
+  const isOfficial = user?.role === 'OFFICIAL';
 
-  if (user?.role === 'OFFICIAL') {
-    navItems.push({
-      href: '/equipment',
-      label: t('equipment'),
-      icon: <Icon name="truck" aria-hidden={true} size={20} />,
-    });
-    navItems.push({
-      href: '/fire-database',
-      label: t('fireDatabase'),
-      icon: <Icon name="database" aria-hidden={true} size={20} />,
-    });
-  }
+  const navItems = [
+    { href: '/map', label: t('fireMap'), icon: <Icon name="map" aria-hidden={true} size={20} />, restricted: false },
+    { href: '/analytics', label: t('analytics'), icon: <Icon name="analytics" aria-hidden={true} size={20} />, restricted: false },
+    { href: '/report', label: t('reportFire'), icon: <Icon name="campaign" aria-hidden={true} size={20} />, restricted: false },
+    { href: '/reports-list', label: t('reports'), icon: <Icon name="list" aria-hidden={true} size={20} />, restricted: false },
+    { href: '/equipment', label: t('equipment'), icon: <Icon name="truck" aria-hidden={true} size={20} />, restricted: !isOfficial },
+    { href: '/fire-database', label: t('fireDatabase'), icon: <Icon name="database" aria-hidden={true} size={20} />, restricted: !isOfficial },
+    { href: '/coordination', label: t('coordination'), icon: <Icon name="share" aria-hidden={true} size={20} />, restricted: !isOfficial },
+    { href: '/operations', label: t('operationsTitle'), icon: <Icon name="layers" aria-hidden={true} size={20} />, restricted: !isOfficial },
+  ];
 
   return (
     <>
@@ -76,24 +86,24 @@ export default function Navbar({ children }: { children: React.ReactNode }) {
         topbar={
           <Topbar
             left={
-              <div className="flex items-center gap-3">
-                <Link href="/map" className="flex items-center gap-3 group" aria-label={t('brandTitle')}>
-                  <div className="h-12 w-12 sm:h-14 sm:w-14 lg:h-16 lg:w-16 bg-surface shadow-elev-1 rounded-md p-2 sm:p-2.5 lg:p-3 transition-all duration-200 group-hover:shadow-elev-2">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <Link href="/map" className="flex items-center gap-2.5 group shrink-0" aria-label={t('brandTitle')}>
+                  <div className="h-10 w-10 sm:h-11 sm:w-11 bg-surface shadow-elev-1 rounded-lg p-1.5 sm:p-2 transition-all duration-200 group-hover:shadow-elev-2 group-hover:scale-[1.02]">
                     <Logo variant="badge" size="responsive" priority />
                   </div>
                   <span className="sr-only">{t('brandTitle')}</span>
-                  <div className="hidden sm:block leading-tight">
-                    <div className="text-sm font-extrabold tracking-tight">{t('brandTitle')}</div>
-                    <div className="text-xs text-muted-foreground">{t('brandSubtitle')}</div>
+                  <div className="hidden sm:block leading-tight min-w-0">
+                    <div className="text-sm font-bold tracking-tight truncate">{t('brandTitle')}</div>
+                    <div className="text-[11px] text-muted-foreground truncate">{t('brandSubtitle')}</div>
                   </div>
                 </Link>
 
-                <div className="hidden lg:flex items-center gap-2 rounded-full border border-success/25 bg-success/10 px-3 py-1.5">
-                  <span className="relative flex h-2.5 w-2.5">
+                <div className="hidden lg:flex items-center gap-1.5 rounded-full border border-success/20 bg-success/8 px-2.5 py-1 shrink-0">
+                  <span className="relative flex h-2 w-2">
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success/60 opacity-75" />
-                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-success" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
                   </span>
-                  <span className="text-xs font-bold text-foreground">{t('systemOnline')}</span>
+                  <span className="text-[11px] font-semibold text-success-foreground">{t('systemOnline')}</span>
                 </div>
               </div>
             }
@@ -107,7 +117,7 @@ export default function Navbar({ children }: { children: React.ReactNode }) {
               </div>
             }
             right={
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 sm:gap-1.5">
                 <ThemeToggle />
                 <LanguageSwitcher />
 
@@ -116,27 +126,32 @@ export default function Navbar({ children }: { children: React.ReactNode }) {
                   onClick={() => setNotificationsOpen(!notificationsOpen)}
                 >
                   <span className="relative">
-                    <Icon name="notifications" aria-hidden={true} size={22} />
-                    <span className="absolute right-0.5 top-0.5 h-2 w-2 rounded-full bg-primary ring-2 ring-surface" />
+                    <Icon name="notifications" aria-hidden={true} size={20} />
+                    {unreadCount > 0 && (
+                      <span className="absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-danger px-1 text-[10px] font-bold text-white ring-2 ring-surface">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    )}
                   </span>
                 </IconButton>
 
-                <div className="hidden sm:flex items-center gap-3 rounded-md border border-border bg-surface px-3 py-2 shadow-sm">
+                {/* User info — desktop only */}
+                <div className="hidden sm:flex items-center gap-2 rounded-lg border border-border/60 bg-surface-2/80 px-2.5 py-1.5">
                   <div className="min-w-0">
-                    <div className="truncate text-xs font-bold">{user?.cin}</div>
-                    <div className="truncate text-[11px] text-muted-foreground">
+                    <div className="truncate text-xs font-bold leading-tight">{user?.cin}</div>
+                    <div className="truncate text-[10px] text-muted-foreground leading-tight">
                       {user?.role === 'OFFICIAL' ? t('official') : t('civilian')}
-                      {user?.department ? ` • ${user.department}` : ''}
+                      {user?.department ? ` · ${user.department}` : ''}
                     </div>
                   </div>
-                  <Badge tone="primary" className="hidden md:inline-flex">
+                  <Badge tone="primary" className="hidden md:inline-flex text-[10px] px-2 py-0.5">
                     {user?.role === 'OFFICIAL' ? t('roleBadgeOps') : t('roleBadgeUser')}
                   </Badge>
                 </div>
 
-                <Button variant="secondary" onClick={handleLogout}>
-                  <Icon name="logout" aria-hidden={true} size={20} />
-                  <span className="sr-only sm:not-sr-only">{t('logout')}</span>
+                <Button variant="ghost" onClick={handleLogout} className="gap-1.5">
+                  <Icon name="logout" aria-hidden={true} size={18} />
+                  <span className="sr-only sm:not-sr-only text-xs">{t('logout')}</span>
                 </Button>
               </div>
             }
@@ -145,12 +160,19 @@ export default function Navbar({ children }: { children: React.ReactNode }) {
         sidebar={<SidebarRail items={navItems} />}
       >
         <div className="flex flex-col min-h-screen">
+          {breadcrumbItems.length > 0 && (
+            <div className="hidden md:block border-b border-border/40 px-6 py-2 bg-surface-2/40">
+              <Breadcrumb items={breadcrumbItems} />
+            </div>
+          )}
           <div className="flex-1">{children}</div>
           <Footer />
         </div>
       </AppShell>
+      <MobileTabBar />
 
       <NotificationsPanel isOpen={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
+      <ShortcutsOverlay open={showOverlay} onClose={() => setShowOverlay(false)} />
     </>
   );
 }

@@ -3,8 +3,8 @@
  */
 
 import { IconLayer, PathLayer, ScatterplotLayer } from '@deck.gl/layers';
-import { RESOURCE_TYPE_COLORS, INCIDENT_STATUS_COLORS } from './colors';
-import { circleIcon, hexToRgba } from './helpers';
+import { RESOURCE_TYPE_COLORS, INCIDENT_STATUS_COLORS, INFRASTRUCTURE_TYPE_COLORS, RETARDANT_COLOR } from './colors';
+import { shapeIcon, hexToRgba, RESOURCE_SHAPE, INFRA_SHAPE } from './helpers';
 import type { GeoFeatureCollection, GeoResourceProps, GeoInfrastructureProps, GeoIncidentProps } from '@/types';
 
 /**
@@ -12,13 +12,20 @@ import type { GeoFeatureCollection, GeoResourceProps, GeoInfrastructureProps, Ge
  */
 export function createResourceLayer(
   resources: GeoFeatureCollection<GeoResourceProps>,
-  isActive: boolean
+  isActive: boolean,
+  activeTypes?: Record<string, boolean>
 ): IconLayer | null {
   if (!isActive || resources.features.length === 0) return null;
 
-  const data = resources.features.map((f) => ({
+  const filtered = activeTypes
+    ? resources.features.filter((f) => activeTypes[f.properties.type] !== false)
+    : resources.features;
+  if (filtered.length === 0) return null;
+
+  const data = filtered.map((f) => ({
     coordinates: f.geometry.coordinates as [number, number],
     color: RESOURCE_TYPE_COLORS[f.properties.type] ?? '#6b7280',
+    type: f.properties.type,
   }));
 
   return new IconLayer({
@@ -26,7 +33,7 @@ export function createResourceLayer(
     data,
     getPosition: (d: (typeof data)[0]) => d.coordinates,
     getIcon: (d: (typeof data)[0]) => ({
-      url: circleIcon(d.color),
+      url: shapeIcon(RESOURCE_SHAPE[d.type] ?? 'circle', d.color),
       width: 24,
       height: 24,
     }),
@@ -84,7 +91,7 @@ export function createIncidentPulseLayer(
 }
 
 /**
- * Creates icon and path layers for infrastructure (watchtowers, water points, stations, firebreaks)
+ * Creates icon and path layers for infrastructure (watchtowers, water points, stations, firebreaks, helipads)
  */
 export function createInfrastructureLayers(
   infrastructure: GeoFeatureCollection<GeoInfrastructureProps>,
@@ -94,24 +101,17 @@ export function createInfrastructureLayers(
 
   const layers: (IconLayer | PathLayer)[] = [];
 
-  const iconColorMap: Record<string, string> = {
-    WATCHTOWER: '#7c3aed',
-    WATER_POINT: '#0ea5e9',
-    STATION: '#14b8a6',
-  };
-
-  // Point infrastructure (watchtowers, water points, stations)
+  // Point infrastructure (watchtowers, water points, stations, helipads)
+  const pointTypes = new Set(['WATCHTOWER', 'WATER_POINT', 'STATION', 'HELIPAD']);
   const pointFeatures = infrastructure.features.filter(
-    (f) =>
-      f.properties.type === 'WATCHTOWER' ||
-      f.properties.type === 'WATER_POINT' ||
-      f.properties.type === 'STATION',
+    (f) => pointTypes.has(f.properties.type),
   );
 
   if (pointFeatures.length > 0) {
     const data = pointFeatures.map((f) => ({
       coordinates: f.geometry.coordinates as [number, number],
-      color: iconColorMap[f.properties.type] ?? '#6b7280',
+      color: INFRASTRUCTURE_TYPE_COLORS[f.properties.type] ?? '#6b7280',
+      type: f.properties.type,
     }));
 
     layers.push(
@@ -120,7 +120,7 @@ export function createInfrastructureLayers(
         data,
         getPosition: (d: (typeof data)[0]) => d.coordinates,
         getIcon: (d: (typeof data)[0]) => ({
-          url: circleIcon(d.color),
+          url: shapeIcon(INFRA_SHAPE[d.type] ?? 'circle', d.color),
           width: 24,
           height: 24,
         }),
@@ -155,4 +155,37 @@ export function createInfrastructureLayers(
   }
 
   return layers;
+}
+
+/**
+ * Retardant layer data item
+ */
+interface RetardantDataItem {
+  coordinates: [number, number];
+  name: string;
+}
+
+/**
+ * Creates icon layer for retardant storage locations
+ */
+export function createRetardantLayer(
+  data: RetardantDataItem[],
+  isActive: boolean
+): IconLayer | null {
+  if (!isActive || data.length === 0) return null;
+
+  return new IconLayer({
+    id: 'retardant-icons',
+    data,
+    getPosition: (d: RetardantDataItem) => d.coordinates,
+    getIcon: () => ({
+      url: shapeIcon('hexagon', RETARDANT_COLOR),
+      width: 24,
+      height: 24,
+    }),
+    getSize: () => 28,
+    updateTriggers: {
+      getPosition: [data.length],
+    },
+  });
 }

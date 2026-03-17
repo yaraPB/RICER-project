@@ -25,6 +25,12 @@ if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma;
 }
 
+// Eagerly warm up the connection pool so the first query doesn't pay the
+// cold-start cost (MongoDB Atlas free/serverless tiers can take 2-5 s).
+void prisma.$connect().catch(() => {
+  // Non-blocking — if this fails the first query will retry automatically.
+});
+
 // Health check utility
 export async function checkDatabaseHealth(): Promise<boolean> {
   try {

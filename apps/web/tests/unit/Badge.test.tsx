@@ -35,7 +35,7 @@ describe('Badge', () => {
   it('applies the primary tone class when tone="primary"', () => {
     const { container } = render(<Badge tone="primary">Primary</Badge>);
     const span = container.firstElementChild as HTMLElement;
-    expect(span.className).toContain('bg-primary-muted');
+    expect(span.className).toContain('bg-primary/10');
     expect(span.className).toContain('text-primary');
   });
 

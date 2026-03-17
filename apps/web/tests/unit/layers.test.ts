@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi } from 'vitest';
-import { createIncidentPulseLayer, createResourceLayer, createInfrastructureLayers } from '@/lib/map/layers';
+import { createIncidentPulseLayer, createResourceLayer, createInfrastructureLayers, createRetardantLayer } from '@/lib/map/layers';
 import type { GeoFeatureCollection, GeoIncidentProps, GeoResourceProps, GeoInfrastructureProps } from '@/types';
 
 // Mock deck.gl layers — WebGL deps can't run in Node
@@ -21,7 +21,10 @@ vi.mock('@deck.gl/layers', () => ({
 
 vi.mock('@/lib/map/helpers', () => ({
   circleIcon: (color: string) => `data:svg,${color}`,
+  shapeIcon: (_shape: string, color: string) => `data:svg,${color}`,
   hexToRgba: (hex: string, alpha = 255) => [255, 100, 0, alpha],
+  RESOURCE_SHAPE: { TRUCK: 'circle', AIRCRAFT: 'diamond', PERSONNEL: 'triangle', EQUIPMENT: 'square' },
+  INFRA_SHAPE: { WATCHTOWER: 'triangle', WATER_POINT: 'circle', STATION: 'square', HELIPAD: 'diamond', FIREBREAK: 'circle' },
 }));
 
 vi.mock('@/lib/map/colors', () => ({
@@ -33,6 +36,14 @@ vi.mock('@/lib/map/colors', () => ({
     MAITRISE: '#8b5cf6',
     ETEINT: '#6b7280',
   },
+  INFRASTRUCTURE_TYPE_COLORS: {
+    WATCHTOWER: '#7c3aed',
+    WATER_POINT: '#0ea5e9',
+    STATION: '#14b8a6',
+    FIREBREAK: '#8b5cf6',
+    HELIPAD: '#6366f1',
+  },
+  RETARDANT_COLOR: '#f43f5e',
 }));
 
 const activeIncidents: GeoFeatureCollection<GeoIncidentProps> = {
@@ -231,5 +242,93 @@ describe('createInfrastructureLayers', () => {
     const layers = createInfrastructureLayers(firebreakInfra, true);
     const pathLayer = layers[0] as any;
     expect(pathLayer.props.getColor()).toEqual([139, 92, 246]);
+  });
+});
+
+/* ────────────────────────────────────────────────────────────
+ * createRetardantLayer
+ * ──────────────────────────────────────────────────────────── */
+
+describe('createRetardantLayer', () => {
+  const retardantData = [
+    { coordinates: [-5.1, 33.5] as [number, number], name: 'Depot A' },
+    { coordinates: [-5.2, 33.6] as [number, number], name: 'Depot B' },
+  ];
+
+  it('returns null when isActive=false', () => {
+    expect(createRetardantLayer(retardantData, false)).toBeNull();
+  });
+
+  it('returns null when data is empty', () => {
+    expect(createRetardantLayer([], true)).toBeNull();
+  });
+
+  it('returns IconLayer with id "retardant-icons"', () => {
+    const layer = createRetardantLayer(retardantData, true) as any;
+    expect(layer).not.toBeNull();
+    expect(layer.props.id).toBe('retardant-icons');
+  });
+
+  it('has updateTriggers keyed on data.length', () => {
+    const layer = createRetardantLayer(retardantData, true) as any;
+    expect(layer.props.updateTriggers.getPosition).toContain(2);
+  });
+});
+
+/* ────────────────────────────────────────────────────────────
+ * Edge cases — empty data handling
+ * ──────────────────────────────────────────────────────────── */
+
+describe('layer edge cases', () => {
+  it('createIncidentPulseLayer with 0 pulsePhase still returns layer for active incidents', () => {
+    const layer = createIncidentPulseLayer(activeIncidents, 0, true);
+    expect(layer).not.toBeNull();
+  });
+
+  it('createIncidentPulseLayer with pulsePhase=1.0 (boundary) returns layer', () => {
+    const layer = createIncidentPulseLayer(activeIncidents, 1.0, true);
+    expect(layer).not.toBeNull();
+    expect((layer as any).props.id).toBe('incident-pulse');
+  });
+
+  it('createResourceLayer with activeTypes filtering all types returns null', () => {
+    const allOff = { TRUCK: false, AIRCRAFT: false, PERSONNEL: false, EQUIPMENT: false };
+    expect(createResourceLayer(resourceFC, true, allOff)).toBeNull();
+  });
+
+  it('createResourceLayer with some activeTypes filters correctly', () => {
+    const onlyTruck = { TRUCK: true, AIRCRAFT: false, PERSONNEL: false, EQUIPMENT: false };
+    const layer = createResourceLayer(resourceFC, true, onlyTruck) as any;
+    expect(layer).not.toBeNull();
+    expect(layer.props.data).toHaveLength(1);
+    expect(layer.props.data[0].type).toBe('TRUCK');
+  });
+
+  it('createInfrastructureLayers with only HELIPAD features returns IconLayer', () => {
+    const helipadFC: GeoFeatureCollection<GeoInfrastructureProps> = {
+      type: 'FeatureCollection',
+      features: [{
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [-5.1, 33.5] },
+        properties: { id: 'h-1', type: 'HELIPAD', name: 'Pad A', status: 'ACTIVE', description: '' },
+      }],
+    };
+    const layers = createInfrastructureLayers(helipadFC, true);
+    expect(layers).toHaveLength(1);
+    expect((layers[0] as any).props.id).toBe('infra-icons');
+  });
+
+  it('createIncidentPulseLayer filters out ETEINT incidents in mixed collection', () => {
+    const mixed: GeoFeatureCollection<GeoIncidentProps> = {
+      type: 'FeatureCollection',
+      features: [
+        ...activeIncidents.features,
+        ...extinctIncidents.features,
+      ],
+    };
+    const layer = createIncidentPulseLayer(mixed, 0.5, true) as any;
+    expect(layer).not.toBeNull();
+    // Only active (non-ETEINT) incidents should be in data
+    expect(layer.props.data).toHaveLength(1);
   });
 });

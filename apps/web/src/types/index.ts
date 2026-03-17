@@ -1,11 +1,13 @@
 export type Role = 'CIVILIAN' | 'OFFICIAL';
 export type Status = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
+export type AgencyType = 'FORESTIER' | 'PROTECTION_CIVILE' | 'COORDINATEUR' | 'OBSERVATEUR';
 
 export interface User {
   id: string;
   cin: string;
   phone: string;
   role: Role;
+  agencyType?: AgencyType;
   department?: string;
   position?: string;
   createdAt: Date;
@@ -23,6 +25,10 @@ export interface Report {
   cause?: string;
   incidentId?: string | null;
   incident?: Incident | null;
+  anonymous?: boolean;
+  contactPhone?: string;
+  characteristics?: Record<string, unknown>;
+  referenceNumber?: string;
   createdAt: Date;
   updatedAt: Date;
   user?: User;
@@ -61,7 +67,7 @@ export interface UpdateIncidentInput {
 
 export type ResourceType = 'TRUCK' | 'AIRCRAFT' | 'PERSONNEL' | 'EQUIPMENT';
 
-export type InfrastructureType = 'WATCHTOWER' | 'WATER_POINT' | 'FIREBREAK' | 'STATION';
+export type InfrastructureType = 'WATCHTOWER' | 'WATER_POINT' | 'FIREBREAK' | 'STATION' | 'FOREST_ROAD' | 'HELIPAD';
 
 export interface GeoFeature<P> {
   type: 'Feature';
@@ -105,48 +111,15 @@ export interface GeoInfrastructureProps {
 
 export type GeoInfrastructure = GeoFeature<GeoInfrastructureProps>;
 
-export interface RiskBasinProps {
-  id: string;
-  name: string;
-  riskLevel: number;
-  description?: string;
-}
-
-export type GeoRiskBasin = GeoFeature<RiskBasinProps>;
-
-export interface Equipment {
-  id: string;
-  category: string;
-  name: string;
-  quantity: number;
-  condition: string;
-  lastMaintenance?: Date;
-  location: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface RetardantProduct {
-  id: string;
-  productName: string;
-  acquisitionDate: Date;
-  storageLocation: string;
-  quantity: number;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface Infrastructure {
-  id: string;
-  type: string;
-  name: string;
-  latitude?: number;
-  longitude?: number;
-  status: string;
-  description: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
+export type { Equipment, RetardantProduct, Infrastructure } from './equipment';
+export type {
+  EquipmentType,
+  EquipmentStatus,
+  RetardantType,
+  InfrastructureType as EquipmentInfrastructureType,
+  InfrastructureStatus,
+  EquipmentTab,
+} from './equipment';
 
 export interface TruckDeployment {
   id: string;
@@ -156,8 +129,19 @@ export interface TruckDeployment {
   longitude: number;
   status: string;
   assignedTo?: string;
+  vehicleType?: string;
+  crewCount?: number;
+  lastUpdate?: string;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface GeoWindPointProps {
+  speed: number;      // km/h
+  direction: number;  // degrees (meteorological)
+  gusts: number;      // km/h
+  lat: number;
+  lon: number;
 }
 
 export interface WeatherData {
@@ -260,8 +244,8 @@ export type GeoVehicle = GeoFeature<GeoVehicleProps>;
 // ============================================
 
 export type AlertSource = 'FIRMS_SATELLITE' | 'CITIZEN_REPORT' | 'PATROL' | 'PHONE_CALL' | 'RADIO' | 'OTHER';
-export type RecordStatus = 'DRAFT' | 'VALIDATED' | 'APPROVED';
-export type LockableSection = 'timeline' | 'agencyArrivals' | 'meansEngaged' | 'economicLoss' | 'perimeter';
+export type RecordStatus = 'DRAFT' | 'VERIFIED' | 'LOCKED';
+export type LockableSection = 'location' | 'cause' | 'damage' | 'response' | 'postFire';
 
 export interface AgencyArrival {
   agencyName: string;
@@ -298,6 +282,7 @@ export interface FireEventRecord {
   id: string;
   incidentId: string;
   alertSource: AlertSource;
+  ignitionAt?: string | null;
   alertReceivedAt?: string | null;
   verifiedAt?: string | null;
   firstResponseAt?: string | null;
@@ -307,6 +292,12 @@ export interface FireEventRecord {
   agencyArrivals?: AgencyArrival[] | null;
   meansEngaged?: MeansEngaged | null;
   economicLoss?: EconomicLoss | null;
+  locationDetail?: import('./fire-record').LocationDetail | null;
+  causeDetail?: import('./fire-record').CauseDetail | null;
+  damageDetail?: import('./fire-record').DamageDetail | null;
+  responseDetail?: import('./fire-record').ResponseDetail | null;
+  weatherAtTime?: import('./fire-record').WeatherAtTime | null;
+  postFire?: import('./fire-record').PostFireDetail | null;
   burnPerimeter?: { type: 'Polygon'; coordinates: [number, number][][] } | null;
   burnAreaHa?: number | null;
   burnCentroid?: [number, number] | null;
@@ -316,15 +307,18 @@ export interface FireEventRecord {
   auditTrail: AuditEntry[];
   createdAt: string;
   updatedAt: string;
+  incident?: Incident | null;
 }
 
 export interface CreateFireRecordInput {
   incidentId: string;
   alertSource?: AlertSource;
+  locationDetail?: import('./fire-record').LocationDetail;
 }
 
 export interface UpdateFireRecordInput {
   alertSource?: AlertSource;
+  ignitionAt?: string;
   alertReceivedAt?: string;
   verifiedAt?: string;
   firstResponseAt?: string;
@@ -334,4 +328,28 @@ export interface UpdateFireRecordInput {
   agencyArrivals?: AgencyArrival[];
   meansEngaged?: MeansEngaged;
   economicLoss?: EconomicLoss;
+  locationDetail?: import('./fire-record').LocationDetail;
+  causeDetail?: import('./fire-record').CauseDetail;
+  damageDetail?: import('./fire-record').DamageDetail;
+  responseDetail?: import('./fire-record').ResponseDetail;
+  weatherAtTime?: import('./fire-record').WeatherAtTime;
+  postFire?: import('./fire-record').PostFireDetail;
+  recordStatus?: RecordStatus;
+}
+
+// ============================================
+// Notification Types
+// ============================================
+
+export type NotificationType = 'FIRE_DETECTION' | 'STATUS_CHANGE' | 'WEATHER_ALERT' | 'NEW_REPORT' | 'POI_ACTIVATION';
+
+export interface Notification {
+  id: string;
+  type: NotificationType;
+  title: string;
+  body: string;
+  read: boolean;
+  createdAt: string;
+  referenceId?: string;
+  referenceUrl?: string;
 }
