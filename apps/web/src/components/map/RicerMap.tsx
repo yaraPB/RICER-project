@@ -56,6 +56,22 @@ import type {
 
 /* ────────── helpers ────────── */
 
+const INTERACTIVE_LAYER_IDS: string[] = [
+  'incidents-unclustered',
+  'incidents-cluster',
+  'firms-detections-unclustered',
+  'firms-cluster',
+  'wind-arrows',
+  'soil-moisture-circles',
+  'effis-burned-vector-fill',
+  'reservoir-circles',
+  'pamf-fill',
+  'rma-fill',
+];
+
+const MAP_CONTAINER_STYLE = { width: '100%', height: '100%' } as const;
+const TOOLTIP_STYLE = 'pointer-events-none fixed z-50 hidden rounded-md border border-border bg-surface px-3 py-2 text-xs shadow-elev-3';
+const TOOLTIP_TRANSFORM = 'translate(-50%, -100%) translateY(-8px)';
 
 /* ────────── stable empty refs ────────── */
 
@@ -208,7 +224,8 @@ export default function RicerMap() {
   // Memoize the GPU tier config so it doesn't recompute on every render
   const tierConfig = useMemo(() => getLayerConfigForTier(gpuTier), [gpuTier]);
 
-  // Animation state for pulsing effects (Tier A/B only)
+  // Animation state — phase flushed to React state at 3fps (was 10fps).
+  // For a 2.5s sinusoidal pulse, 3fps is visually identical but 3x fewer re-renders.
   const [pulsePhase, setPulsePhase] = useState(0);
   const phaseRef = useRef(0);
   const animFrameRef = useRef<number | null>(null);
@@ -238,17 +255,18 @@ export default function RicerMap() {
   }, []);
 
   /* ═══════════ Animation loop (Tier A/B only) ═══════════ */
+  // Phase stored in ref, flushed to state at 3fps — smooth enough for 2.5s sinusoidal pulse,
+  // but ~3x fewer re-renders than the previous 10fps flush.
 
   useEffect(() => {
     if (!tierConfig.enableAnimations) return;
-    const CYCLE = 2500; // ms for one full pulse cycle
+    const CYCLE = 2500;
     const tick = () => {
       phaseRef.current = (Date.now() % CYCLE) / CYCLE;
       animFrameRef.current = requestAnimationFrame(tick);
     };
     animFrameRef.current = requestAnimationFrame(tick);
-    // Flush ref → state at ~10fps (visually identical for slow sinusoidal pulse)
-    const flushInterval = setInterval(() => setPulsePhase(phaseRef.current), 100);
+    const flushInterval = setInterval(() => setPulsePhase(phaseRef.current), 333);
     return () => {
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
       clearInterval(flushInterval);
@@ -888,8 +906,11 @@ export default function RicerMap() {
 
   /* ═══════════ Soil moisture depth property ═══════════ */
 
-  const soilMoistureProperty = soilMoistureDepth === 'surface' ? 'surface' : soilMoistureDepth === 'root' ? 'root' : 'deep';
-  const soilMoistureClassProp = soilMoistureDepth === 'surface' ? 'surfaceClass' : soilMoistureDepth === 'root' ? 'rootClass' : 'deepClass';
+  const { soilMoistureProperty, soilMoistureClassProp } = useMemo(() => {
+    if (soilMoistureDepth === 'surface') return { soilMoistureProperty: 'surface' as const, soilMoistureClassProp: 'surfaceClass' as const };
+    if (soilMoistureDepth === 'root') return { soilMoistureProperty: 'root' as const, soilMoistureClassProp: 'rootClass' as const };
+    return { soilMoistureProperty: 'deep' as const, soilMoistureClassProp: 'deepClass' as const };
+  }, [soilMoistureDepth]);
 
   /* ═══════════ Prepared GeoJSON ═══════════ */
 
@@ -1297,21 +1318,10 @@ export default function RicerMap() {
         mapStyle={mapStyle as any}
         onLoad={handleMapLoad}
         onClick={handleClick}
-        interactiveLayerIds={[
-          'incidents-unclustered',
-          'incidents-cluster',
-          'firms-detections-unclustered',
-          'firms-cluster',
-          'wind-arrows',
-          'soil-moisture-circles',
-          'effis-burned-vector-fill',
-          'reservoir-circles',
-          'pamf-fill',
-          'rma-fill',
-        ]}
+        interactiveLayerIds={INTERACTIVE_LAYER_IDS}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        style={{ width: '100%', height: '100%' }}
+        style={MAP_CONTAINER_STYLE}
         maxPitch={85}
         attributionControl={true}
       >
@@ -2571,8 +2581,8 @@ export default function RicerMap() {
       {/* Tooltip for dispatch layers */}
       <div
         id="map-tooltip"
-        className="pointer-events-none fixed z-50 hidden rounded-md border border-border bg-surface px-3 py-2 text-xs shadow-elev-3"
-        style={{ transform: 'translate(-50%, -100%) translateY(-8px)' }}
+        className={TOOLTIP_STYLE}
+        style={{ transform: TOOLTIP_TRANSFORM }}
       />
     </div>
   );

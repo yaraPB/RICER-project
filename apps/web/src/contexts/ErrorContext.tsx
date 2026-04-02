@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, type ReactNode } from 'react';
+import React, { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 
 interface ErrorInfo {
   code?: number;
@@ -21,12 +21,15 @@ export function ErrorProvider({ children }: { children: ReactNode }) {
   const [lastRequestId, setLastRequestId] = useState<string | null>(null);
   const [lastError, setLastError] = useState<ErrorInfo | null>(null);
 
-  const value: ErrorContextValue = {
+  const stableSetLastRequestId = useCallback((id: string | null) => setLastRequestId(id), []);
+  const stableSetLastError = useCallback((err: ErrorInfo | null) => setLastError(err), []);
+
+  const value = useMemo<ErrorContextValue>(() => ({
     lastRequestId,
-    setLastRequestId,
+    setLastRequestId: stableSetLastRequestId,
     lastError,
-    setLastError,
-  };
+    setLastError: stableSetLastError,
+  }), [lastRequestId, stableSetLastRequestId, lastError, stableSetLastError]);
 
   return (
     <ErrorContext.Provider value={value}>

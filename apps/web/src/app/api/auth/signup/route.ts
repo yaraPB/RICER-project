@@ -1,4 +1,4 @@
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 import { buildAuthResponse, deriveScopes, hashRefreshToken, signAccessToken, signRefreshToken } from '@/lib/auth';
 import { withApiHandler } from '@/lib/errors/withApiHandler';

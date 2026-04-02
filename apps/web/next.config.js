@@ -9,6 +9,13 @@ const nextConfig = {
       bodySizeLimit: '10mb',
     },
     optimizePackageImports: ['lucide-react', 'recharts', '@deck.gl/core', '@deck.gl/layers', '@deck.gl/mapbox'],
+    serverComponentsExternalPackages: [
+      'bcrypt',
+      '@sentry/nextjs',
+      '@sentry/opentelemetry',
+      '@opentelemetry/instrumentation',
+      'require-in-the-middle',
+    ],
   },
   typescript: {
     ignoreBuildErrors: false, // Fixed: Enable TypeScript checking for production builds
