@@ -13,7 +13,7 @@
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
-[Live Demo](https://ricer-project-website.vercel.app/) • [Documentation](#documentation) • [Report Bug](https://github.com/MTC-123/FireDetectionPlatform/issues) • [Request Feature](https://github.com/MTC-123/FireDetectionPlatform/issues)
+[Live Demo](https://ricer-project.vercel.app/signin) • [Documentation](#documentation) • [Report Bug](https://github.com/MTC-123/FireDetectionPlatform/issues) • [Request Feature](https://github.com/MTC-123/FireDetectionPlatform/issues)
 
 </div>
 
