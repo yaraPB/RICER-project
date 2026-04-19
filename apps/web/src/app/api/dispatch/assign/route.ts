@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 /**
  * Dispatch Assignment API
  * POST: Assign team(s) and/or vehicle(s) to incident with route calculation

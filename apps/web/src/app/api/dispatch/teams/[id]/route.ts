@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 /**
  * Dispatch Team by ID API - MVP Phase
  * PATCH: Update team status or assignment

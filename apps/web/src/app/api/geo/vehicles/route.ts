@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 /**
  * Geo Vehicles API
  * GET: Returns vehicles as GeoJSON FeatureCollection for map display

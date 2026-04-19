@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 /**
  * Dispatch Teams API - MVP Phase
  * GET: List/filter teams

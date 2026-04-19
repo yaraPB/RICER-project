@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 /**
  * Vehicle Telemetry Ingestion API
  * POST: Ingest telemetry data for a vehicle

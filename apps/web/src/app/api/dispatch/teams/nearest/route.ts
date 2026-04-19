@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 /**
  * Nearest Teams API - Geospatial Query
  * POST: Find nearest available teams to a location

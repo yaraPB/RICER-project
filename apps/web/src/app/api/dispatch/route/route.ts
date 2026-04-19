@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 /**
  * Dispatch Route API - MVP Phase
  * POST: Calculate route between origin and destination

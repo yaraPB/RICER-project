@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 /**
  * Vehicle CRUD API
  * GET: List vehicles (optional filters)

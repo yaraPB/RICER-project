@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
 import { IFRANE_COORDINATES } from '@/config/constants';
 import { withApiHandler } from '@/lib/errors/withApiHandler';

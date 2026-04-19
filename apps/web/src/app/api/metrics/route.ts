@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { withApiHandler } from '@/lib/errors/withApiHandler';
 
 export const runtime = 'nodejs';

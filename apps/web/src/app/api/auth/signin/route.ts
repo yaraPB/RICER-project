@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 import { buildAuthResponse, deriveScopes, hashRefreshToken, signAccessToken, signRefreshToken } from '@/lib/auth';

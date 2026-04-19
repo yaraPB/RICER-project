@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 /**
  * Dispatch Isochrones API - Production Phase
  * POST: Calculate reachability polygons from origin point

@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 /**
  * Vehicle by ID API
  * GET: Get single vehicle

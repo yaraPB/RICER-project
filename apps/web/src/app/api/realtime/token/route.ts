@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 /**
  * Ably Token Auth Endpoint
  * GET: Returns Ably token request for client-side subscription
