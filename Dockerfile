@@ -6,7 +6,7 @@ COPY apps/web/prisma ./prisma
 RUN npm install --omit=dev
 
 FROM node:20-alpine AS builder
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 COPY apps/web/package.json apps/web/package-lock.json ./
 COPY apps/web/prisma ./prisma
@@ -23,7 +23,7 @@ ENV NEXT_PUBLIC_OWM_API_KEY="build-placeholder"
 RUN npm run build
 
 FROM node:20-alpine AS runtime
-RUN apk add --no-cache dumb-init
+RUN apk add --no-cache dumb-init openssl
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
