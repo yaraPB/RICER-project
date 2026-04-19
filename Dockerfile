@@ -3,14 +3,14 @@ RUN apk add --no-cache libc6-compat
 WORKDIR /app
 COPY apps/web/package.json apps/web/package-lock.json ./
 COPY apps/web/prisma ./prisma
-RUN npm ci --omit=dev
+RUN npm install --omit=dev
 
 FROM node:20-alpine AS builder
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 COPY apps/web/package.json apps/web/package-lock.json ./
 COPY apps/web/prisma ./prisma
-RUN npm ci
+RUN npm install
 COPY apps/web/. .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
