@@ -85,7 +85,15 @@ const FIRE_SPREAD_ITEMS = [
   { key: 'extreme', color: FIRE_SPREAD_COLORS.extreme, label: 'fireSpreadExtreme' },
 ];
 
-const DEFAULT_SECTIONS = ['incidents', 'resources', 'infra', 'firms', 'effis', 'vehicles', 'wind', 'soilMoisture', 'ndvi', 'reservoir', 'pamf', 'rma', 'camsAerosol', 'landCover', 'populationDensity', 'slope', 'hillshade', 'fireSpread', 'retardant'];
+const DEFAULT_SECTIONS = ['incidents', 'resources', 'infra', 'firms', 'effis', 'vehicles', 'wind', 'owmWeather', 'soilMoisture', 'ndvi', 'reservoir', 'pamf', 'rma', 'camsAerosol', 'landCover', 'populationDensity', 'slope', 'hillshade', 'fireSpread', 'retardant'];
+
+const OWM_LAYER_LABELS: Record<string, string> = {
+  precipitation_new: 'owmWeatherPrecipitation',
+  clouds_new: 'owmWeatherClouds',
+  wind_new: 'owmWeatherWind',
+  temp_new: 'owmWeatherTemp',
+  pressure_new: 'owmWeatherPressure',
+};
 
 /**
  * Inline SVG shape swatch for legend items
@@ -161,6 +169,8 @@ function SectionCollapsible({
 
 export default function MapLegend() {
   const { t } = useTranslation();
+  const owmWeatherActive = useMapStore((s) => s.layers.owmWeather);
+  const owmWeatherLayer = useMapStore((s) => s.owmWeatherLayer);
   const windLayerActive = useMapStore((s) => s.layers.windVectors);
   const soilMoistureActive = useMapStore((s) => s.layers.soilMoisture);
   const ndviActive = useMapStore((s) => s.layers.ndvi);
@@ -350,6 +360,21 @@ export default function MapLegend() {
                   <span>{t('effisFallbackNote' as TranslationKey)}</span>
                 </div>
               )}
+            </SectionCollapsible>
+          )}
+
+          {/* OWM Weather Tiles */}
+          {owmWeatherActive && matchesFilter(t('owmWeather' as TranslationKey)) && (
+            <SectionCollapsible label={t('owmWeather' as TranslationKey)} open={openSections.has('owmWeather')} onToggle={() => toggleSection('owmWeather')}>
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2 text-xs">
+                  <div className="h-3 w-3 rounded-full border-2 border-white shadow-sm flex-shrink-0" style={{ backgroundColor: '#3b82f6' }} />
+                  <span>{t(OWM_LAYER_LABELS[owmWeatherLayer] as TranslationKey)}</span>
+                </div>
+                <div className="text-[9px] text-muted-foreground/70">
+                  {t('owmWeatherNote' as TranslationKey)}
+                </div>
+              </div>
             </SectionCollapsible>
           )}
 

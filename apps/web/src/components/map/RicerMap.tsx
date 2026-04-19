@@ -188,6 +188,10 @@ export default function RicerMap() {
   const camsAerosolMode = useMapStore((s) => s.camsAerosolMode);
   const camsAerosolOpacity = useMapStore((s) => s.camsAerosolOpacity);
 
+  /* OWM Weather Tiles store controls */
+  const owmWeatherLayer = useMapStore((s) => s.owmWeatherLayer);
+  const owmWeatherOpacity = useMapStore((s) => s.owmWeatherOpacity);
+
   /* Population Density store controls */
   const populationDensityOpacity = useMapStore((s) => s.populationDensityOpacity);
 
@@ -871,6 +875,14 @@ export default function RicerMap() {
     // Use the Next.js proxy to avoid CORS issues and handle CRS conversion
     return `/api/cams/tiles?layer=${camsWmsLayer}&bbox={bbox-epsg-3857}`;
   }, [camsWmsLayer]);
+
+  /* ═══════════ OWM Weather tile URL ═══════════ */
+
+  const owmTileUrl = useMemo(() => {
+    const key = process.env.NEXT_PUBLIC_OWM_API_KEY;
+    if (!key) return null;
+    return `https://tile.openweathermap.org/map/${owmWeatherLayer}/{z}/{x}/{y}.png?appid=${key}`;
+  }, [owmWeatherLayer]);
 
   /* ═══════════ CAMS health check (probe proxy on toggle/mode change) ═══════════ */
 
@@ -1574,6 +1586,23 @@ export default function RicerMap() {
               type="raster"
               layout={{ visibility: layers.camsAerosol ? 'visible' : 'none' }}
               paint={{ 'raster-opacity': camsAerosolOpacity }}
+            />
+          </Source>
+        )}
+        {/* ─── OWM Weather Tiles (precipitation, clouds, wind, temp, pressure) ─── */}
+        {owmTileUrl && (
+          <Source
+            key={`owm-weather-${owmWeatherLayer}`}
+            id="owm-weather"
+            type="raster"
+            tiles={[owmTileUrl]}
+            tileSize={256}
+          >
+            <Layer
+              id="owm-weather-layer"
+              type="raster"
+              layout={{ visibility: layers.owmWeather ? 'visible' : 'none' }}
+              paint={{ 'raster-opacity': owmWeatherOpacity }}
             />
           </Source>
         )}

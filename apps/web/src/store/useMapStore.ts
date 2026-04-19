@@ -36,7 +36,8 @@ type ActiveLayer =
   | 'slope'
   | 'populationDensity'
   | 'fireSpread'
-  | 'retardant';
+  | 'retardant'
+  | 'owmWeather';
 
 const EMPTY_INCIDENTS: GeoFeatureCollection<GeoIncidentProps> = { type: 'FeatureCollection', features: [] };
 
@@ -44,6 +45,7 @@ export type EffisFwiMode = 'fwi' | 'ranking';
 export type EffisBurnedAreaMode = 'recent' | 'season';
 export type SoilMoistureDepth = 'surface' | 'root' | 'deep';
 export type CamsAerosolMode = 'aod' | 'dust' | 'smoke';
+export type OwmWeatherLayer = 'precipitation_new' | 'clouds_new' | 'wind_new' | 'temp_new' | 'pressure_new';
 
 const HEAVY_RASTER_LAYERS: ActiveLayer[] = ['ndvi', 'soilMoisture', 'effisFWI', 'camsAerosol', 'landCover'];
 
@@ -83,6 +85,7 @@ interface MapState {
     populationDensity: boolean;
     fireSpread: boolean;
     retardant: boolean;
+    owmWeather: boolean;
   };
   toggleLayer: (layer: ActiveLayer) => void;
   setLayerEnabled: (layer: ActiveLayer, enabled: boolean) => void;
@@ -113,6 +116,11 @@ interface MapState {
   /* Population Density controls */
   populationDensityOpacity: number;
   setPopulationDensityOpacity: (opacity: number) => void;
+  /* OWM Weather Tiles controls */
+  owmWeatherLayer: OwmWeatherLayer;
+  setOwmWeatherLayer: (layer: OwmWeatherLayer) => void;
+  owmWeatherOpacity: number;
+  setOwmWeatherOpacity: (opacity: number) => void;
   /* Fire Spread controls */
   fireSpreadOpacity: number;
   setFireSpreadOpacity: (opacity: number) => void;
@@ -224,6 +232,7 @@ export const useMapStore = create<MapState>()((set) => ({
     populationDensity: false,
     fireSpread: false,
     retardant: false,
+    owmWeather: false,
   },
   toggleLayer: (layer) =>
     set((state) => {
@@ -309,6 +318,11 @@ export const useMapStore = create<MapState>()((set) => ({
   /* Population Density controls */
   populationDensityOpacity: 0.6,
   setPopulationDensityOpacity: (populationDensityOpacity) => set({ populationDensityOpacity }),
+  /* OWM Weather Tiles controls */
+  owmWeatherLayer: 'precipitation_new' as OwmWeatherLayer,
+  setOwmWeatherLayer: (owmWeatherLayer) => set({ owmWeatherLayer }),
+  owmWeatherOpacity: 0.7,
+  setOwmWeatherOpacity: (owmWeatherOpacity) => set({ owmWeatherOpacity }),
   /* Fire Spread controls */
   fireSpreadOpacity: 0.8,
   setFireSpreadOpacity: (fireSpreadOpacity) => set({ fireSpreadOpacity }),

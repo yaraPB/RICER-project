@@ -11,7 +11,7 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/
 import { Icon } from '@/components/ui/Icon';
 import type { Basemap } from '@/lib/map/styles';
 import type { TranslationKey } from '@/i18n/translations';
-import type { EffisFwiMode, EffisBurnedAreaMode, SoilMoistureDepth, CamsAerosolMode } from '@/store/useMapStore';
+import type { EffisFwiMode, EffisBurnedAreaMode, SoilMoistureDepth, CamsAerosolMode, OwmWeatherLayer } from '@/store/useMapStore';
 import { useToastStore } from '@/store/useToastStore';
 
 const RESOURCE_SUB_LAYERS = [
@@ -56,6 +56,7 @@ const LAYER_KEY_MAP: Record<string, string> = {
   retardant: 'layerRetardant',
   hillshade: 'layerHillshade',
   slope: 'layerSlope',
+  owmWeather: 'owmWeather',
 };
 
 const LAYER_ICONS: Record<string, string> = {
@@ -86,6 +87,7 @@ const LAYER_ICONS: Record<string, string> = {
   retardant: 'droplet',
   hillshade: 'mountain',
   slope: 'mountain',
+  owmWeather: 'cloud',
 };
 
 const UNAVAILABLE_LAYERS = new Set([
@@ -530,6 +532,63 @@ function CamsAerosolControls() {
   );
 }
 
+/* ─── OWM Weather Tiles sub-controls (layer selector + opacity slider) ─── */
+
+const OWM_WEATHER_LAYERS: { value: OwmWeatherLayer; labelKey: string }[] = [
+  { value: 'precipitation_new', labelKey: 'owmWeatherPrecipitation' },
+  { value: 'clouds_new', labelKey: 'owmWeatherClouds' },
+  { value: 'wind_new', labelKey: 'owmWeatherWind' },
+  { value: 'temp_new', labelKey: 'owmWeatherTemp' },
+  { value: 'pressure_new', labelKey: 'owmWeatherPressure' },
+];
+
+function OwmWeatherControls() {
+  const { t } = useTranslation();
+  const owmLayer = useMapStore((s) => s.owmWeatherLayer);
+  const setOwmLayer = useMapStore((s) => s.setOwmWeatherLayer);
+  const opacity = useMapStore((s) => s.owmWeatherOpacity);
+  const setOpacity = useMapStore((s) => s.setOwmWeatherOpacity);
+
+  return (
+    <div className="pl-5 space-y-2 mt-1">
+      {/* Layer selector */}
+      <div>
+        <div className="text-[9px] text-muted-foreground mb-1">{t('owmWeatherModeLabel' as TranslationKey)}</div>
+        <div className="flex flex-wrap gap-1">
+          {OWM_WEATHER_LAYERS.map((m) => (
+            <button
+              key={m.value}
+              type="button"
+              onClick={() => setOwmLayer(m.value)}
+              className={`rounded-full px-2 py-0.5 text-[10px] font-medium border transition-all
+                ${owmLayer === m.value
+                  ? 'border-primary bg-primary text-white'
+                  : 'border-border bg-surface-2/50 text-foreground hover:border-primary/50'
+                }`}
+            >
+              {t(m.labelKey as TranslationKey)}
+            </button>
+          ))}
+        </div>
+      </div>
+      {/* Opacity slider */}
+      <div>
+        <div className="flex items-center justify-between text-[9px] text-muted-foreground mb-1">
+          <span>{t('owmWeatherOpacity' as TranslationKey)}</span>
+          <span>{Math.round(opacity * 100)}%</span>
+        </div>
+        <Slider
+          value={Math.round(opacity * 100)}
+          onValueChange={(v) => setOpacity(v / 100)}
+          min={20}
+          max={100}
+          label={t('owmWeatherOpacity' as TranslationKey)}
+        />
+      </div>
+    </div>
+  );
+}
+
 /* ─── Population Density sub-controls (opacity slider) ─── */
 
 function PopulationDensityControls() {
@@ -832,6 +891,8 @@ export default function MapControls() {
               <AccordionTrigger>{t('environment' as TranslationKey)}</AccordionTrigger>
               <AccordionContent>
                 <div className="space-y-1.5">
+                  {isVisible('owmWeather') && <LayerRow layerKey="owmWeather" />}
+                  {layers.owmWeather && <OwmWeatherControls />}
                   {isVisible('windVectors') && <WindLayerRow />}
                   {isVisible('ndvi') && <LayerRow layerKey="ndvi" />}
                   {layers.ndvi && <NdviControls />}

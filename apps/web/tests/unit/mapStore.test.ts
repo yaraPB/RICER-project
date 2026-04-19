@@ -45,6 +45,7 @@ describe('useMapStore', () => {
         populationDensity: false,
         fireSpread: false,
         retardant: false,
+        owmWeather: false,
       },
       selectedIncidentId: null,
       basemap: 'streets',
@@ -77,7 +78,7 @@ describe('useMapStore', () => {
     it('has all 32 layers with expected defaults', () => {
       const { layers } = useMapStore.getState();
       const values = Object.values(layers);
-      expect(values).toHaveLength(32);
+      expect(values).toHaveLength(33);
       expect(layers.incidents).toBe(true);
       expect(layers.effisFWI).toBe(false);
       expect(layers.effisBurnedAreas).toBe(false);
