@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
@@ -434,6 +434,7 @@ async function main() {
   console.log('✅ Dispatch teams created');
 
   // Create dispatch vehicles around Ifrane
+  await prisma.vehicle.deleteMany({});
   await prisma.vehicle.createMany({
     data: [
       {
