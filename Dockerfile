@@ -14,6 +14,12 @@ RUN npm install
 COPY apps/web/. .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+# Placeholder build-time env vars so Next.js can evaluate route modules.
+# Railway overrides these with real values at runtime.
+ENV DATABASE_URL="mongodb://build-placeholder:27017/placeholder"
+ENV JWT_SECRET="build-time-placeholder-not-used-at-runtime"
+ENV FIRMS_MAP_KEY="build-placeholder"
+ENV NEXT_PUBLIC_OWM_API_KEY="build-placeholder"
 RUN npm run build
 
 FROM node:20-alpine AS runtime
