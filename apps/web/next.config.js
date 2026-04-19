@@ -3,12 +3,14 @@ const nextConfig = {
   output: 'standalone',
   compress: true,
   swcMinify: true,
+  productionBrowserSourceMaps: false,
   experimental: {
+    webpackMemoryOptimizations: true,
     serverActions: {
       allowedOrigins: ['*'],
       bodySizeLimit: '10mb',
     },
-    optimizePackageImports: ['lucide-react', 'recharts', '@deck.gl/core', '@deck.gl/layers', '@deck.gl/mapbox'],
+    optimizePackageImports: ['lucide-react', 'recharts', '@deck.gl/core', '@deck.gl/layers', '@deck.gl/mapbox', 'date-fns', 'lodash-es'],
     serverComponentsExternalPackages: [
       'bcrypt',
       '@sentry/nextjs',
@@ -18,11 +20,13 @@ const nextConfig = {
     ],
   },
   typescript: {
-    ignoreBuildErrors: false, // Fixed: Enable TypeScript checking for production builds
+    ignoreBuildErrors: false,
   },
   images: {
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 2592000, // 30 days
+    deviceSizes: [320, 420, 640, 768, 1024, 1280, 1536],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256],
   },
   webpack: (config, { isServer }) => {
     // MapLibre GL configuration - disable Node.js modules in client bundle
