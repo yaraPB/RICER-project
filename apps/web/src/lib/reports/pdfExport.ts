@@ -215,24 +215,22 @@ export function generateReportPdf(report: ReportPdfData, languageInput: string |
   let y = 18;
 
   const setBodyFont = (bold = false, forceUnicode = false) => {
-    if ((rtl || forceUnicode) && hasUnicodeFont) {
+    if (forceUnicode && hasUnicodeFont) {
       doc.setFont(FONT_NAME, 'normal');
       return;
     }
     doc.setFont('helvetica', bold ? 'bold' : 'normal');
   };
 
-  if (rtl) doc.setR2L(true);
   setBodyFont();
 
-  const prepare = (value: string) => (rtl ? doc.processArabic(value) : value);
+  const prepare = (value: string) => (containsArabicText(value) && hasUnicodeFont ? doc.processArabic(value) : value);
   const textX = rtl ? right : left;
   const align = rtl ? 'right' as const : 'left' as const;
 
   const ensureSpace = (height = 12) => {
     if (y + height < pageHeight - 18) return;
     doc.addPage();
-    if (rtl) doc.setR2L(true);
     setBodyFont();
     y = 18;
   };
@@ -255,10 +253,34 @@ export function generateReportPdf(report: ReportPdfData, languageInput: string |
       return;
     }
 
-    setBodyFont(bold);
+    setBodyFont(bold, containsArabicText(text));
     const lines = doc.splitTextToSize(prepare(text), contentWidth);
     doc.text(lines, textX, y, { align });
     y += lines.length * gap;
+  };
+
+  const addRtlValue = (value: string, size = 10, gap = 5.5, x = textX, width = contentWidth) => {
+    if (!rtl) {
+      addText(value, size, gap);
+      return;
+    }
+
+    const hasArabic = containsArabicText(value);
+    const hasLatin = /[A-Za-z]/.test(value);
+    const parts = hasArabic && hasLatin
+      ? value.split(ARABIC_RUN_PATTERN).map((part) => part.trim()).filter(Boolean)
+      : [value];
+
+    for (const part of parts) {
+      ensureSpace(gap + 4);
+      const isArabic = containsArabicText(part);
+      doc.setFontSize(size);
+      setBodyFont(false, isArabic);
+      const prepared = isArabic ? doc.processArabic(part) : part;
+      const lines = doc.splitTextToSize(prepared, width);
+      doc.text(lines, x, y, { align });
+      y += lines.length * gap;
+    }
   };
 
   const addSection = (titleKey: TranslationKey) => {
@@ -272,6 +294,16 @@ export function generateReportPdf(report: ReportPdfData, languageInput: string |
   };
 
   const addField = (labelKey: TranslationKey, value: string | number | null | undefined) => {
+    if (rtl) {
+      const normalized = value === null || typeof value === 'undefined' || value === '' ? '-' : String(value);
+      ensureSpace(10);
+      doc.setFontSize(10);
+      doc.setTextColor(12, 22, 38);
+      setBodyFont(false, true);
+      doc.text(prepare(`${t(language, labelKey)}:`), right, y, { align: 'right' });
+      addRtlValue(normalized, 10, 5.5, right - 50, contentWidth - 54);
+      return;
+    }
     addText(labelValue(language, labelKey, value), 10, 5);
   };
 
@@ -292,7 +324,7 @@ export function generateReportPdf(report: ReportPdfData, languageInput: string |
 
   addSection('reportPdfIncidentSection');
   addField('cause', translateCause(language, report.cause));
-  addText(labelValue(language, 'description', report.description), 10, 5);
+  addField('description', report.description);
 
   const characteristics = isRecord(report.characteristics) ? report.characteristics : {};
   addSection('reportPdfCharacteristicsSection');

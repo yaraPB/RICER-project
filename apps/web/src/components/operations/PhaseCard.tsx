@@ -12,6 +12,7 @@ import {
   AccordionContent,
 } from '@/components/ui/Accordion';
 import { TaskRow } from './TaskRow';
+import { OperationPhasePdfActions } from './OperationPhasePdfActions';
 import type { OperationalPhase, PhaseSummary } from '@/types/operations';
 
 const PHASE_LABELS: Record<OperationalPhase, string> = {
@@ -42,6 +43,7 @@ interface PhaseCardProps {
 
 export function PhaseCard({ phase, index, summary, isActive, isCompleted }: PhaseCardProps) {
   const { t } = useTranslation();
+  const activeCampaign = useOperationsStore((s) => s.activeCampaign);
   const tasks = useOperationsStore((s) => s.tasks);
   const tasksLoading = useOperationsStore((s) => s.tasksLoading);
   const viewingPhase = useOperationsStore((s) => s.viewingPhase);
@@ -64,6 +66,7 @@ export function PhaseCard({ phase, index, summary, isActive, isCompleted }: Phas
   const progressText = t('phaseProgress')
     .replace('{done}', String(summary.done))
     .replace('{total}', String(summary.total));
+  const isPdfAvailable = !!activeCampaign && summary.total > 0 && (summary.done === summary.total || isCompleted);
 
   const handleAddTask = () => {
     const trimmed = newTask.trim();
@@ -182,6 +185,16 @@ export function PhaseCard({ phase, index, summary, isActive, isCompleted }: Phas
                 {t('addTask')}
               </button>
             )}
+          </div>
+        )}
+
+        {isViewing && isPdfAvailable && (
+          <div className="mt-4 flex flex-col gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2 text-xs font-semibold text-emerald-700 dark:text-emerald-200">
+              <Icon name="check-circle" size={16} aria-hidden={true} />
+              {t('operationPdfReady')}
+            </div>
+            <OperationPhasePdfActions campaignId={activeCampaign.id} phase={phase} compact />
           </div>
         )}
       </AccordionContent>
