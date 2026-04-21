@@ -23,6 +23,12 @@ const SIZE_CLASSES: Record<LogoSize, string> = {
   responsive: 'h-10 w-10 sm:h-12 sm:w-12 lg:h-14 lg:w-14',
 };
 
+const LOGO_SOURCES: Record<LogoVariant, string> = {
+  badge: '/logos/badge.png',
+  icon: '/logos/icon-512.png',
+  horizontal: '/logos/logo.png',
+};
+
 export interface LogoProps {
   variant?: LogoVariant;
   size?: LogoSize;
@@ -37,17 +43,11 @@ export function Logo({
   priority = false,
 }: LogoProps) {
   const dimension = SIZE_MAP[size];
-  const sizeClass = SIZE_CLASSES[size];
-  const src =
-    variant === 'horizontal'
-      ? '/logos/logo-horizontal.svg'
-      : variant === 'icon'
-        ? '/logos/icon.svg'
-        : '/logos/badge.svg';
+  const src = LOGO_SOURCES[variant];
 
   const altText =
     variant === 'horizontal'
-      ? 'RICER - Rapid Incident Communication & Emergency Response'
+      ? 'RICER - Forest Prevention Platform'
       : 'RICER Logo';
 
   return (
@@ -57,7 +57,7 @@ export function Logo({
       width={dimension}
       height={dimension}
       priority={priority}
-      className={cn('object-contain', sizeClass, className)}
+      className={cn('object-contain', SIZE_CLASSES[size], className)}
     />
   );
 }

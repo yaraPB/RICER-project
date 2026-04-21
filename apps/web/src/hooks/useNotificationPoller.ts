@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useNotificationStore } from '@/store/useNotificationStore';
+import { fetchWithAuth } from '@/lib/api/fetchWithAuth';
 import type { Notification } from '@/types';
 
 const POLL_INTERVAL_MS = 30_000; // 30 seconds
@@ -16,7 +17,7 @@ export function useNotificationPoller() {
       if (document.visibilityState === 'hidden') return;
 
       try {
-        const res = await fetch('/api/notifications');
+        const res = await fetchWithAuth('/api/notifications', { cache: 'no-store' });
         if (res.ok) {
           const data = (await res.json()) as { notifications: Notification[] };
           setNotifications(data.notifications ?? []);

@@ -18,6 +18,7 @@ function makeNotification(overrides: Partial<Notification> = {}): Notification {
 
 describe('useNotificationStore', () => {
   beforeEach(() => {
+    window.localStorage.clear();
     // Reset store to initial state before each test
     useNotificationStore.setState({
       notifications: [],
@@ -86,6 +87,23 @@ describe('useNotificationStore', () => {
       const state = useNotificationStore.getState();
       expect(state.notifications).toHaveLength(1);
       expect(state.notifications[0].id).toBe('new-1');
+    });
+
+    it('preserves locally read notifications when new poll data arrives', () => {
+      useNotificationStore.getState().setNotifications([
+        makeNotification({ id: 'same-1', read: false }),
+      ]);
+      useNotificationStore.getState().markAsRead('same-1');
+
+      useNotificationStore.getState().setNotifications([
+        makeNotification({ id: 'same-1', read: false }),
+        makeNotification({ id: 'same-2', read: false }),
+      ]);
+
+      const state = useNotificationStore.getState();
+      expect(state.notifications[0].read).toBe(true);
+      expect(state.notifications[1].read).toBe(false);
+      expect(state.unreadCount).toBe(1);
     });
   });
 

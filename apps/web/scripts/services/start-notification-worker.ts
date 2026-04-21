@@ -17,8 +17,8 @@
  *   TWILIO_WHATSAPP_NUMBER - WhatsApp sender number
  */
 
-import { startNotificationWorker, stopNotificationWorker } from '../src/lib/notifications/worker';
-import { closeRedisConnection } from '../src/lib/notifications/queue';
+import { startNotificationWorker, stopNotificationWorker } from '../../src/lib/notifications/worker';
+import { closeRedisConnection } from '../../src/lib/notifications/queue';
 
 console.log('RICER Notification Worker');
 console.log('=========================');

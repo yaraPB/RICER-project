@@ -9,25 +9,25 @@ describe('Logo Component', () => {
       render(<Logo />);
       const img = screen.getByAltText('RICER Logo');
       expect(img).toBeInTheDocument();
-      expect(img).toHaveAttribute('src', '/logos/badge.svg');
+      expect(img).toHaveAttribute('src', '/logos/badge.png');
     });
 
     it('renders badge variant explicitly', () => {
       render(<Logo variant="badge" />);
       const img = screen.getByAltText('RICER Logo');
-      expect(img).toHaveAttribute('src', '/logos/badge.svg');
+      expect(img).toHaveAttribute('src', '/logos/badge.png');
     });
 
     it('renders icon variant', () => {
       render(<Logo variant="icon" />);
       const img = screen.getByAltText('RICER Logo');
-      expect(img).toHaveAttribute('src', '/logos/icon.svg');
+      expect(img).toHaveAttribute('src', '/logos/icon-512.png');
     });
 
     it('renders horizontal variant', () => {
       render(<Logo variant="horizontal" />);
-      const img = screen.getByAltText('RICER - Rapid Incident Communication & Emergency Response');
-      expect(img).toHaveAttribute('src', '/logos/logo-horizontal.svg');
+      const img = screen.getByAltText('RICER - Forest Prevention Platform');
+      expect(img).toHaveAttribute('src', '/logos/logo.png');
     });
   });
 
@@ -110,7 +110,7 @@ describe('Logo Component', () => {
         const { unmount } = render(<Logo variant={variant} />);
         const altText =
           variant === 'horizontal'
-            ? 'RICER - Rapid Incident Communication & Emergency Response'
+            ? 'RICER - Forest Prevention Platform'
             : 'RICER Logo';
         expect(screen.getByAltText(altText)).toBeInTheDocument();
         unmount();
@@ -122,16 +122,18 @@ describe('Logo Component', () => {
     it('renders icon variant with xl size', () => {
       render(<Logo variant="icon" size="xl" />);
       const img = screen.getByAltText('RICER Logo');
-      expect(img).toHaveAttribute('src', '/logos/icon.svg');
+      expect(img).toHaveAttribute('src', '/logos/icon-512.png');
       expect(img).toHaveAttribute('width', '80');
       expect(img).toHaveAttribute('height', '80');
     });
 
     it('renders horizontal variant with sm size and custom class', () => {
       render(<Logo variant="horizontal" size="sm" className="my-custom-logo" />);
-      const img = screen.getByAltText('RICER - Rapid Incident Communication & Emergency Response');
-      expect(img).toHaveAttribute('src', '/logos/logo-horizontal.svg');
+      const img = screen.getByAltText('RICER - Forest Prevention Platform');
+      expect(img).toHaveAttribute('src', '/logos/logo.png');
       expect(img).toHaveAttribute('width', '32');
+      expect(img).toHaveAttribute('height', '32');
+      expect(img).toHaveClass('w-8');
       expect(img).toHaveClass('my-custom-logo');
     });
 

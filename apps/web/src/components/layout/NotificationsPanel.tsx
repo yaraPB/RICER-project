@@ -3,10 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from '@/hooks/useTranslation';
 import { Icon } from '@/components/ui/Icon';
-import { STATUS_COLORS } from '@/config/constants';
-import type { Report } from '@/types';
+import type { Notification, NotificationType } from '@/types';
 import { clientLogger } from '@/lib/observability/clientLogger';
 import { fetchWithAuth } from '@/lib/api/fetchWithAuth';
+import { useNotificationStore } from '@/store/useNotificationStore';
 
 interface NotificationsPanelProps {
   isOpen: boolean;
@@ -15,36 +15,42 @@ interface NotificationsPanelProps {
 
 export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps) {
   const { t } = useTranslation();
-  const [recentReports, setRecentReports] = useState<Report[]>([]);
+  const notifications = useNotificationStore((s) => s.notifications);
+  const setNotifications = useNotificationStore((s) => s.setNotifications);
+  const markAllAsRead = useNotificationStore((s) => s.markAllAsRead);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errorRequestId, setErrorRequestId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
+    let active = true;
 
-    const fetchRecentReports = async () => {
+    const fetchNotifications = async () => {
       setLoading(true);
       setError(null);
       setErrorRequestId(null);
 
       try {
-        const res = await fetchWithAuth('/api/reports?limit=10');
+        const res = await fetchWithAuth('/api/notifications', { cache: 'no-store' });
         const requestId = res.headers.get('x-request-id');
 
         if (res.ok) {
-          const data = await res.json();
-          setRecentReports(data.data || data.reports || []);
+          const data = (await res.json()) as { notifications?: Notification[] };
+          if (!active) return;
+          setNotifications(data.notifications ?? []);
+          markAllAsRead();
           setError(null);
         } else {
           const errorData = await res.json().catch(() => ({}));
-          const errorMessage = errorData.error?.userMessage || t('errorLoadingReports') || 'Failed to load reports';
+          if (!active) return;
+          const errorMessage = errorData.error?.userMessage || t('errorLoadingNotifications') || 'Failed to load notifications';
           setError(errorMessage);
           setErrorRequestId(errorData.error?.requestId || requestId || null);
 
           clientLogger.error({
             event: 'notifications_fetch_failed',
-            route: '/api/reports',
+            route: '/api/notifications',
             requestId: requestId || undefined,
             meta: {
               status: res.status,
@@ -53,11 +59,12 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
           });
         }
       } catch (err) {
+        if (!active) return;
         setError(t('connectionError') || 'Connection error');
 
         clientLogger.error({
           event: 'notifications_fetch_exception',
-          route: '/api/reports',
+          route: '/api/notifications',
           error: {
             name: (err as Error)?.name,
             message: (err as Error)?.message,
@@ -65,20 +72,38 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
           },
         });
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     };
 
-    fetchRecentReports();
-  }, [isOpen, t]);
+    fetchNotifications();
+
+    return () => {
+      active = false;
+    };
+  }, [isOpen, markAllAsRead, setNotifications, t]);
 
   if (!isOpen) return null;
 
-  const getStatusLabel = (status: string) => {
-    if (status === 'PENDING') return t('pending');
-    if (status === 'IN_PROGRESS') return t('inProgress');
-    if (status === 'COMPLETED') return t('completed');
-    return status;
+  const getToneClass = (type?: NotificationType) => {
+    switch (type) {
+      case 'NEW_REPORT':
+        return 'bg-danger';
+      case 'STATUS_CHANGE':
+        return 'bg-warning';
+      case 'WEATHER_ALERT':
+        return 'bg-info';
+      case 'POI_ACTIVATION':
+        return 'bg-primary';
+      default:
+        return 'bg-success';
+    }
+  };
+
+  const formatCreatedAt = (value: string) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' });
   };
 
   return (
@@ -91,10 +116,15 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
       />
 
       {/* Panel */}
-      <div className="fixed right-4 top-16 z-50 w-full max-w-md sm:w-96 rounded-lg border border-border bg-surface shadow-elev-2">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="notifications-panel-title"
+        className="fixed right-4 top-16 z-50 w-[calc(100vw-2rem)] max-w-md sm:w-96 rounded-lg border border-border bg-surface shadow-elev-2"
+      >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
-          <h2 className="text-sm font-bold">{t('notifications')}</h2>
+          <h2 id="notifications-panel-title" className="text-sm font-bold">{t('notifications')}</h2>
           <button
             onClick={onClose}
             className="rounded-full p-1 hover:bg-surface-2 transition-colors"
@@ -133,50 +163,39 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
                 </div>
               ))}
             </div>
-          ) : recentReports.length === 0 ? (
+          ) : notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
               <Icon name="notifications" size={48} className="text-muted-foreground opacity-50 mb-2" />
               <p className="text-sm text-muted-foreground">{t('noNotifications')}</p>
             </div>
           ) : (
             <div className="divide-y divide-border">
-              {recentReports.map((report) => (
+              {notifications.map((notification) => (
                 <a
-                  key={report.id}
-                  href={`/map?selected=${report.id}`}
+                  key={notification.id}
+                  href={notification.referenceUrl ?? '/reports-list'}
                   className="block px-4 py-3 hover:bg-surface-2 transition-colors"
                   onClick={onClose}
                 >
                   <div className="flex items-start gap-3">
-                    <div
-                      className="mt-1 h-3 w-3 flex-shrink-0 rounded-full"
-                      style={{ backgroundColor: STATUS_COLORS[report.status] }}
-                    />
+                    <div className={`mt-1 h-3 w-3 flex-shrink-0 rounded-full ${getToneClass(notification.type)}`} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2 mb-1">
                         <span className="text-sm font-bold truncate">
-                          {t('fireIncident')} #{report.id.slice(0, 6)}
+                          {notification.title}
                         </span>
                         <span className="text-xs text-muted-foreground whitespace-nowrap">
-                          {new Date(report.createdAt).toLocaleDateString()}
+                          {formatCreatedAt(notification.createdAt)}
                         </span>
                       </div>
                       <p className="text-xs text-muted-foreground line-clamp-2 mb-1">
-                        {report.description}
+                        {notification.body}
                       </p>
-                      <div className="flex items-center gap-2 text-xs">
-                        <span
-                          className="font-semibold"
-                          style={{ color: STATUS_COLORS[report.status] }}
-                        >
-                          {getStatusLabel(report.status)}
-                        </span>
-                        {report.user && (
-                          <span className="text-muted-foreground">
-                            • {report.user.cin}
-                          </span>
-                        )}
-                      </div>
+                      {notification.referenceId && (
+                        <p className="text-xs font-semibold text-muted-foreground">
+                          {notification.referenceId.slice(0, 12)}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </a>

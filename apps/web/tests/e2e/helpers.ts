@@ -241,17 +241,23 @@ export async function mockNotifications(page: Page) {
         notifications: [
           {
             id: 'notif-1',
+            type: 'NEW_REPORT',
             title: 'New fire detected',
             body: 'A fire has been detected near Ifrane forest.',
             read: false,
             createdAt: new Date().toISOString(),
+            referenceId: 'report-42',
+            referenceUrl: '/reports-list?report=report-42',
           },
           {
             id: 'notif-2',
+            type: 'STATUS_CHANGE',
             title: 'Report approved',
             body: 'Your report #42 has been approved by an official.',
             read: true,
             createdAt: new Date(Date.now() - 3600_000).toISOString(),
+            referenceId: 'report-42',
+            referenceUrl: '/reports-list?report=report-42',
           },
         ],
       }),
