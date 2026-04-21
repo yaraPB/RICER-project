@@ -90,9 +90,7 @@ export default function Navbar({ children }: { children: React.ReactNode }) {
             left={
               <div className="flex items-center gap-2.5 min-w-0">
                 <Link href="/map" className="flex items-center gap-2.5 group shrink-0" aria-label={t('brandTitle')}>
-                  <div className="h-10 w-10 sm:h-11 sm:w-11 overflow-hidden rounded-lg bg-surface shadow-elev-1 transition-all duration-200 group-hover:shadow-elev-2 group-hover:scale-[1.02]">
-                    <Logo variant="badge" size="md" priority className="h-full w-full" />
-                  </div>
+                  <Logo variant="badge" size="md" priority className="rounded-md shadow-elev-1 transition-all duration-200 group-hover:shadow-elev-2 group-hover:scale-[1.02]" />
                   <span className="sr-only">{t('brandTitle')}</span>
                   <div className="hidden sm:block leading-tight min-w-0">
                     <div className="text-sm font-bold tracking-tight truncate">{t('brandTitle')}</div>

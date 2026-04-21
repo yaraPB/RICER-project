@@ -25,8 +25,8 @@ const SIZE_CLASSES: Record<LogoSize, string> = {
 
 const LOGO_SOURCES: Record<LogoVariant, string> = {
   badge: '/logos/badge.png',
-  icon: '/logos/icon-512.png',
-  horizontal: '/logos/logo.png',
+  icon: '/logos/badge.png',
+  horizontal: '/logos/badge.png',
 };
 
 export interface LogoProps {
@@ -45,10 +45,7 @@ export function Logo({
   const dimension = SIZE_MAP[size];
   const src = LOGO_SOURCES[variant];
 
-  const altText =
-    variant === 'horizontal'
-      ? 'RICER - Forest Prevention Platform'
-      : 'RICER Logo';
+  const altText = 'RICER Logo';
 
   return (
     <Image

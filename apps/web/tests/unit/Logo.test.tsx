@@ -21,13 +21,13 @@ describe('Logo Component', () => {
     it('renders icon variant', () => {
       render(<Logo variant="icon" />);
       const img = screen.getByAltText('RICER Logo');
-      expect(img).toHaveAttribute('src', '/logos/icon-512.png');
+      expect(img).toHaveAttribute('src', '/logos/badge.png');
     });
 
     it('renders horizontal variant', () => {
       render(<Logo variant="horizontal" />);
-      const img = screen.getByAltText('RICER - Forest Prevention Platform');
-      expect(img).toHaveAttribute('src', '/logos/logo.png');
+      const img = screen.getByAltText('RICER Logo');
+      expect(img).toHaveAttribute('src', '/logos/badge.png');
     });
   });
 
@@ -108,11 +108,7 @@ describe('Logo Component', () => {
       const variants = ['badge', 'icon', 'horizontal'] as const;
       variants.forEach((variant) => {
         const { unmount } = render(<Logo variant={variant} />);
-        const altText =
-          variant === 'horizontal'
-            ? 'RICER - Forest Prevention Platform'
-            : 'RICER Logo';
-        expect(screen.getByAltText(altText)).toBeInTheDocument();
+        expect(screen.getByAltText('RICER Logo')).toBeInTheDocument();
         unmount();
       });
     });
@@ -122,15 +118,15 @@ describe('Logo Component', () => {
     it('renders icon variant with xl size', () => {
       render(<Logo variant="icon" size="xl" />);
       const img = screen.getByAltText('RICER Logo');
-      expect(img).toHaveAttribute('src', '/logos/icon-512.png');
+      expect(img).toHaveAttribute('src', '/logos/badge.png');
       expect(img).toHaveAttribute('width', '80');
       expect(img).toHaveAttribute('height', '80');
     });
 
     it('renders horizontal variant with sm size and custom class', () => {
       render(<Logo variant="horizontal" size="sm" className="my-custom-logo" />);
-      const img = screen.getByAltText('RICER - Forest Prevention Platform');
-      expect(img).toHaveAttribute('src', '/logos/logo.png');
+      const img = screen.getByAltText('RICER Logo');
+      expect(img).toHaveAttribute('src', '/logos/badge.png');
       expect(img).toHaveAttribute('width', '32');
       expect(img).toHaveAttribute('height', '32');
       expect(img).toHaveClass('w-8');

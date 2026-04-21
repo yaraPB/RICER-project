@@ -17,9 +17,7 @@ export function Footer() {
           {/* Branding */}
           <div className="col-span-1">
             <div className="flex items-center gap-2.5 mb-3">
-              <div className="h-10 w-10 bg-surface shadow-elev-1 rounded-lg p-1.5">
-                <Logo variant="badge" size="md" />
-              </div>
+              <Logo variant="badge" size="md" className="rounded-md shadow-elev-1" />
               <div>
                 <div className="text-sm font-bold">{t('brandTitle')}</div>
                 <div className="text-[11px] text-muted-foreground">{t('brandSubtitle')}</div>
