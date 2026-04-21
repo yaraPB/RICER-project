@@ -129,6 +129,23 @@ describe('reports API', () => {
     }));
   });
 
+  it('exports Arabic PDF with UTF-8 translated filename', async () => {
+    mockUser('OFFICIAL', 'official-1');
+    const { GET } = await import('@/app/api/reports/[id]/pdf/route');
+
+    const response = await GET(
+      createRequest('/api/reports/65f000000000000000000001/pdf?lang=ar'),
+      { params: { id: '65f000000000000000000001' } }
+    );
+
+    expect(response.status).toBe(200);
+    const disposition = response.headers.get('content-disposition') || '';
+    expect(disposition).toContain('filename="report-RPT-20260421-ABCD-ar.pdf"');
+    expect(decodeURIComponent(disposition.split("filename*=UTF-8''")[1])).toBe(
+      'بلاغ-RPT-20260421-ABCD-ar.pdf'
+    );
+  });
+
   it('does not export another civilian report', async () => {
     mockUser('CIVILIAN', 'user-2');
     mockReportFindFirst.mockResolvedValue(null);

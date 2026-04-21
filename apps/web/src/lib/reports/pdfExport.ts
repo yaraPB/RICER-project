@@ -32,6 +32,16 @@ export interface ReportPdfData {
 
 const FONT_FILE = 'NotoSansArabic-Regular.ttf';
 const FONT_NAME = 'NotoSansArabic';
+const FILE_BASES: Record<ReportPdfLanguage, string> = {
+  ar: 'بلاغ',
+  fr: 'signalement',
+  en: 'report',
+};
+const ASCII_FILE_BASES: Record<ReportPdfLanguage, string> = {
+  ar: 'report',
+  fr: 'signalement',
+  en: 'report',
+};
 
 const STATUS_KEYS: Record<ReportStatus, TranslationKey> = {
   PENDING: 'pending',
@@ -164,20 +174,38 @@ function registerArabicFont(doc: jsPDF): boolean {
   return true;
 }
 
+const ARABIC_TEXT_PATTERN = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/;
+const ARABIC_RUN_PATTERN = /([\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF][\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF\s،؛؟.!-]*)/g;
+
+function containsArabicText(value: string): boolean {
+  return ARABIC_TEXT_PATTERN.test(value);
+}
+
 function safeReference(report: ReportPdfData): string {
   return report.referenceNumber || `RPT-${report.id.slice(-8).toUpperCase()}`;
 }
 
 export function buildReportPdfFilename(report: ReportPdfData, language: ReportPdfLanguage): string {
   const ref = safeReference(report).replace(/[^a-zA-Z0-9_-]/g, '-');
-  return `report-${ref}-${language}.pdf`;
+  return `${FILE_BASES[language]}-${ref}-${language}.pdf`;
+}
+
+export function buildReportPdfAsciiFilename(report: ReportPdfData, language: ReportPdfLanguage): string {
+  const ref = safeReference(report).replace(/[^a-zA-Z0-9_-]/g, '-');
+  return `${ASCII_FILE_BASES[language]}-${ref}-${language}.pdf`;
+}
+
+export function buildReportPdfContentDisposition(report: ReportPdfData, language: ReportPdfLanguage): string {
+  const filename = buildReportPdfFilename(report, language);
+  const fallback = buildReportPdfAsciiFilename(report, language);
+  return `attachment; filename="${fallback}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
 }
 
 export function generateReportPdf(report: ReportPdfData, languageInput: string | null | undefined): ArrayBuffer {
   const language = normalizeReportPdfLanguage(languageInput);
   const rtl = language === 'ar';
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-  const hasArabicFont = registerArabicFont(doc);
+  const hasUnicodeFont = registerArabicFont(doc);
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 16;
@@ -186,12 +214,16 @@ export function generateReportPdf(report: ReportPdfData, languageInput: string |
   const right = pageWidth - margin;
   let y = 18;
 
-  if (rtl) {
-    doc.setR2L(true);
-    if (hasArabicFont) doc.setFont(FONT_NAME, 'normal');
-  } else {
-    doc.setFont('helvetica', 'normal');
-  }
+  const setBodyFont = (bold = false, forceUnicode = false) => {
+    if ((rtl || forceUnicode) && hasUnicodeFont) {
+      doc.setFont(FONT_NAME, 'normal');
+      return;
+    }
+    doc.setFont('helvetica', bold ? 'bold' : 'normal');
+  };
+
+  if (rtl) doc.setR2L(true);
+  setBodyFont();
 
   const prepare = (value: string) => (rtl ? doc.processArabic(value) : value);
   const textX = rtl ? right : left;
@@ -200,17 +232,30 @@ export function generateReportPdf(report: ReportPdfData, languageInput: string |
   const ensureSpace = (height = 12) => {
     if (y + height < pageHeight - 18) return;
     doc.addPage();
-    if (rtl) {
-      doc.setR2L(true);
-      if (hasArabicFont) doc.setFont(FONT_NAME, 'normal');
-    }
+    if (rtl) doc.setR2L(true);
+    setBodyFont();
     y = 18;
   };
 
   const addText = (text: string, size = 10, gap = 6, bold = false) => {
     ensureSpace(gap + 4);
     doc.setFontSize(size);
-    if (!rtl) doc.setFont('helvetica', bold ? 'bold' : 'normal');
+
+    if (!rtl && hasUnicodeFont && containsArabicText(text)) {
+      const parts = text.split(ARABIC_RUN_PATTERN).filter(Boolean);
+      for (const part of parts) {
+        const isArabic = containsArabicText(part);
+        const normalized = part.trim();
+        if (!normalized) continue;
+        setBodyFont(bold, isArabic);
+        const lines = doc.splitTextToSize(isArabic ? doc.processArabic(normalized) : normalized, contentWidth);
+        doc.text(lines, isArabic ? right : left, y, { align: isArabic ? 'right' : 'left' });
+        y += lines.length * gap;
+      }
+      return;
+    }
+
+    setBodyFont(bold);
     const lines = doc.splitTextToSize(prepare(text), contentWidth);
     doc.text(lines, textX, y, { align });
     y += lines.length * gap;

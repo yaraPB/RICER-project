@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { generateReportPdf, normalizeReportPdfLanguage } from '@/lib/reports/pdfExport';
+import {
+  buildReportPdfAsciiFilename,
+  buildReportPdfContentDisposition,
+  buildReportPdfFilename,
+  generateReportPdf,
+  normalizeReportPdfLanguage,
+} from '@/lib/reports/pdfExport';
 
 const report = {
   id: '65f000000000000000000001',
@@ -38,5 +44,19 @@ describe('generateReportPdf', () => {
 
   it('defaults invalid language input to French', () => {
     expect(normalizeReportPdfLanguage('xx')).toBe('fr');
+  });
+
+  it('builds translated filenames with safe ASCII fallbacks', () => {
+    expect(buildReportPdfFilename(report, 'ar')).toBe('بلاغ-RPT-20260421-ABCD-ar.pdf');
+    expect(buildReportPdfFilename(report, 'fr')).toBe('signalement-RPT-20260421-ABCD-fr.pdf');
+    expect(buildReportPdfFilename(report, 'en')).toBe('report-RPT-20260421-ABCD-en.pdf');
+    expect(buildReportPdfAsciiFilename(report, 'ar')).toBe('report-RPT-20260421-ABCD-ar.pdf');
+
+    const disposition = buildReportPdfContentDisposition(report, 'ar');
+    expect(disposition).toContain('filename="report-RPT-20260421-ABCD-ar.pdf"');
+    expect(disposition).toContain("filename*=UTF-8''");
+    expect(decodeURIComponent(disposition.split("filename*=UTF-8''")[1])).toBe(
+      'بلاغ-RPT-20260421-ABCD-ar.pdf'
+    );
   });
 });

@@ -5,7 +5,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { AppError } from '@/lib/errors/AppError';
 import { withApiHandler } from '@/lib/errors/withApiHandler';
 import {
-  buildReportPdfFilename,
+  buildReportPdfContentDisposition,
   generateReportPdf,
   normalizeReportPdfLanguage,
 } from '@/lib/reports/pdfExport';
@@ -60,7 +60,7 @@ export const GET = withApiHandler(async (request: Request, context) => {
     status: 200,
     headers: {
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="${buildReportPdfFilename(pdfData, language)}"`,
+      'Content-Disposition': buildReportPdfContentDisposition(pdfData, language),
       'Cache-Control': 'private, no-store',
     },
   });
