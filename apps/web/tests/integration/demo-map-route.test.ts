@@ -50,12 +50,12 @@ describe('demo map route', () => {
   it('creates a short-lived official demo session and redirects to the map', async () => {
     const { GET } = await import('@/app/demo/map/route');
 
-    const response = await GET(new Request('https://demo.test/demo/map', {
+    const response = await GET(new Request('https://internal-railway:8080/demo/map', {
       headers: { 'user-agent': 'vitest', 'x-forwarded-for': '127.0.0.1' },
     }));
 
     expect(response.status).toBe(302);
-    expect(response.headers.get('location')).toBe('https://demo.test/map');
+    expect(response.headers.get('location')).toBe('https://internal-railway:8080/map');
     expect(response.headers.get('cache-control')).toBe('no-store');
     expect(response.headers.get('set-cookie')).toContain('auth-token=');
     expect(response.headers.get('set-cookie')).toContain('refresh-token=');
@@ -78,5 +78,19 @@ describe('demo map route', () => {
 
     expect(response.status).toBe(403);
     expect(mockRefreshTokenCreate).not.toHaveBeenCalled();
+  });
+
+  it('redirects with the public forwarded host behind Railway', async () => {
+    const { GET } = await import('@/app/demo/map/route');
+
+    const response = await GET(new Request('https://internal-railway:8080/demo/map', {
+      headers: {
+        host: 'ricer-project-production.up.railway.app',
+        'x-forwarded-proto': 'https',
+      },
+    }));
+
+    expect(response.status).toBe(302);
+    expect(response.headers.get('location')).toBe('https://ricer-project-production.up.railway.app/map');
   });
 });

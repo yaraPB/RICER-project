@@ -9,6 +9,19 @@ import { AppError } from '@/lib/errors/AppError';
 const DEFAULT_DEMO_ADMIN_CIN = 'CD789012';
 const DEMO_SESSION_SECONDS = 60 * 60 * 6;
 
+function getPublicOrigin(request: Request): string {
+  const forwardedHost = request.headers.get('x-forwarded-host')?.split(',')[0]?.trim();
+  const host = forwardedHost || request.headers.get('host')?.split(',')[0]?.trim();
+  const forwardedProto = request.headers.get('x-forwarded-proto')?.split(',')[0]?.trim();
+  const requestUrl = new URL(request.url);
+
+  if (host) {
+    return `${forwardedProto || requestUrl.protocol.replace(':', '')}://${host}`;
+  }
+
+  return requestUrl.origin;
+}
+
 function setDemoAuthCookies(response: NextResponse, accessToken: string, refreshToken: string) {
   const base = {
     httpOnly: true,
@@ -63,7 +76,7 @@ export const GET = withApiHandler(async (request: Request) => {
     },
   });
 
-  const response = NextResponse.redirect(new URL('/map', request.url), 302);
+  const response = NextResponse.redirect(new URL('/map', getPublicOrigin(request)), 302);
   response.headers.set('Cache-Control', 'no-store');
   setDemoAuthCookies(response, accessToken, refreshToken);
   return response;
