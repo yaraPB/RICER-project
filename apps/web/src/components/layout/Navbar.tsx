@@ -25,6 +25,7 @@ import { SearchInput } from '@/components/ui/SearchInput';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useNotificationPoller } from '@/hooks/useNotificationPoller';
 import { ShortcutsOverlay } from '@/components/ui/ShortcutsOverlay';
+import { cn } from '@/lib/cn';
 
 const BREADCRUMB_MAP: Record<string, string> = {
   '/map': 'fireMap',
@@ -67,6 +68,7 @@ export default function Navbar({ children }: { children: React.ReactNode }) {
   };
 
   const isOfficial = user?.role === 'OFFICIAL';
+  const isMapPage = pathname === '/map';
 
   const navItems = [
     { href: '/map', label: t('fireMap'), icon: <Icon name="map" aria-hidden={true} size={20} />, restricted: false },
@@ -119,7 +121,9 @@ export default function Navbar({ children }: { children: React.ReactNode }) {
             right={
               <div className="flex items-center gap-1 sm:gap-1.5">
                 <ThemeToggle />
-                <LanguageSwitcher />
+                <div className="hidden sm:block">
+                  <LanguageSwitcher />
+                </div>
 
                 <IconButton
                   label={unreadCount > 0 ? `${t('notifications')} (${unreadCount})` : t('notifications')}
@@ -158,15 +162,16 @@ export default function Navbar({ children }: { children: React.ReactNode }) {
           />
         }
         sidebar={<SidebarRail items={navItems} />}
+        mainClassName={cn(isMapPage && 'overflow-hidden pb-0')}
       >
-        <div className="flex flex-col min-h-screen">
+        <div className={cn('flex flex-col', isMapPage ? 'h-full min-h-0' : 'min-h-screen')}>
           {breadcrumbItems.length > 0 && (
             <div className="hidden md:block border-b border-border/40 px-6 py-2 bg-surface-2/40">
               <Breadcrumb items={breadcrumbItems} />
             </div>
           )}
-          <div className="flex-1">{children}</div>
-          <Footer />
+          <div className={cn('flex-1', isMapPage && 'min-h-0')}>{children}</div>
+          {!isMapPage && <Footer />}
         </div>
       </AppShell>
       <MobileTabBar />

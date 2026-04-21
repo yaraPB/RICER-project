@@ -74,6 +74,7 @@ export function ImportFirmsDialog() {
       <Button
         variant="secondary"
         size="sm"
+        className="min-h-10 w-full"
         onClick={() => setOpen(true)}
         data-testid="import-firms-btn"
       >
@@ -83,7 +84,7 @@ export function ImportFirmsDialog() {
   }
 
   return (
-    <div className="rounded-lg border border-border bg-surface p-4 shadow-sm" data-testid="import-firms-dialog">
+    <div className="rounded-lg border border-border bg-surface p-4 shadow-sm sm:col-span-3" data-testid="import-firms-dialog">
       <h3 className="text-sm font-bold">{t('importFirmsTitle' as Parameters<typeof t>[0])}</h3>
       <p className="mt-1 text-xs text-muted-foreground">
         {t('importFirmsDesc' as Parameters<typeof t>[0])}
@@ -98,16 +99,17 @@ export function ImportFirmsDialog() {
         </p>
       )}
 
-      <div className="mt-3 flex gap-2">
+      <div className="mt-3 grid grid-cols-2 gap-2 sm:flex">
         <Button
           variant="primary"
           size="sm"
+          className="w-full sm:w-auto"
           disabled={importing}
           onClick={handleImport}
         >
           {importing ? t('loading') : t('importFirmsConfirm' as Parameters<typeof t>[0])}
         </Button>
-        <Button variant="secondary" size="sm" onClick={() => { setOpen(false); setResult(null); setError(null); }}>
+        <Button variant="secondary" size="sm" className="w-full sm:w-auto" onClick={() => { setOpen(false); setResult(null); setError(null); }}>
           {t('cancel')}
         </Button>
       </div>

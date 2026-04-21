@@ -51,7 +51,7 @@ export function AnalyticsTabs() {
       <div
         role="tablist"
         aria-label={t('tabOverview')}
-        className="mb-6 flex flex-wrap gap-1 rounded-lg border border-border bg-surface-2 p-1"
+        className="mb-6 flex gap-1 overflow-x-auto rounded-lg border border-border bg-surface-2 p-1 md:flex-wrap md:overflow-visible"
       >
         {TABS.map((tab) => (
           <button
@@ -65,7 +65,7 @@ export function AnalyticsTabs() {
               activeTab === tab.id
                 ? 'bg-surface text-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
-            }`}
+            } shrink-0`}
           >
             {t(tab.labelKey)}
           </button>

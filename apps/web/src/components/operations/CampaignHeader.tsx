@@ -51,13 +51,13 @@ export function CampaignHeader() {
 
   return (
     <Card tone="subtle" className="p-4 mb-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
         {/* Campaign info */}
         {activeCampaign ? (
-          <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className="flex w-full flex-col gap-3 sm:flex-1 sm:flex-row sm:items-center">
             <Icon name="layers" size={20} className="text-primary shrink-0" aria-hidden={true} />
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-sm font-bold truncate">
                   {activeCampaign.label} ({activeCampaign.year})
                 </h2>
@@ -75,7 +75,7 @@ export function CampaignHeader() {
                   const c = campaigns.find((c) => c.id === e.target.value);
                   if (c) setActiveCampaign(c);
                 }}
-                className="text-xs bg-transparent border border-border/60 rounded-md px-2 py-1 outline-none"
+                className="min-h-10 w-full rounded-md border border-border/60 bg-transparent px-2 py-1 text-xs outline-none sm:w-auto"
               >
                 {campaigns.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -92,14 +92,14 @@ export function CampaignHeader() {
         )}
 
         {/* Actions */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:shrink-0 sm:items-center">
           {canAdvance && (
-            <Button variant="primary" onClick={advancePhase} className="gap-1.5 text-xs">
+            <Button variant="primary" onClick={advancePhase} className="w-full gap-1.5 text-xs sm:w-auto">
               <Icon name="chevronRight" size={14} aria-hidden={true} />
               {t('advancePhase')}
             </Button>
           )}
-          <Button variant="secondary" onClick={() => setShowForm(!showForm)} className="gap-1.5 text-xs">
+          <Button variant="secondary" onClick={() => setShowForm(!showForm)} className="w-full gap-1.5 text-xs sm:w-auto">
             <Icon name="plus" size={14} aria-hidden={true} />
             {t('newCampaign')}
           </Button>
@@ -108,7 +108,7 @@ export function CampaignHeader() {
 
       {/* Inline create form */}
       {showForm && (
-        <div className="flex flex-col sm:flex-row items-end gap-2 mt-4 pt-3 border-t border-border/30">
+        <div className="mt-4 flex flex-col items-end gap-2 border-t border-border/30 pt-3 sm:flex-row">
           <div className="flex-1 w-full sm:w-auto">
             <label htmlFor="campaign-year" className="text-[11px] font-medium text-muted-foreground mb-1 block">
               {t('campaignYear')}
@@ -141,7 +141,7 @@ export function CampaignHeader() {
             variant="primary"
             onClick={handleCreate}
             disabled={creating || !label.trim()}
-            className="text-xs"
+            className="w-full text-xs sm:w-auto"
           >
             {creating ? t('loading') : t('newCampaign')}
           </Button>

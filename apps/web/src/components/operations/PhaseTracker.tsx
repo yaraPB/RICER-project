@@ -40,7 +40,8 @@ export function PhaseTracker() {
     <div className="space-y-6">
       {/* Stepper */}
       <div className="rounded-xl border border-border/50 bg-surface p-4 sm:p-6 shadow-elev-1">
-        <div className="flex items-center justify-between gap-1 sm:gap-0">
+        <div className="overflow-x-auto pb-1">
+        <div className="flex min-w-[640px] items-center justify-between gap-1 sm:min-w-0 sm:gap-0">
           {PHASE_ORDER.map((phase, i) => {
             const summary = phaseSummary.find((s) => s.phase === phase);
             const isCurrent = i === activePhaseIndex;
@@ -100,6 +101,7 @@ export function PhaseTracker() {
               </div>
             );
           })}
+        </div>
         </div>
       </div>
 

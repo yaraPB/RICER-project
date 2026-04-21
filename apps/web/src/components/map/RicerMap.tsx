@@ -21,7 +21,9 @@ import { useDispatchStore } from '@/store/useDispatchStore';
 import { useToastStore } from '@/store/useToastStore';
 import MapControls from '@/components/map/MapControls';
 import MapLegend from './MapLegend';
+import WeatherWidget from '@/components/map/WeatherWidget';
 import { useTranslation } from '@/hooks/useTranslation';
+import { Icon, type IconName } from '@/components/ui/Icon';
 import type { TranslationKey } from '@/i18n/translations';
 import { getMapStyle, HAS_PREMIUM_TILES } from '@/lib/map/styles';
 import { INCIDENT_STATUS_COLORS, FIRMS_CONFIDENCE_COLORS, SOIL_MOISTURE_COLORS, RESERVOIR_COLORS, PAMF_COLORS, RMA_COLORS } from '@/lib/map/colors';
@@ -52,6 +54,7 @@ import type {
   GeoFirmsDetectionProps,
   GeoVehicleProps,
   GeoWindPointProps,
+  WeatherData,
 } from '@/types';
 
 /* ────────── helpers ────────── */
@@ -112,7 +115,14 @@ function DeckGLOverlay(props: MapboxOverlayProps) {
   return null;
 }
 
-export default function RicerMap() {
+type MobileMapPanel = 'layers' | 'weather' | 'legend' | null;
+
+interface RicerMapProps {
+  weather?: WeatherData | null;
+  weatherLoading?: boolean;
+}
+
+export default function RicerMap({ weather = null, weatherLoading = false }: RicerMapProps) {
   const { t } = useTranslation();
   const mapRef = useRef<MapRef>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -154,6 +164,7 @@ export default function RicerMap() {
     feature: any;
   } | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [mobilePanel, setMobilePanel] = useState<MobileMapPanel>(null);
   const [gpuTier, setGpuTier] = useState<GPUTier>('tier-c'); // Start with safest tier
   const [isochroneData, setIsochroneData] = useState<any | null>(null);
   const [vehiclesData, setVehiclesData] = useState(EMPTY_VEHICLES);
@@ -2244,7 +2255,7 @@ export default function RicerMap() {
               >
                 <div className="flex items-center justify-between gap-3">
                   <span className="flex items-center gap-1.5 text-xs font-bold uppercase text-white/90">
-                    🔥 #{hoveredIncident.id.slice(0, 8)}
+                    <Icon name="fire" size={13} aria-hidden /> #{hoveredIncident.id.slice(0, 8)}
                   </span>
                   <span className="rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-bold text-white">
                     {hoveredIncident.properties.status}
@@ -2293,7 +2304,7 @@ export default function RicerMap() {
           >
             <div className="p-2 min-w-[200px] rounded-lg bg-surface/90 backdrop-blur-md">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-orange-500">🛰️</span>
+                <Icon name="navigation" size={16} className="text-orange-500" aria-hidden />
                 <span className="font-bold text-sm">{t('firmsSatelliteDetection')}</span>
               </div>
               <div className="space-y-1 text-xs">
@@ -2400,7 +2411,7 @@ export default function RicerMap() {
           >
             <div className="p-2 min-w-[180px] rounded-lg bg-surface/90 backdrop-blur-md">
               <div className="flex items-center gap-2 mb-2">
-                <span>💨</span>
+                <Icon name="air" size={16} className="text-primary" aria-hidden />
                 <span className="font-bold text-sm">{t('windVectors')}</span>
               </div>
               <div className="space-y-1 text-xs">
@@ -2433,7 +2444,7 @@ export default function RicerMap() {
           >
             <div className="p-2 min-w-[180px] rounded-lg bg-surface/90 backdrop-blur-md">
               <div className="flex items-center gap-2 mb-2">
-                <span>💧</span>
+                <Icon name="droplet" size={16} className="text-primary" aria-hidden />
                 <span className="font-bold text-sm">{t('soilMoistureValue' as TranslationKey)}</span>
               </div>
               <div className="space-y-1 text-xs">
@@ -2472,7 +2483,7 @@ export default function RicerMap() {
           >
             <div className="p-2 min-w-[180px] rounded-lg bg-surface/90 backdrop-blur-md">
               <div className="flex items-center gap-2 mb-2">
-                <span>🔥</span>
+                <Icon name="fire" size={16} className="text-accent-fire" aria-hidden />
                 <span className="font-bold text-sm">{t('burnedAreaName' as TranslationKey)}</span>
               </div>
               <div className="space-y-1 text-xs">
@@ -2514,7 +2525,7 @@ export default function RicerMap() {
           >
             <div className="p-2 min-w-[180px] rounded-lg bg-surface/90 backdrop-blur-md">
               <div className="flex items-center gap-2 mb-2">
-                <span>🏊</span>
+                <Icon name="waves" size={16} className="text-primary" aria-hidden />
                 <span className="font-bold text-sm">{hoverInfo.feature.properties.name}</span>
               </div>
               <div className="space-y-1 text-xs">
@@ -2539,7 +2550,7 @@ export default function RicerMap() {
           >
             <div className="p-2 min-w-[200px] rounded-lg bg-surface/90 backdrop-blur-md">
               <div className="flex items-center gap-2 mb-2">
-                <span>{hoverInfo.layer === 'pamf-fill' ? '📊' : '📈'}</span>
+                <Icon name={hoverInfo.layer === 'pamf-fill' ? 'analytics' : 'trending_up'} size={16} className="text-primary" aria-hidden />
                 <span className="font-bold text-sm">{hoverInfo.feature.properties.name}</span>
               </div>
               <div className="space-y-1.5 text-xs">
@@ -2567,14 +2578,65 @@ export default function RicerMap() {
       </ReactMapGL>
 
       {/* ═══ Overlay controls ═══ */}
-      <MapControls />
-      <MapLegend />
+      <MapControls
+        mobileOpen={mobilePanel === 'layers'}
+        onMobileOpenChange={(open) => setMobilePanel(open ? 'layers' : null)}
+      />
+      <WeatherWidget
+        weather={weather}
+        loading={weatherLoading}
+        mobileOpen={mobilePanel === 'weather'}
+        onMobileOpenChange={(open) => setMobilePanel(open ? 'weather' : null)}
+      />
+      <MapLegend
+        mobileOpen={mobilePanel === 'legend'}
+        onMobileOpenChange={(open) => setMobilePanel(open ? 'legend' : null)}
+      />
+
+      {/* Mobile map dock */}
+      <div
+        className="absolute bottom-[calc(var(--mobile-tabbar-height)+0.75rem)] left-1/2 z-30 flex -translate-x-1/2 items-center gap-1.5 rounded-xl border border-border/60 bg-surface/95 p-1.5 shadow-elev-3 backdrop-blur-xl md:hidden"
+        data-testid="map-mobile-dock"
+      >
+        {([
+          { panel: 'layers' as const, icon: 'layers' as IconName, label: t('layersPanel' as TranslationKey) },
+          { panel: 'weather' as const, icon: 'thermostat' as IconName, label: t('weatherTitle' as TranslationKey) },
+          { panel: 'legend' as const, icon: 'map' as IconName, label: t('mapLegend' as TranslationKey) },
+        ]).map((item) => {
+          const active = mobilePanel === item.panel;
+          return (
+            <button
+              key={item.panel}
+              type="button"
+              onClick={() => setMobilePanel(active ? null : item.panel)}
+              aria-label={item.label}
+              aria-pressed={active}
+              className={`grid h-11 w-11 place-items-center rounded-lg border text-muted-foreground transition ${
+                active
+                  ? 'border-primary/30 bg-primary text-primary-foreground shadow-elev-1'
+                  : 'border-transparent bg-surface-2/80 hover:bg-muted hover:text-foreground'
+              }`}
+            >
+              <Icon name={item.icon} size={19} aria-hidden />
+            </button>
+          );
+        })}
+        <button
+          type="button"
+          onClick={toggleFullscreen}
+          className="grid h-11 w-11 place-items-center rounded-lg border border-transparent bg-surface-2/80 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+          title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+          aria-label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+        >
+          <Icon name="open" size={18} aria-hidden />
+        </button>
+      </div>
 
       {/* Fullscreen toggle */}
       <button
         type="button"
         onClick={toggleFullscreen}
-        className="absolute bottom-14 left-3 z-10 flex h-11 w-11 items-center justify-center rounded-lg border border-border bg-surface shadow-elev-1 transition-colors hover:bg-surface-2"
+        className="absolute bottom-14 left-3 z-10 hidden h-11 w-11 items-center justify-center rounded-lg border border-border bg-surface shadow-elev-1 transition-colors hover:bg-surface-2 md:flex"
         title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
         aria-label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
       >

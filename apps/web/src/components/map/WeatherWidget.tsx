@@ -5,17 +5,25 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { getRiskInfo } from '@/lib/map/riskLevel';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Icon } from '@/components/ui/Icon';
+import { cn } from '@/lib/cn';
 import type { WeatherData } from '@/types';
 import type { TranslationKey } from '@/i18n/translations';
 
 interface WeatherWidgetProps {
   weather: WeatherData | null;
   loading?: boolean;
+  mobileOpen?: boolean;
+  onMobileOpenChange?: (open: boolean) => void;
 }
 
 const WIND_DIRECTION_KEYS = ['windN', 'windNE', 'windE', 'windSE', 'windS', 'windSW', 'windW', 'windNW'] as const;
 
-export default function WeatherWidget({ weather, loading }: WeatherWidgetProps) {
+export default function WeatherWidget({
+  weather,
+  loading,
+  mobileOpen = false,
+  onMobileOpenChange,
+}: WeatherWidgetProps) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(true);
   const risk = weather ? getRiskInfo(weather) : null;
@@ -30,7 +38,23 @@ export default function WeatherWidget({ weather, loading }: WeatherWidgetProps) 
     : '…';
 
   return (
-    <div className="absolute top-16 ltr:right-3 rtl:left-3 z-10 w-auto min-w-0 max-w-[calc(100%-1.5rem)] sm:min-w-[160px]">
+    <>
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm md:hidden"
+          aria-hidden="true"
+          onPointerDown={() => onMobileOpenChange?.(false)}
+        />
+      )}
+      <div
+        data-testid="map-weather-panel"
+        className={cn(
+          'z-10 w-auto min-w-0',
+          mobileOpen
+            ? 'fixed inset-x-2 bottom-[calc(var(--mobile-tabbar-height)+0.75rem)] z-50 md:hidden'
+            : 'absolute top-16 hidden max-w-[calc(100%-1.5rem)] ltr:right-3 rtl:left-3 md:block sm:min-w-[160px]'
+        )}
+      >
       <GlassPanel
         title={expanded ? t('weatherTitle' as TranslationKey) : compactSummary}
         collapsible
@@ -93,6 +117,7 @@ export default function WeatherWidget({ weather, loading }: WeatherWidgetProps) 
           </div>
         )}
       </GlassPanel>
-    </div>
+      </div>
+    </>
   );
 }

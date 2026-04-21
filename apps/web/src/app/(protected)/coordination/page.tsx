@@ -36,7 +36,7 @@ export default function CoordinationPage() {
 
   if (user?.role !== 'OFFICIAL') {
     return (
-      <div className="max-w-7xl mx-auto p-6">
+      <div className="max-w-7xl mx-auto p-4 md:p-6">
         <p className="text-muted-foreground">{t('errorForbidden')}</p>
       </div>
     );
@@ -45,7 +45,7 @@ export default function CoordinationPage() {
   const ActivePanel = PANELS[activeTab];
 
   return (
-    <div className="max-w-7xl mx-auto p-6">
+    <div className="max-w-7xl mx-auto p-4 md:p-6 page-enter">
       <div className="mb-6">
         <h1 className="text-fluid-3xl font-bold text-foreground mb-2">
           {t('coordination')}

@@ -23,7 +23,7 @@ export function CoordinationTabs() {
     <div
       role="tablist"
       aria-label={t('coordination')}
-      className="mb-6 flex flex-wrap gap-1 rounded-lg border border-border bg-surface-2 p-1"
+      className="-mx-4 mb-6 flex gap-1 overflow-x-auto border-y border-border bg-surface-2 px-4 py-2 sm:mx-0 sm:flex-wrap sm:rounded-lg sm:border sm:p-1"
     >
       {TABS.map((tab) => (
         <button
@@ -33,7 +33,7 @@ export function CoordinationTabs() {
           aria-controls={`panel-${tab.id}`}
           id={`tab-${tab.id}`}
           onClick={() => setActiveTab(tab.id)}
-          className={`rounded-md px-4 py-2 text-sm font-semibold transition ${
+          className={`min-h-10 shrink-0 rounded-md px-4 py-2 text-sm font-semibold transition ${
             activeTab === tab.id
               ? 'bg-surface text-foreground shadow-sm'
               : 'text-muted-foreground hover:text-foreground'

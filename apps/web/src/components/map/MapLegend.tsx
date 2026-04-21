@@ -7,6 +7,7 @@ import { Icon } from '@/components/ui/Icon';
 import * as Collapsible from '@radix-ui/react-collapsible';
 import type { TranslationKey } from '@/i18n/translations';
 import { INCIDENT_STATUS_COLORS, RESOURCE_TYPE_COLORS, INFRASTRUCTURE_TYPE_COLORS, RETARDANT_COLOR, FIRMS_CONFIDENCE_COLORS, EFFIS_FWI_COLORS, EFFIS_BURNED_AREA_COLOR, SOIL_MOISTURE_COLORS, NDVI_COLORS, RESERVOIR_COLORS, PAMF_COLORS, RMA_COLORS, CAMS_AEROSOL_COLORS, SLOPE_COLORS_HEX, LAND_COVER_COLORS, POPULATION_DENSITY_COLORS, FIRE_SPREAD_COLORS } from '@/lib/map/colors';
+import { cn } from '@/lib/cn';
 
 const WIND_SPEED_ITEMS = [
   { label: '0–10 km/h', color: '#22c55e', desc: 'Calm' },
@@ -167,7 +168,12 @@ function SectionCollapsible({
   );
 }
 
-export default function MapLegend() {
+interface MapLegendProps {
+  mobileOpen?: boolean;
+  onMobileOpenChange?: (open: boolean) => void;
+}
+
+export default function MapLegend({ mobileOpen = false, onMobileOpenChange }: MapLegendProps) {
   const { t } = useTranslation();
   const owmWeatherActive = useMapStore((s) => s.layers.owmWeather);
   const owmWeatherLayer = useMapStore((s) => s.owmWeatherLayer);
@@ -205,9 +211,32 @@ export default function MapLegend() {
   };
 
   return (
-    <div className="absolute bottom-4 ltr:right-4 rtl:left-4 z-10 min-w-[180px] max-h-[45vh] sm:max-h-[60vh] flex flex-col">
+    <>
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm md:hidden"
+          aria-hidden="true"
+          onPointerDown={() => onMobileOpenChange?.(false)}
+        />
+      )}
+      <div
+        data-testid="map-legend-panel"
+        className={cn(
+          'z-10 flex-col',
+          mobileOpen
+            ? 'fixed inset-x-2 bottom-[calc(var(--mobile-tabbar-height)+0.75rem)] z-50 flex md:hidden'
+            : 'absolute bottom-4 hidden min-w-[180px] max-h-[45vh] ltr:right-4 rtl:left-4 md:flex sm:max-h-[60vh]'
+        )}
+      >
       <GlassPanel title={t('mapLegend')} collapsible>
-        <div className="border-t border-white/10 px-3 pb-3 pt-2.5 space-y-3 overflow-auto max-h-[calc(45vh-3rem)] sm:max-h-[calc(60vh-3rem)]">
+        <div
+          className={cn(
+            'space-y-3 overflow-auto border-t border-white/10 px-3 pb-3 pt-2.5',
+            mobileOpen
+              ? 'max-h-[calc(min(72dvh,640px)-3rem)] overscroll-contain'
+              : 'max-h-[calc(45vh-3rem)] sm:max-h-[calc(60vh-3rem)]'
+          )}
+        >
           {/* Filter */}
           <div className="relative">
             <Icon name="search" size={12} className="absolute ltr:left-2 rtl:right-2 top-1/2 -translate-y-1/2 text-muted-foreground" aria-hidden />
@@ -623,6 +652,7 @@ export default function MapLegend() {
           )}
         </div>
       </GlassPanel>
-    </div>
+      </div>
+    </>
   );
 }

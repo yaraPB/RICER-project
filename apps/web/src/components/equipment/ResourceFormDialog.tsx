@@ -84,15 +84,19 @@ export function ResourceFormDialog({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-surface border border-border rounded-xl w-full max-w-lg mx-4 max-h-[85vh] overflow-y-auto shadow-elev-3">
-        <div className="p-6 space-y-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4">
+      <div className="max-h-[92dvh] w-full overflow-y-auto rounded-t-xl border border-border bg-surface pb-[env(safe-area-inset-bottom)] shadow-elev-3 sm:max-w-lg sm:rounded-xl sm:pb-0">
+        <div className="space-y-4 p-4 sm:p-6">
+          <div className="flex justify-center sm:hidden" aria-hidden="true">
+            <span className="h-1 w-10 rounded-full bg-muted-foreground/25" />
+          </div>
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-bold text-foreground">{title}</h3>
             <button
               type="button"
               onClick={onClose}
-              className="text-muted-foreground hover:text-foreground transition-colors"
+              className="grid h-10 w-10 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              aria-label={cancelLabel}
             >
               <Icon name="close" size={20} aria-hidden />
             </button>
@@ -185,7 +189,7 @@ export function ResourceFormDialog({
             </Button>
           )}
 
-          <div className="flex justify-end gap-2 pt-4 border-t border-border/40">
+          <div className="grid grid-cols-2 gap-2 border-t border-border/40 pt-4 sm:flex sm:justify-end">
             <Button variant="secondary" onClick={onClose} disabled={submitting}>
               {cancelLabel}
             </Button>

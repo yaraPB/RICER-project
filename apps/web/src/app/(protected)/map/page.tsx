@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import type { WeatherData, IncidentStatus } from '@/types';
 import { useTranslation } from '@/hooks/useTranslation';
 import { Badge } from '@/components/ui/Badge';
@@ -21,7 +21,6 @@ import { computeSACILevel } from '@/lib/map/complexity';
 import { computePOILevel } from '@/lib/map/poiLevel';
 
 const MapStatusBar = dynamic(() => import('@/components/map/MapStatusBar'), { ssr: false });
-const WeatherWidget = dynamic(() => import('@/components/map/WeatherWidget'), { ssr: false });
 
 function MapDataErrorBanner() {
   const { t } = useTranslation();
@@ -37,7 +36,7 @@ function MapDataErrorBanner() {
   };
 
   return (
-    <div role="alert" className="absolute top-3 left-1/2 -translate-x-1/2 z-20 max-w-md rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning shadow-xl backdrop-blur-md">
+    <div role="alert" className="absolute left-3 right-3 top-16 z-20 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning shadow-xl backdrop-blur-md sm:left-1/2 sm:right-auto sm:top-3 sm:max-w-md sm:-translate-x-1/2 sm:px-4 sm:py-3 sm:text-sm">
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1">
           <div className="font-semibold">{t('mapDataWarning')}</div>
@@ -94,6 +93,7 @@ const INCIDENT_STATUS_TONES: Record<IncidentStatus, 'success' | 'warning' | 'dan
 
 export default function MapPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useTranslation();
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [weatherLoading, setWeatherLoading] = useState(true);
@@ -111,6 +111,15 @@ export default function MapPage() {
   useEffect(() => {
     if (selectedIncidentId) setDrawerOpen(true);
   }, [selectedIncidentId]);
+
+  useEffect(() => {
+    const selectedFromUrl = searchParams.get('selected');
+    if (!selectedFromUrl || selectedIncidentId === selectedFromUrl) return;
+    const exists = incidents.features.some((feature) => feature.properties.id === selectedFromUrl);
+    if (!exists) return;
+    setSelectedIncidentId(selectedFromUrl);
+    setDrawerOpen(true);
+  }, [incidents.features, searchParams, selectedIncidentId, setSelectedIncidentId]);
 
   const fetchWeather = useCallback(async () => {
     try {
@@ -245,13 +254,14 @@ export default function MapPage() {
     : null;
 
   return (
-    <div className="relative h-[calc(100vh-4rem)] w-full overflow-hidden">
+    <div className="relative h-full min-h-0 w-full overflow-hidden">
+      <h1 className="sr-only">{t('fireMap')}</h1>
+
       {/* Map fills entire viewport */}
-      <RicerMap />
+      <RicerMap weather={weather} weatherLoading={weatherLoading} />
 
       {/* Floating overlays */}
       <MapStatusBar weather={weather} activeIncidents={activeIncidents} lastUpdated={lastUpdated} />
-      <WeatherWidget weather={weather} loading={weatherLoading} />
       <MapDataErrorBanner />
 
       {/* Incident detail drawer — only when selected */}

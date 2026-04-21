@@ -48,6 +48,7 @@ export function StepLocation({ location, onLocationSelect, onNext }: StepLocatio
           variant="primary"
           disabled={!location}
           onClick={onNext}
+          className="w-full sm:w-auto"
         >
           {t('nextStep')}
         </Button>

@@ -15,18 +15,14 @@ export type AuthShellProps = {
 
 export function AuthShell({ title, subtitle, children, footer, isRTL }: AuthShellProps) {
   return (
-    <div className="relative isolate min-h-screen overflow-x-clip overflow-y-hidden bg-background bg-dot-grid">
-      {/* Ambient glow orbs */}
-      <div className="pointer-events-none absolute -left-32 -top-32 hidden h-[420px] w-[420px] rounded-full bg-primary/10 blur-[100px] sm:block" />
-      <div className="pointer-events-none absolute -bottom-40 -right-32 hidden h-[500px] w-[500px] rounded-full bg-warning/8 blur-[120px] sm:block" />
-      <div className="pointer-events-none absolute left-1/2 top-1/3 hidden h-[300px] w-[300px] -translate-x-1/2 rounded-full bg-danger/5 blur-[80px] sm:block" />
-
+    <div className="relative isolate min-h-[100dvh] overflow-x-clip overflow-y-auto bg-background bg-dot-grid">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-40 border-b border-border/40 bg-gradient-to-b from-surface/90 to-transparent" />
       <div className="absolute end-4 top-4 z-10">
         <LanguageSwitcher />
       </div>
 
-      <div className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center p-4 sm:p-6">
-        <Card tone="elevated" className="p-6 sm:p-8 animate-scale-in" dir={isRTL ? 'rtl' : 'ltr'}>
+      <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col justify-center px-4 py-20 sm:p-6">
+        <Card tone="elevated" className="p-5 shadow-elev-3 animate-scale-in sm:p-8" dir={isRTL ? 'rtl' : 'ltr'}>
           <div className="mb-6 text-center">
             <div className="mx-auto mb-5 h-20 w-20 bg-surface-2 shadow-elev-2 rounded-xl p-3 transition-all duration-200">
               <Logo variant="badge" size="xl" priority />

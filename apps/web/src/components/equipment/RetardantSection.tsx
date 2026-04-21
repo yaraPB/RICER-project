@@ -100,11 +100,12 @@ export function RetardantSection() {
 
   return (
     <section className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h3 className="text-lg font-bold text-foreground">{t('tabRetardant')}</h3>
         <Button
           size="sm"
           variant="primary"
+          className="w-full sm:w-auto"
           onClick={() => {
             setEditing(null);
             setDialogOpen(true);
@@ -165,7 +166,7 @@ export function RetardantSection() {
             ))}
           </div>
 
-          <div className="p-4 bg-primary/10 rounded-lg border border-primary/20">
+          <div className="rounded-lg border border-primary/20 bg-primary/10 p-4">
             <div className="font-bold text-primary">
               {t('totalAmount')}:{' '}
               {retardant.reduce((sum, p) => sum + p.quantity, 0).toLocaleString(locale)}{' '}
@@ -200,10 +201,10 @@ export function RetardantSection() {
       />
 
       {deleteId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-surface border border-border rounded-xl p-6 max-w-sm mx-4 space-y-4">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4">
+          <div className="w-full max-w-sm space-y-4 rounded-t-xl border border-border bg-surface p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] shadow-elev-3 sm:rounded-xl sm:p-6">
             <p className="text-foreground font-medium">{t('confirmDelete')}</p>
-            <div className="flex gap-2 justify-end">
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:justify-end">
               <Button variant="secondary" onClick={() => setDeleteId(null)}>
                 {t('cancel')}
               </Button>

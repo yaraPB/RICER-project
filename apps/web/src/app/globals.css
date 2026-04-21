@@ -4,6 +4,9 @@
 
 @layer base {
   :root {
+    --topbar-height: 4rem;
+    --mobile-tabbar-base-height: 3.5rem;
+    --mobile-tabbar-height: calc(var(--mobile-tabbar-base-height) + env(safe-area-inset-bottom));
     --background: 0 0% 97.5%;
     --foreground: 224 50% 10%;
     --surface: 0 0% 100%;
@@ -71,6 +74,10 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
+    overflow-x: hidden;
+    min-height: 100dvh;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
   }
 
   /* Smooth base transitions */
@@ -135,6 +142,10 @@
   animation: popup-enter 0.2s ease-out;
 }
 
+.maplibregl-popup-content {
+  max-width: calc(100vw - 2rem);
+}
+
 .incident-popup .maplibregl-popup-tip {
   border-top-color: hsl(var(--surface));
 }
@@ -167,6 +178,25 @@ div[data-ricer-map-ready]:fullscreen {
 .maplibregl-ctrl-group button {
   width: 44px !important;
   height: 44px !important;
+}
+
+@media (max-width: 767px) {
+  .maplibregl-ctrl-top-right {
+    top: 4.75rem !important;
+    right: 0.75rem !important;
+  }
+
+  .maplibregl-ctrl-bottom-left {
+    display: none !important;
+  }
+
+  .maplibregl-ctrl-attrib {
+    max-width: calc(100vw - 1rem) !important;
+  }
+
+  .maplibregl-popup-content {
+    max-width: calc(100vw - 1.5rem) !important;
+  }
 }
 
 /* ── Shimmer / Skeleton ────────────────────────────────── */

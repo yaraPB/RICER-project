@@ -11,7 +11,7 @@ export default function ReportPage() {
   const textAlign = isRTL ? 'text-right' : 'text-left';
 
   return (
-    <div className="mx-auto max-w-6xl p-4 md:p-6 page-enter">
+    <div className="mx-auto max-w-6xl p-3 sm:p-4 md:p-6 page-enter">
       <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between" dir={isRTL ? 'rtl' : 'ltr'}>
         <div className={textAlign}>
           <Link
@@ -31,14 +31,14 @@ export default function ReportPage() {
             {t('reportFireDesc')}
           </p>
         </div>
-        <div className="rounded-lg border border-danger/20 bg-danger/5 px-4 py-3 text-sm text-danger">
+        <div className="rounded-lg border border-danger/20 bg-danger/5 px-3 py-2.5 text-sm text-danger sm:px-4 sm:py-3">
           <span className="font-bold">{t('emergencyNumber')}</span>
           <span className="mx-2">-</span>
           {t('emergencyReminderShort')}
         </div>
       </div>
 
-      <div className="rounded-lg border border-border/60 bg-surface p-4 shadow-elev-2 sm:p-6">
+      <div className="rounded-lg border border-border/60 bg-surface p-3 shadow-elev-2 sm:p-6">
         <ReportWizard />
       </div>
     </div>

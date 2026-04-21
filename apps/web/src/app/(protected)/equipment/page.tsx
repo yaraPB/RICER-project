@@ -98,7 +98,7 @@ export default function EquipmentPage() {
           { status: 'En intervention', key: 'onScene' as const, color: TRUCK_STATUS_COLORS['En intervention'] || '#ef4444' },
         ];
         return (
-          <div className="flex flex-wrap items-center gap-4 rounded-xl border border-border bg-surface-2 px-4 py-3">
+          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface-2 px-4 py-3 sm:gap-4">
             {statusItems.map(({ status, key, color }) => (
               <div key={status} className="flex items-center gap-2 text-sm">
                 <span className="h-3 w-3 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
@@ -106,7 +106,7 @@ export default function EquipmentPage() {
                 <span className="text-muted-foreground">{t(key)}</span>
               </div>
             ))}
-            <div className="h-4 w-px bg-border" />
+            <div className="hidden h-4 w-px bg-border sm:block" />
             <div className="flex items-center gap-2 text-sm font-bold">
               <span>{truckDeployments.length}</span>
               <span className="text-muted-foreground">{t('totalLabel')}</span>
@@ -117,7 +117,7 @@ export default function EquipmentPage() {
 
       {/* Truck Deployment Map */}
       {!trucksLoading && truckDeployments.length > 0 && (
-        <Card tone="elevated" className="p-6">
+        <Card tone="elevated" className="p-4 sm:p-6">
           <h2 className={`text-2xl font-bold mb-4 ${textAlign}`}>{t('truckDeploymentMap')}</h2>
           <TruckMap trucks={truckDeployments} onDispatch={setDispatchTruck} />
         </Card>

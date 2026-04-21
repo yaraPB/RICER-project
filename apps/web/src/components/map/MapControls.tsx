@@ -9,6 +9,7 @@ import { Switch } from '@/components/ui/Switch';
 import { Slider } from '@/components/ui/Slider';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/Accordion';
 import { Icon } from '@/components/ui/Icon';
+import { cn } from '@/lib/cn';
 import type { Basemap } from '@/lib/map/styles';
 import type { TranslationKey } from '@/i18n/translations';
 import type { EffisFwiMode, EffisBurnedAreaMode, SoilMoistureDepth, CamsAerosolMode, OwmWeatherLayer } from '@/store/useMapStore';
@@ -654,7 +655,12 @@ function useLayerSearch(query: string) {
   }, [query, t]);
 }
 
-export default function MapControls() {
+interface MapControlsProps {
+  mobileOpen?: boolean;
+  onMobileOpenChange?: (open: boolean) => void;
+}
+
+export default function MapControls({ mobileOpen = false, onMobileOpenChange }: MapControlsProps) {
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const filteredLayers = useLayerSearch(searchQuery);
@@ -723,7 +729,23 @@ export default function MapControls() {
   const defaultSections = ['basemap', 'visualization', 'incidents', 'resources', 'dispatch', 'infra', 'environment', 'effis'];
 
   return (
-    <div className="absolute ltr:left-3 rtl:right-3 top-3 z-10 flex flex-col gap-2 max-w-[calc(100vw-1.5rem)] sm:max-w-xs">
+    <>
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm md:hidden"
+          aria-hidden="true"
+          onPointerDown={() => onMobileOpenChange?.(false)}
+        />
+      )}
+      <div
+        data-testid="map-layers-panel"
+        className={cn(
+          'z-10 flex-col gap-2',
+          mobileOpen
+            ? 'fixed inset-x-2 bottom-[calc(var(--mobile-tabbar-height)+0.75rem)] z-50 flex md:hidden'
+            : 'absolute top-3 hidden max-w-[calc(100vw-1.5rem)] ltr:left-3 rtl:right-3 md:flex md:max-w-xs'
+        )}
+      >
       <GlassPanel
         title={t('layersPanel')}
         collapsible
@@ -732,9 +754,20 @@ export default function MapControls() {
             {activeCount}/{totalCount}
           </span>
         }
-        className="max-h-[50vh] sm:max-h-[70vh]"
+        className={cn(
+          mobileOpen
+            ? 'max-h-[min(72dvh,640px)] rounded-xl'
+            : 'max-h-[50vh] sm:max-h-[70vh]'
+        )}
       >
-        <div className="border-t border-white/10 px-3 pb-3 pt-2.5 space-y-1 overflow-auto max-h-[calc(50vh-3rem)] sm:max-h-[calc(70vh-3rem)]">
+        <div
+          className={cn(
+            'space-y-1 overflow-auto border-t border-white/10 px-3 pb-3 pt-2.5',
+            mobileOpen
+              ? 'max-h-[calc(min(72dvh,640px)-3rem)] overscroll-contain'
+              : 'max-h-[calc(50vh-3rem)] sm:max-h-[calc(70vh-3rem)]'
+          )}
+        >
           {/* Search */}
           <div className="relative mb-2">
             <Icon name="search" size={14} className="absolute ltr:left-2 rtl:right-2 top-1/2 -translate-y-1/2 text-muted-foreground" aria-hidden />
@@ -949,6 +982,7 @@ export default function MapControls() {
           )}
         </div>
       </GlassPanel>
-    </div>
+      </div>
+    </>
   );
 }

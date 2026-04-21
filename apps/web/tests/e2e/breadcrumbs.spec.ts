@@ -5,10 +5,12 @@ import {
   mockTokenRefresh,
   mockAnalytics,
   mockGeoRoutes,
+  setLanguage,
 } from './helpers';
 
 test.describe('Breadcrumb navigation', () => {
   test.beforeEach(async ({ page }) => {
+    await setLanguage(page, 'en');
     await mockAuthMe(page);
     await mockNotifications(page);
     await mockTokenRefresh(page);

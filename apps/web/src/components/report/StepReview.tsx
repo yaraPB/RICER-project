@@ -112,15 +112,15 @@ export function StepReview({ formData, onBack, onSubmit, submitting }: StepRevie
       </Card>
 
       {/* Navigation */}
-      <div className="flex justify-between gap-4">
-        <Button variant="secondary" onClick={onBack} disabled={submitting}>
+      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
+        <Button variant="secondary" onClick={onBack} disabled={submitting} className="w-full sm:w-auto">
           {t('previousStep')}
         </Button>
         <Button
           variant="primary"
           onClick={onSubmit}
           disabled={submitting}
-          className="bg-danger hover:bg-danger/90"
+          className="w-full bg-danger hover:bg-danger/90 sm:w-auto"
         >
           {submitting ? (
             t('submitting')

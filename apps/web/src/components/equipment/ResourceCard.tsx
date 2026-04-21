@@ -53,16 +53,16 @@ export function ResourceCard({
         ))}
       </div>
 
-      <div className="flex gap-2 pt-2 border-t border-border/40">
-        <Button size="sm" variant="secondary" onClick={onEdit}>
+      <div className="flex flex-wrap gap-2 border-t border-border/40 pt-2">
+        <Button size="sm" variant="secondary" onClick={onEdit} className="min-w-24 flex-1 sm:flex-none">
           <Icon name="pencil" size={12} aria-hidden /> {editLabel}
         </Button>
         {onRelocate && (
-          <Button size="sm" variant="secondary" onClick={onRelocate}>
+          <Button size="sm" variant="secondary" onClick={onRelocate} className="min-w-24 flex-1 sm:flex-none">
             <Icon name="mapPin" size={12} aria-hidden /> {relocateLabel}
           </Button>
         )}
-        <Button size="sm" variant="danger" onClick={onDelete}>
+        <Button size="sm" variant="danger" onClick={onDelete} className="min-w-24 flex-1 sm:flex-none">
           <Icon name="trash" size={12} aria-hidden /> {deleteLabel}
         </Button>
       </div>

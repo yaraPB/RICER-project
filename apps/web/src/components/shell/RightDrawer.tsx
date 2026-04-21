@@ -92,13 +92,20 @@ export function RightDrawer({
         aria-labelledby={titleId}
         ref={drawerRef}
         className={cn(
-          'fixed right-0 top-16 z-50 h-[calc(100vh-4rem)] w-full sm:w-[400px] max-w-[95vw] overflow-hidden',
+          'fixed right-0 top-16 z-50 h-[calc(100dvh-var(--topbar-height))] w-full max-w-[95vw] overflow-hidden sm:w-[400px]',
+          'max-md:inset-x-0 max-md:bottom-0 max-md:top-auto max-md:h-[min(82dvh,720px)] max-md:max-w-none max-md:rounded-t-xl',
           'glass shadow-elev-3 border-l border-border/40',
+          'max-md:border-l-0 max-md:border-t max-md:pb-[env(safe-area-inset-bottom)]',
           'transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]',
-          open ? 'translate-x-0' : 'translate-x-full',
+          open
+            ? 'translate-x-0 max-md:translate-y-0'
+            : 'translate-x-full max-md:translate-x-0 max-md:translate-y-full',
           className
         )}
       >
+        <div className="flex justify-center pt-2 md:hidden" aria-hidden="true">
+          <span className="h-1 w-10 rounded-full bg-muted-foreground/25" />
+        </div>
         <div className="flex h-14 items-center justify-between border-b border-border/50 bg-surface-2/60 px-4">
           <div id={titleId} className="min-w-0 text-sm font-bold tracking-tight">
             {title}

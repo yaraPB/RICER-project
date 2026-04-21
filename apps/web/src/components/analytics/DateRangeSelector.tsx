@@ -26,7 +26,11 @@ export function DateRangeSelector() {
 
   return (
     <div className="mb-6">
-      <div className="flex flex-wrap gap-2" role="group" aria-label={t('dateRangeAll')}>
+      <div
+        className="-mx-1 flex snap-x gap-2 overflow-x-auto px-1 pb-1 md:flex-wrap md:overflow-visible"
+        role="group"
+        aria-label={t('dateRangeAll')}
+      >
         {PRESETS.map((p) => (
           <Button
             key={p.value}
@@ -34,6 +38,7 @@ export function DateRangeSelector() {
             variant={dateRange === p.value ? 'primary' : 'secondary'}
             onClick={() => setDateRange(p.value)}
             aria-pressed={dateRange === p.value}
+            className="shrink-0 snap-start"
           >
             {t(p.labelKey)}
           </Button>
@@ -41,23 +46,23 @@ export function DateRangeSelector() {
       </div>
 
       {dateRange === 'custom' && (
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <label className="flex items-center gap-2 text-sm text-muted-foreground">
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <label className="flex flex-col gap-1.5 text-sm text-muted-foreground sm:flex-row sm:items-center sm:gap-2">
             {t('dateFrom')}
             <input
               type="date"
               value={customFrom}
               onChange={(e) => setCustomFrom(e.target.value)}
-              className="rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-foreground"
+              className="h-10 rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-foreground"
             />
           </label>
-          <label className="flex items-center gap-2 text-sm text-muted-foreground">
+          <label className="flex flex-col gap-1.5 text-sm text-muted-foreground sm:flex-row sm:items-center sm:gap-2">
             {t('dateTo')}
             <input
               type="date"
               value={customTo}
               onChange={(e) => setCustomTo(e.target.value)}
-              className="rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-foreground"
+              className="h-10 rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-foreground"
             />
           </label>
         </div>

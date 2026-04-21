@@ -120,7 +120,7 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
         role="dialog"
         aria-modal="true"
         aria-labelledby="notifications-panel-title"
-        className="fixed right-4 top-16 z-50 w-[calc(100vw-2rem)] max-w-md sm:w-96 rounded-lg border border-border bg-surface shadow-elev-2"
+        className="fixed inset-x-2 bottom-[calc(var(--mobile-tabbar-height)+0.75rem)] z-50 max-h-[min(76dvh,640px)] rounded-lg border border-border bg-surface shadow-elev-2 sm:bottom-auto sm:left-auto sm:right-4 sm:top-16 sm:w-96 sm:max-w-md"
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
@@ -135,7 +135,7 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
         </div>
 
         {/* Content */}
-        <div className="max-h-[70vh] overflow-y-auto">
+        <div className="max-h-[calc(min(76dvh,640px)-3.25rem)] overflow-y-auto sm:max-h-[70vh]">
           {error ? (
             <div className="p-4">
               <div className="border border-red-200 bg-red-50 rounded-lg p-4">

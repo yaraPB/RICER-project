@@ -16,6 +16,10 @@ import { mockAuthMe, mockGeoRoutes, mockWeather, mockNotifications, mockTokenRef
 test.skip(({ browserName }) => browserName !== 'chromium', 'Visual tests only run in Chromium');
 
 async function setupMapMocks(page: import('@playwright/test').Page) {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('theme', 'dark');
+    document.documentElement.classList.add('dark');
+  });
   await setLanguage(page, 'en');
   await mockAuthMe(page, 'OFFICIAL');
   await mockGeoRoutes(page);
@@ -156,5 +160,47 @@ test.describe('Map Visual Regression', () => {
         threshold: 0.3,
       });
     }
+  });
+
+  test('mobile map dock layout is stable', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await setupMapMocks(page);
+    await page.goto('/map');
+    await expect(page.locator('[data-ricer-map-ready="true"]')).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId('map-mobile-dock')).toBeVisible();
+    await page.waitForTimeout(3000);
+
+    await expect(page).toHaveScreenshot('map-mobile-default.png', {
+      maxDiffPixelRatio: 0.03,
+      threshold: 0.3,
+    });
+  });
+
+  test('mobile layers sheet layout is stable', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await setupMapMocks(page);
+    await page.goto('/map');
+    await expect(page.getByTestId('map-mobile-dock')).toBeVisible({ timeout: 30_000 });
+    await page.getByRole('button', { name: /layers/i }).click();
+    await expect(page.getByTestId('map-layers-panel')).toBeVisible();
+    await page.waitForTimeout(500);
+
+    await expect(page).toHaveScreenshot('map-mobile-layers-sheet.png', {
+      maxDiffPixelRatio: 0.03,
+      threshold: 0.3,
+    });
+  });
+
+  test('mobile incident sheet layout is stable', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await setupMapMocks(page);
+    await page.goto('/map?selected=inc-1');
+    await expect(page.getByRole('dialog', { name: /incident details/i })).toBeVisible({ timeout: 30_000 });
+    await page.waitForTimeout(500);
+
+    await expect(page).toHaveScreenshot('map-mobile-incident-sheet.png', {
+      maxDiffPixelRatio: 0.03,
+      threshold: 0.3,
+    });
   });
 });

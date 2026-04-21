@@ -55,9 +55,11 @@ export default function LocationPicker({ onLocationSelect, selectedLocation, exp
   const storeBasemap = useMapStore((s) => s.basemap);
   const mapStyle = getMapStyle(storeBasemap || 'streets');
 
-  const height = expanded
-    ? 'clamp(300px, 60vh, 900px)'
-    : 'clamp(300px, 60vh, 500px)';
+  const height = isMobile
+    ? 'clamp(320px, 52dvh, 620px)'
+    : expanded
+      ? 'clamp(300px, 60vh, 900px)'
+      : 'clamp(300px, 60vh, 500px)';
 
   return (
     <div className="relative" data-map-ready={mapReady ? 'true' : undefined}>
@@ -89,7 +91,7 @@ export default function LocationPicker({ onLocationSelect, selectedLocation, exp
 
       {/* Instruction overlay */}
       <div
-        className={`absolute top-4 ${isRTL ? 'right-4' : 'left-4'} z-[1000] rounded-lg border border-border bg-surface px-3 py-2 shadow-elev-1 text-sm`}
+        className={`absolute top-3 ${isRTL ? 'right-3' : 'left-3'} z-[1000] max-w-[calc(100%-1.5rem)] rounded-lg border border-border bg-surface/95 px-3 py-2 text-xs shadow-elev-1 backdrop-blur sm:top-4 sm:text-sm ${isRTL ? 'sm:right-4' : 'sm:left-4'}`}
         dir={isRTL ? 'rtl' : 'ltr'}
       >
         <div className={`mb-1 flex items-center gap-2 font-bold ${isRTL ? 'justify-end text-right' : 'justify-start text-left'}`}>
@@ -106,7 +108,7 @@ export default function LocationPicker({ onLocationSelect, selectedLocation, exp
         type="button"
         onClick={handleGeolocate}
         disabled={locating}
-        className={`absolute bottom-4 ${isRTL ? 'left-4' : 'right-4'} z-[1000] flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium shadow-elev-2 transition hover:bg-surface-2 disabled:opacity-60`}
+        className={`absolute bottom-3 ${isRTL ? 'left-3' : 'right-3'} z-[1000] flex min-h-11 items-center gap-2 rounded-lg border border-border bg-surface/95 px-3 py-2 text-sm font-medium shadow-elev-2 backdrop-blur transition hover:bg-surface-2 disabled:opacity-60 sm:bottom-4 ${isRTL ? 'sm:left-4' : 'sm:right-4'}`}
       >
         {locating ? (
           <Icon name="loading" aria-hidden={true} size={18} className="animate-spin text-primary" />

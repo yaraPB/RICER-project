@@ -24,7 +24,7 @@ export default function MapStatusBar({ weather, activeIncidents, lastUpdated }: 
   const isHighRisk = risk?.labelKey === 'riskEleve' || risk?.labelKey === 'riskExtreme';
 
   return (
-    <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 glass rounded-xl px-3 py-2 shadow-glass">
+    <div className="absolute left-3 right-3 top-3 z-10 flex items-center justify-between gap-2 rounded-xl px-2.5 py-2 shadow-glass glass sm:left-1/2 sm:right-auto sm:-translate-x-1/2 sm:justify-start sm:px-3">
       {/* Risk badge */}
       <div
         className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold text-white ${isHighRisk ? 'animate-pulse' : ''}`}
@@ -37,9 +37,9 @@ export default function MapStatusBar({ weather, activeIncidents, lastUpdated }: 
       <div className="h-4 w-px bg-white/20" />
 
       {/* Active incidents */}
-      <div className="flex items-center gap-1 text-[11px] font-medium text-foreground">
+      <div className="flex min-w-0 items-center gap-1 text-[11px] font-medium text-foreground">
         <Icon name="fire" size={14} aria-hidden />
-        <span className={activeIncidents > 0 ? 'text-warning font-bold' : ''}>
+        <span className={activeIncidents > 0 ? 'truncate text-warning font-bold' : 'truncate'}>
           {activeIncidents} {t('activeIncidents')}
         </span>
       </div>

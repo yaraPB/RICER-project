@@ -32,7 +32,7 @@ function ToastItem({ toast }: { toast: Toast }) {
     <div
       role="alert"
       aria-live="assertive"
-      className={`flex items-start gap-3 rounded-lg border px-4 py-3 shadow-lg text-sm max-w-sm w-full pointer-events-auto transition-all ${TOAST_STYLES[toast.type]}`}
+      className={`flex w-full max-w-sm pointer-events-auto items-start gap-3 rounded-lg border px-4 py-3 text-sm shadow-lg transition-all ${TOAST_STYLES[toast.type]}`}
     >
       <span className="font-bold mt-0.5 flex-shrink-0">{TOAST_ICONS[toast.type]}</span>
       <span className="flex-1">{toast.message}</span>
@@ -56,7 +56,7 @@ export function ToastContainer() {
 
   return (
     <div
-      className="fixed bottom-6 right-6 z-[9999] flex flex-col gap-2 pointer-events-none"
+      className="pointer-events-none fixed inset-x-3 bottom-[calc(var(--mobile-tabbar-height)+0.75rem)] z-[9999] flex flex-col items-end gap-2 md:bottom-6 md:left-auto md:right-6 md:w-full"
       aria-label="Notifications"
     >
       {toasts.map((toast) => (

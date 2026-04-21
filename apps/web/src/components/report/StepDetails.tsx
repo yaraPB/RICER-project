@@ -237,11 +237,11 @@ export function StepDetails({ formData, onChange, onNext, onBack, errors }: Step
       </div>
 
       {/* Navigation */}
-      <div className="flex justify-between gap-4">
-        <Button variant="secondary" onClick={onBack}>
+      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
+        <Button variant="secondary" onClick={onBack} className="w-full sm:w-auto">
           {t('previousStep')}
         </Button>
-        <Button variant="primary" onClick={onNext}>
+        <Button variant="primary" onClick={onNext} className="w-full sm:w-auto">
           {t('nextStep')}
         </Button>
       </div>

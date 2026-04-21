@@ -45,18 +45,18 @@ export default function FireDatabasePage() {
         </div>
 
         {user?.role === 'OFFICIAL' && (
-          <div className="flex flex-wrap gap-2 shrink-0">
+          <div className="grid w-full grid-cols-1 gap-2 sm:w-auto sm:grid-cols-3">
             <ImportFirmsDialog />
             <button
               onClick={() => handleExport('csv')}
-              className="rounded-lg border border-border/60 px-3 py-1.5 text-sm font-medium hover:bg-muted transition-colors"
+              className="min-h-10 rounded-lg border border-border/60 px-3 py-2 text-sm font-medium transition-colors hover:bg-muted"
               data-testid="export-csv"
             >
               {t('fireRecordExportCSV')}
             </button>
             <button
               onClick={() => handleExport('geojson')}
-              className="rounded-lg border border-border/60 px-3 py-1.5 text-sm font-medium hover:bg-muted transition-colors"
+              className="min-h-10 rounded-lg border border-border/60 px-3 py-2 text-sm font-medium transition-colors hover:bg-muted"
               data-testid="export-geojson"
             >
               {t('fireRecordExportGeoJSON')}

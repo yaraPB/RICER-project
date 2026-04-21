@@ -48,7 +48,7 @@ export function MobileTabBar() {
             aria-hidden="true"
           />
           <div
-            className="fixed bottom-[calc(56px+env(safe-area-inset-bottom))] left-2 right-2 z-50 rounded-xl border border-border/60 bg-surface/95 backdrop-blur-xl shadow-elev-3 p-1.5 animate-slide-up-fade"
+            className="fixed bottom-[calc(var(--mobile-tabbar-height)+0.5rem)] left-2 right-2 z-50 rounded-xl border border-border/60 bg-surface/95 p-1.5 shadow-elev-3 backdrop-blur-xl animate-slide-up-fade"
           >
             {MORE_ITEMS.map((item) => {
               const isActive = pathname === item.href;
@@ -98,10 +98,9 @@ export function MobileTabBar() {
       <nav
         aria-label={t('primaryNavigation')}
         className={cn(
-          'fixed bottom-0 left-0 right-0 z-40 flex h-14 items-stretch',
+          'fixed bottom-0 left-0 right-0 z-40 flex h-[var(--mobile-tabbar-height)] items-start',
           'border-t border-border/40 glass md:hidden'
         )}
-        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         {MAIN_TABS.map((tab) => {
           const isActive = pathname === tab.href;
@@ -110,7 +109,7 @@ export function MobileTabBar() {
               key={tab.href}
               href={tab.href}
               className={cn(
-                'relative flex flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-semibold transition-colors min-h-[44px]',
+                'relative flex min-h-[var(--mobile-tabbar-base-height)] flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-semibold transition-colors',
                 isActive ? 'text-primary' : 'text-muted-foreground active:text-foreground'
               )}
             >
@@ -128,7 +127,7 @@ export function MobileTabBar() {
           type="button"
           onClick={() => setMoreOpen((v) => !v)}
           className={cn(
-            'relative flex flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-semibold transition-colors min-h-[44px]',
+            'relative flex min-h-[var(--mobile-tabbar-base-height)] flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-semibold transition-colors',
             isMoreActive || moreOpen ? 'text-primary' : 'text-muted-foreground active:text-foreground'
           )}
         >

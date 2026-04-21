@@ -34,8 +34,8 @@ export default function WeatherPage() {
     return (
       <div className="max-w-7xl mx-auto p-4 md:p-6 page-enter" aria-busy="true" aria-label={t('loading')}>
         <div className="mb-8">
-          <div className="h-9 w-64 animate-pulse bg-muted rounded-lg mb-2" />
-          <div className="h-5 w-96 animate-pulse bg-muted rounded-lg" />
+          <div className="mb-2 h-9 w-full max-w-64 animate-pulse rounded-lg bg-muted" />
+          <div className="h-5 w-full max-w-96 animate-pulse rounded-lg bg-muted" />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 stagger-children">
           {Array.from({ length: 3 }).map((_, i) => (
@@ -122,14 +122,14 @@ export default function WeatherPage() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 stagger-children">
         {weatherCards.map((card) => (
-          <Card key={card.icon} tone="elevated" className="p-5">
-            <div className="flex items-center justify-between mb-3">
+          <Card key={card.icon} tone="elevated" className="p-4 sm:p-5">
+            <div className="mb-3 flex items-center justify-between gap-3">
               <span className={`${card.bgColor} ${card.color} h-11 w-11 rounded-xl grid place-items-center`}>
                 <Icon name={card.icon} aria-hidden={true} size={24} />
               </span>
-              <div className={textAlign}>
+              <div className={`${textAlign} min-w-0`}>
                 <div className="text-xs font-medium text-muted-foreground mb-0.5">{card.label}</div>
-                <div className={`text-3xl font-bold ${card.color}`}>
+                <div className={`break-words text-2xl font-bold sm:text-3xl ${card.color}`}>
                   {card.value}
                 </div>
               </div>

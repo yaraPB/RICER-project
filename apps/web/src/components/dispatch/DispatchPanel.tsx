@@ -193,27 +193,30 @@ export function DispatchPanel({ incidentId, onClose }: DispatchPanelProps) {
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-40 bg-black/30"
+        className="fixed inset-0 z-40 bg-black/35 backdrop-blur-sm"
         onClick={handleClose}
         aria-hidden="true"
       />
 
       {/* Panel */}
       <div
-        className="fixed right-0 top-0 z-50 h-full w-full max-w-md bg-surface shadow-2xl overflow-y-auto"
+        className="fixed right-0 top-0 z-50 h-full w-full max-w-md overflow-y-auto bg-surface shadow-2xl max-md:inset-x-0 max-md:bottom-0 max-md:top-auto max-md:h-[min(86dvh,760px)] max-md:max-w-none max-md:rounded-t-xl max-md:pb-[env(safe-area-inset-bottom)]"
         role="dialog"
         aria-modal="true"
         aria-labelledby="dispatch-panel-title"
         data-testid="dispatch-panel"
       >
+        <div className="flex justify-center pt-2 md:hidden" aria-hidden="true">
+          <span className="h-1 w-10 rounded-full bg-muted-foreground/25" />
+        </div>
         {/* Header */}
-        <div className="sticky top-0 z-10 bg-surface border-b border-border px-4 py-3 flex items-center justify-between">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-surface px-4 py-3">
           <h2 id="dispatch-panel-title" className="text-lg font-semibold">
             {t('dispatchTeams') || 'Dispatch Teams'}
           </h2>
           <button
             onClick={handleClose}
-            className="text-muted-foreground hover:text-foreground transition-colors"
+            className="grid h-10 w-10 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             aria-label={t('closePanel')}
           >
             <Icon name="close" />
@@ -302,7 +305,7 @@ export function DispatchPanel({ incidentId, onClose }: DispatchPanelProps) {
         </div>
 
         {/* Footer Actions */}
-        <div className="sticky bottom-0 bg-surface border-t border-border px-4 py-3 space-y-2">
+        <div className="sticky bottom-0 space-y-2 border-t border-border bg-surface px-4 py-3">
           {activeRoutes.length === 0 ? (
             <Button
               onClick={handleGenerateRoutes}

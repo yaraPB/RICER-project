@@ -19,10 +19,10 @@ export default function LanguageSwitcher() {
         onClick={() => setLanguage('ar')}
         aria-pressed={language === 'ar'}
         className={cn(
-          'h-9 rounded-md px-3 text-sm font-bold transition',
+          'h-9 rounded-md border border-transparent px-3 text-sm font-bold transition',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
           language === 'ar'
-            ? 'bg-surface text-primary shadow-sm'
+            ? 'border-success/30 bg-primary-muted text-success-foreground shadow-sm'
             : 'text-muted-foreground hover:bg-muted hover:text-foreground'
         )}
       >
@@ -32,10 +32,10 @@ export default function LanguageSwitcher() {
         onClick={() => setLanguage('fr')}
         aria-pressed={language === 'fr'}
         className={cn(
-          'h-9 rounded-md px-3 text-sm font-bold transition',
+          'h-9 rounded-md border border-transparent px-3 text-sm font-bold transition',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
           language === 'fr'
-            ? 'bg-surface text-primary shadow-sm'
+            ? 'border-success/30 bg-primary-muted text-success-foreground shadow-sm'
             : 'text-muted-foreground hover:bg-muted hover:text-foreground'
         )}
       >
@@ -45,10 +45,10 @@ export default function LanguageSwitcher() {
         onClick={() => setLanguage('en')}
         aria-pressed={language === 'en'}
         className={cn(
-          'h-9 rounded-md px-3 text-sm font-bold transition',
+          'h-9 rounded-md border border-transparent px-3 text-sm font-bold transition',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
           language === 'en'
-            ? 'bg-surface text-primary shadow-sm'
+            ? 'border-success/30 bg-primary-muted text-success-foreground shadow-sm'
             : 'text-muted-foreground hover:bg-muted hover:text-foreground'
         )}
       >
