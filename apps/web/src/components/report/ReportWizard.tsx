@@ -22,7 +22,7 @@ export function ReportWizard() {
   const [error, setError] = useState('');
   const [errorCode, setErrorCode] = useState<number | undefined>();
   const [requestId, setRequestId] = useState<string | undefined>();
-  const [referenceNumber, setReferenceNumber] = useState<string | null>(null);
+  const [submittedReport, setSubmittedReport] = useState<{ id: string; referenceNumber: string } | null>(null);
 
   // Validation errors for step 2
   const [detailsErrors, setDetailsErrors] = useState<{ description?: string; cause?: string }>({});
@@ -97,7 +97,11 @@ export function ReportWizard() {
         return;
       }
 
-      setReferenceNumber(data.referenceNumber ?? data.report?.referenceNumber ?? '');
+      const reportId = typeof data.report?.id === 'string' ? data.report.id : '';
+      setSubmittedReport({
+        id: reportId,
+        referenceNumber: data.referenceNumber ?? data.report?.referenceNumber ?? '',
+      });
     } catch (err) {
       setError(t('connectionError'));
 
@@ -118,13 +122,19 @@ export function ReportWizard() {
   const handleReset = () => {
     setFormData({ ...DEFAULT_FORM_DATA, characteristics: { ...DEFAULT_FORM_DATA.characteristics } });
     setStep('location');
-    setReferenceNumber(null);
+    setSubmittedReport(null);
     setError('');
   };
 
   // After successful submission — show confirmation
-  if (referenceNumber !== null) {
-    return <ConfirmationScreen referenceNumber={referenceNumber} onReset={handleReset} />;
+  if (submittedReport !== null) {
+    return (
+      <ConfirmationScreen
+        reportId={submittedReport.id}
+        referenceNumber={submittedReport.referenceNumber}
+        onReset={handleReset}
+      />
+    );
   }
 
   return (

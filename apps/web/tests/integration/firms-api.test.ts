@@ -281,10 +281,19 @@ describe('FIRMS API Integration', () => {
       const { getCachedFirmsDetections } = await import('@/lib/firms/cache');
       vi.mocked(getCachedFirmsDetections).mockResolvedValue(null);
 
+      const csvData = 'latitude,longitude,brightness,scan,track,acq_date,acq_time,satellite,instrument,confidence,version,bright_t31,frp,daynight\n33.5,-5.1,350.5,1.2,1.1,2024-02-09,1345,N,VIIRS,high,2.0NRT,310.5,45.2,D';
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        headers: new Headers({ 'content-type': 'text/csv' }),
+        text: () => Promise.resolve(csvData),
+      });
+
       const request = new Request('http://localhost/api/firms/detections');
       const response = await GET(request);
 
       // Should attempt to fetch from API since cache is expired
+      expect(response.status).toBe(200);
       expect(vi.mocked(getCachedFirmsDetections)).toHaveBeenCalled();
     });
   });

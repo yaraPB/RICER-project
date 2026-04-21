@@ -1,11 +1,13 @@
 import { test, expect } from '@playwright/test';
-import { mockAuthMe, mockGeoRoutes, setLanguage } from './helpers';
+import { mockAuthMe, mockGeoRoutes, mockNotifications, mockTokenRefresh, setLanguage } from './helpers';
 
 test.describe('Report Fire — Wizard Flow', () => {
   test.beforeEach(async ({ page }) => {
     await setLanguage(page, 'en');
     await mockAuthMe(page, 'CIVILIAN');
     await mockGeoRoutes(page);
+    await mockNotifications(page);
+    await mockTokenRefresh(page);
   });
 
   test('page loads with wizard progress bar and step 1', async ({ page }) => {
@@ -89,6 +91,14 @@ test.describe('Report Fire — Wizard Flow', () => {
         }),
       });
     });
+    await page.route(/\/api\/reports\/new-report-1\/pdf(?:\?.*)?$/, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/pdf',
+        headers: { 'Content-Disposition': 'attachment; filename="report-test.pdf"' },
+        body: Buffer.from('%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF', 'utf8'),
+      });
+    });
 
     await page.goto('/report', { waitUntil: 'networkidle' });
     await expect(page.getByRole('heading', { name: /report.*fire/i })).toBeVisible({ timeout: 15000 });
@@ -117,6 +127,12 @@ test.describe('Report Fire — Wizard Flow', () => {
     // Should show confirmation screen with reference number
     await expect(page.getByText(/report.*submitted|success/i)).toBeVisible({ timeout: 15000 });
     await expect(page.getByText('RPT-20260224-A3F2')).toBeVisible();
+    await expect(page.getByRole('link', { name: /Arabic/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: /French/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: /English/i })).toHaveAttribute(
+      'href',
+      '/api/reports/new-report-1/pdf?lang=en'
+    );
   });
 
   test('GPS button is visible on location step', async ({ page }) => {
@@ -130,7 +146,9 @@ test.describe('Report Fire — Wizard Flow', () => {
     await expect(page.getByText(/use my location/i)).toBeVisible();
   });
 
-  test('shows "Click the map" on desktop', async ({ page }) => {
+  test('shows "Click the map" on desktop', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name.startsWith('mobile'), 'Desktop-only helper text');
+
     await page.goto('/report');
     await page.locator('[data-map-ready="true"]').first().waitFor({ timeout: 30000 });
 

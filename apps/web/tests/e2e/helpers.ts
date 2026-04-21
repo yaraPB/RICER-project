@@ -147,16 +147,34 @@ export type MockReport = {
 export async function mockReports(page: Page, initialReports: MockReport[]) {
   let reports = [...initialReports];
 
-  await page.route('**/api/reports', async (route) => {
+  await page.route(/\/api\/reports\/[^/]+\/pdf(?:\?.*)?$/, async (route) => {
     if (route.request().method() !== 'GET') return route.fallback();
     await route.fulfill({
       status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ data: reports, pagination: { cursor: null, hasMore: false, total: reports.length } }),
+      contentType: 'application/pdf',
+      headers: { 'Content-Disposition': 'attachment; filename="report-test.pdf"' },
+      body: Buffer.from('%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF', 'utf8'),
     });
   });
 
-  await page.route('**/api/reports/*', async (route) => {
+  await page.route(/\/api\/reports(?:\?.*)?$/, async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    const url = new URL(route.request().url());
+    const status = url.searchParams.get('status');
+    const cause = url.searchParams.get('cause');
+    const filteredReports = reports.filter((report) => {
+      if (status && report.status !== status) return false;
+      if (cause && report.cause !== cause) return false;
+      return true;
+    });
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ data: filteredReports, pagination: { cursor: null, hasMore: false, total: filteredReports.length } }),
+    });
+  });
+
+  await page.route(/\/api\/reports\/[^/]+$/, async (route) => {
     if (route.request().method() !== 'PATCH') return route.fallback();
     const url = new URL(route.request().url());
     const id = url.pathname.split('/').pop();

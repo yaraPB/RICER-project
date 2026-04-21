@@ -32,14 +32,29 @@ export const GET = withApiHandler(async (request: Request) => {
   );
   const cursor = url.searchParams.get('cursor') || undefined;
   const withoutIncident = url.searchParams.get('withoutIncident') === 'true';
+  const status = url.searchParams.get('status') || undefined;
+  const cause = url.searchParams.get('cause') || undefined;
 
   // Build query
   const where: Prisma.ReportWhereInput = {};
+  if (currentUser.role !== 'OFFICIAL') {
+    where.userId = currentUser.userId;
+  }
   if (cursor) {
     where.id = { lt: cursor };
   }
   if (withoutIncident) {
     where.incidentId = null;
+  }
+  if (status) {
+    const allowed = ['PENDING', 'IN_PROGRESS', 'COMPLETED'] as const;
+    if (!allowed.includes(status as (typeof allowed)[number])) {
+      throw new AppError(1001, { fields: [{ field: 'status', code: 'invalid' }] });
+    }
+    where.status = status as (typeof allowed)[number];
+  }
+  if (cause) {
+    where.cause = cause;
   }
 
   // Fetch one extra to determine if there are more results

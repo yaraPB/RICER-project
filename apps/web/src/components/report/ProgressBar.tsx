@@ -22,7 +22,7 @@ export function ProgressBar({ currentStep }: ProgressBarProps) {
   const currentIndex = STEP_ORDER.indexOf(currentStep);
 
   return (
-    <nav aria-label="Progress" className="mb-6">
+    <nav aria-label={t('wizardProgress')} className="mb-6">
       <ol className="flex items-center justify-between gap-2">
         {STEPS.map((step, i) => {
           const isCompleted = i < currentIndex;

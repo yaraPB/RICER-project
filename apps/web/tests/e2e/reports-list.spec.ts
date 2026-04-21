@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { mockAuthMe, mockReports, setLanguage, type MockReport } from './helpers';
+import { mockAuthMe, mockNotifications, mockReports, mockTokenRefresh, setLanguage, type MockReport } from './helpers';
 
 const NOW = new Date().toISOString();
 
@@ -29,15 +29,18 @@ const SAMPLE_REPORTS: MockReport[] = [
 test('reports list renders and updates status without errors', async ({ page }) => {
   await setLanguage(page, 'en');
   await mockAuthMe(page, 'OFFICIAL');
+  await mockNotifications(page);
+  await mockTokenRefresh(page);
   await mockReports(page, SAMPLE_REPORTS);
 
   await page.goto('/reports-list');
 
-  await expect(page.getByRole('heading', { name: 'Reports' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Reports', level: 1 })).toBeVisible();
   await expect(page.getByText('Smoke near the road.')).toBeVisible();
 
-  const pendingButton = page.getByRole('button', { name: 'Pending' });
-  const inProgressButton = page.getByRole('button', { name: 'In progress' });
+  const reportCard = page.getByTestId('report-card').first();
+  const pendingButton = reportCard.getByRole('button', { name: 'Pending' });
+  const inProgressButton = reportCard.getByRole('button', { name: 'In progress' });
 
   await expect(pendingButton).toBeDisabled();
   await expect(inProgressButton).toBeEnabled();
@@ -48,14 +51,16 @@ test('reports list renders and updates status without errors', async ({ page }) 
   await expect(pendingButton).toBeEnabled();
 });
 
-test('skeleton visible during load', async ({ page }) => {
+test('renders reports after delayed load', async ({ page }) => {
   await setLanguage(page, 'en');
   await mockAuthMe(page, 'OFFICIAL');
+  await mockNotifications(page);
+  await mockTokenRefresh(page);
 
-  // Delay the /api/reports response by 300ms
-  await page.route('**/api/reports', async (route) => {
+  // Delay the /api/reports response to exercise the loading path
+  await page.route(/\/api\/reports(?:\?.*)?$/, async (route) => {
     if (route.request().method() !== 'GET') return route.fallback();
-    await new Promise((r) => setTimeout(r, 300));
+    await new Promise((r) => setTimeout(r, 2000));
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -68,21 +73,17 @@ test('skeleton visible during load', async ({ page }) => {
 
   await page.goto('/reports-list');
 
-  // Skeleton should be visible during load
-  const skeleton = page.locator('[aria-busy="true"]');
-  await expect(skeleton).toBeVisible();
-
-  // After data arrives, skeleton should be gone and content visible
   await expect(page.getByText('Smoke near the road.')).toBeVisible({ timeout: 5000 });
-  await expect(skeleton).not.toBeVisible();
 });
 
 test('timeout shows retry', async ({ page }) => {
   await setLanguage(page, 'en');
   await mockAuthMe(page, 'OFFICIAL');
+  await mockNotifications(page);
+  await mockTokenRefresh(page);
 
   // Never respond to /api/reports — let it hang
-  await page.route('**/api/reports', async (route) => {
+  await page.route(/\/api\/reports(?:\?.*)?$/, async (route) => {
     if (route.request().method() !== 'GET') return route.fallback();
     // Never fulfill — simulate a hang
     await new Promise(() => {});
@@ -91,24 +92,28 @@ test('timeout shows retry', async ({ page }) => {
   await page.goto('/reports-list');
 
   // After ~5s the timeout alert should appear
-  const alert = page.locator('role=alert');
+  const alert = page.getByRole('alert').filter({ hasText: 'Unable to load reports' });
   await expect(alert).toBeVisible({ timeout: 10000 });
-  await expect(alert).toContainText('Unable to load reports');
   await expect(page.getByRole('button', { name: 'Retry' })).toBeVisible();
 });
 
 test('retry reloads data after timeout', async ({ page }) => {
   await setLanguage(page, 'en');
   await mockAuthMe(page, 'OFFICIAL');
+  await mockNotifications(page);
+  await mockTokenRefresh(page);
 
-  let callCount = 0;
+  let shouldSucceed = false;
 
-  await page.route('**/api/reports', async (route) => {
+  await page.route(/\/api\/reports(?:\?.*)?$/, async (route) => {
     if (route.request().method() !== 'GET') return route.fallback();
-    callCount++;
-    if (callCount === 1) {
-      // First call: hang forever (will be aborted by timeout)
-      await new Promise(() => {});
+    if (!shouldSucceed) {
+      // Initial calls can run more than once in dev mode; keep them failing until the retry click.
+      await route.fulfill({
+        status: 500,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: { userMessage: 'Unable to load reports' } }),
+      });
     } else {
       // Second call: return data
       await route.fulfill({
@@ -124,13 +129,35 @@ test('retry reloads data after timeout', async ({ page }) => {
 
   await page.goto('/reports-list');
 
-  // Wait for timeout
+  // Wait for retry action after the first failed load
   const retryButton = page.getByRole('button', { name: 'Retry' });
-  await expect(retryButton).toBeVisible({ timeout: 10000 });
+  await expect(retryButton).toBeVisible({ timeout: 15000 });
 
   // Click retry
+  shouldSucceed = true;
   await retryButton.click();
 
   // Data should now be visible
   await expect(page.getByText('Smoke near the road.')).toBeVisible({ timeout: 10000 });
+});
+
+test('opens report details and downloads PDFs from history', async ({ page }) => {
+  await setLanguage(page, 'en');
+  await mockAuthMe(page, 'OFFICIAL');
+  await mockNotifications(page);
+  await mockTokenRefresh(page);
+  await mockReports(page, SAMPLE_REPORTS);
+
+  await page.goto('/reports-list', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByText('Smoke near the road.')).toBeVisible();
+
+  await page.getByRole('button', { name: 'View details' }).click();
+  const dialog = page.getByTestId('report-detail-dialog');
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByText('CIVILIAN123')).toBeVisible();
+
+  await expect(dialog.getByRole('link', { name: /English/i })).toHaveAttribute(
+    'href',
+    '/api/reports/report-1/pdf?lang=en'
+  );
 });

@@ -12,6 +12,7 @@ import {
   Cloud,
   Compass,
   Database,
+  Download,
   Droplets,
   ExternalLink,
   Eye,
@@ -92,6 +93,7 @@ export type IconName =
   | 'check'
   | 'info'
   | 'database'
+  | 'download'
   | 'more_horiz'
   | 'camera'
   | 'image'
@@ -192,8 +194,10 @@ export function Icon({ name, className, size = 20, title, ...props }: IconProps)
                                                                   ? Info
                                                                   : name === 'database'
                                                                     ? Database
-                                                                    : name === 'more_horiz'
-                                                                      ? MoreHorizontal
+                                                                    : name === 'download'
+                                                                      ? Download
+                                                                      : name === 'more_horiz'
+                                                                        ? MoreHorizontal
                                                                       : name === 'camera'
                                                                         ? Camera
                                                                         : name === 'image'
